@@ -92,161 +92,179 @@ namespace SistemaTesourariaEclesiastica.Services
             if (meioPagamento == null || !meioPagamento.Ativo)
                 return (false, "O meio de pagamento selecionado não está ativo.");
 
-            // Verifica se há saldo suficiente no meio de pagamento
-            var saldoMeioPagamento = await CalcularSaldoMeioPagamentoAsync(saida.MeioDePagamentoId, saida.Data);
-            var valorConsiderar = saidaIdToIgnore.HasValue ? 
-                saida.Valor - (await _context.Saidas.Where(s => s.Id == saidaIdToIgnore.Value).Select(s => s.Valor).FirstOrDefaultAsync()) : 
-                saida.Valor;
+            return (true, string.Empty);
+        }
 
-            if (saldoMeioPagamento < valorConsiderar)
-                return (false, $"Saldo insuficiente no meio de pagamento. Saldo disponível: {saldoMeioPagamento:C}");
+        /// <summary>
+        /// Retorna lista de erros de validação para uma entrada (compatibilidade com versão anterior)
+        /// </summary>
+        public async Task<List<string>> ValidateEntrada(Entrada entrada)
+        {
+            var errors = new List<string>();
+
+            var result = await ValidateEntradaAsync(entrada);
+            if (!result.IsValid)
+            {
+                errors.Add(result.ErrorMessage);
+            }
+
+            return errors;
+        }
+
+        /// <summary>
+        /// Verifica se um fechamento de período pode ser criado
+        /// </summary>
+        public async Task<(bool IsValid, string ErrorMessage)> ValidateFechamentoPeriodoAsync(FechamentoPeriodo fechamento)
+        {
+            // Verifica se já existe fechamento para o período
+            var fechamentoExistente = await _context.FechamentosPeriodo
+                .Where(f => f.CentroCustoId == fechamento.CentroCustoId &&
+                           f.Ano == fechamento.Ano &&
+                           f.Mes == fechamento.Mes &&
+                           f.Id != fechamento.Id)
+                .FirstOrDefaultAsync();
+
+            if (fechamentoExistente != null)
+                return (false, "Já existe um fechamento para este período neste centro de custo.");
+
+            // Verifica se o período é válido
+            if (fechamento.Ano < 2020 || fechamento.Ano > DateTime.Now.Year + 1)
+                return (false, "Ano inválido para fechamento.");
+
+            if (fechamento.Mes < 1 || fechamento.Mes > 12)
+                return (false, "Mês inválido para fechamento.");
+
+            // Verifica se não está tentando fechar período muito futuro
+            var dataFechamento = new DateTime(fechamento.Ano, fechamento.Mes, 1);
+            if (dataFechamento > DateTime.Now.AddMonths(1))
+                return (false, "Não é possível fechar períodos muito futuros.");
 
             return (true, string.Empty);
         }
 
         /// <summary>
-        /// Valida se uma transferência interna pode ser criada/editada
+        /// Valida transferência interna
         /// </summary>
-        public async Task<(bool IsValid, string ErrorMessage)> ValidateTransferenciaInternaAsync(TransferenciaInterna transferencia, int? transferenciaIdToIgnore = null)
+        public async Task<(bool IsValid, string ErrorMessage)> ValidateTransferenciaInternaAsync(TransferenciaInterna transferencia)
         {
+            // Verifica se os centros de custo são diferentes
+            if (transferencia.CentroCustoOrigemId == transferencia.CentroCustoDestinoId)
+                return (false, "Os centros de custo de origem e destino devem ser diferentes.");
+
             // Verifica se o valor é positivo
             if (transferencia.Valor <= 0)
                 return (false, "O valor da transferência deve ser maior que zero.");
 
-            // Verifica se origem e destino são diferentes
-            if (transferencia.MeioDePagamentoOrigemId == transferencia.MeioDePagamentoDestinoId)
-                return (false, "O meio de pagamento de origem deve ser diferente do destino.");
+            // Verifica se os centros de custo estão ativos
+            var centroCustoOrigem = await _context.CentrosCusto.FindAsync(transferencia.CentroCustoOrigemId);
+            if (centroCustoOrigem == null || !centroCustoOrigem.Ativo)
+                return (false, "O centro de custo de origem não está ativo.");
 
-            // Verifica se a data não é muito antiga (mais de 1 ano)
-            if (transferencia.Data < DateTime.Now.AddYears(-1))
-                return (false, "Não é possível registrar transferências com mais de 1 ano.");
-
-            // Verifica se a data não é muito futura (mais de 1 semana)
-            if (transferencia.Data > DateTime.Now.AddDays(7))
-                return (false, "Não é possível registrar transferências com mais de 1 semana no futuro.");
+            var centroCustoDestino = await _context.CentrosCusto.FindAsync(transferencia.CentroCustoDestinoId);
+            if (centroCustoDestino == null || !centroCustoDestino.Ativo)
+                return (false, "O centro de custo de destino não está ativo.");
 
             // Verifica se os meios de pagamento estão ativos
-            var meioOrigem = await _context.MeiosDePagamento.FindAsync(transferencia.MeioDePagamentoOrigemId);
-            if (meioOrigem == null || !meioOrigem.Ativo)
+            var meioPagamentoOrigem = await _context.MeiosDePagamento.FindAsync(transferencia.MeioDePagamentoOrigemId);
+            if (meioPagamentoOrigem == null || !meioPagamentoOrigem.Ativo)
                 return (false, "O meio de pagamento de origem não está ativo.");
 
-            var meioDestino = await _context.MeiosDePagamento.FindAsync(transferencia.MeioDePagamentoDestinoId);
-            if (meioDestino == null || !meioDestino.Ativo)
+            var meioPagamentoDestino = await _context.MeiosDePagamento.FindAsync(transferencia.MeioDePagamentoDestinoId);
+            if (meioPagamentoDestino == null || !meioPagamentoDestino.Ativo)
                 return (false, "O meio de pagamento de destino não está ativo.");
 
-            // Verifica se há saldo suficiente no meio de pagamento de origem
-            var saldoOrigem = await CalcularSaldoMeioPagamentoAsync(transferencia.MeioDePagamentoOrigemId, transferencia.Data);
-            var valorConsiderar = transferenciaIdToIgnore.HasValue ? 
-                transferencia.Valor - (await _context.TransferenciasInternas.Where(t => t.Id == transferenciaIdToIgnore.Value).Select(t => t.Valor).FirstOrDefaultAsync()) : 
-                transferencia.Valor;
-
-            if (saldoOrigem < valorConsiderar)
-                return (false, $"Saldo insuficiente no meio de pagamento de origem. Saldo disponível: {saldoOrigem:C}");
-
             return (true, string.Empty);
         }
 
         /// <summary>
-        /// Calcula o saldo de um meio de pagamento até uma determinada data
+        /// Verifica se um membro pode ser cadastrado/atualizado
         /// </summary>
-        public async Task<decimal> CalcularSaldoMeioPagamentoAsync(int meioDePagamentoId, DateTime? dataLimite = null)
+        public async Task<(bool IsValid, string ErrorMessage)> ValidateMembroAsync(Membro membro, int? membroIdToIgnore = null)
         {
-            dataLimite ??= DateTime.Now;
-
-            var entradas = await _context.Entradas
-                .Where(e => e.MeioDePagamentoId == meioDePagamentoId && e.Data <= dataLimite)
-                .SumAsync(e => e.Valor);
-
-            var saidas = await _context.Saidas
-                .Where(s => s.MeioDePagamentoId == meioDePagamentoId && s.Data <= dataLimite)
-                .SumAsync(s => s.Valor);
-
-            var transferenciasEntrada = await _context.TransferenciasInternas
-                .Where(t => t.MeioDePagamentoDestinoId == meioDePagamentoId && t.Data <= dataLimite)
-                .SumAsync(t => t.Valor);
-
-            var transferenciasSaida = await _context.TransferenciasInternas
-                .Where(t => t.MeioDePagamentoOrigemId == meioDePagamentoId && t.Data <= dataLimite)
-                .SumAsync(t => t.Valor);
-
-            return entradas + transferenciasEntrada - saidas - transferenciasSaida;
-        }
-
-        /// <summary>
-        /// Verifica se um período pode ser fechado
-        /// </summary>
-        public async Task<(bool CanClose, string ErrorMessage)> CanClosePeriodAsync(int centroCustoId, int ano, int mes)
-        {
-            // Verifica se já existe fechamento para o período
-            var fechamentoExistente = await _context.FechamentosPeriodo
-                .Where(f => f.CentroCustoId == centroCustoId && f.Ano == ano && f.Mes == mes)
-                .FirstOrDefaultAsync();
-
-            if (fechamentoExistente != null)
-                return (false, "Já existe um fechamento para este período.");
-
-            // Verifica se há movimentações no período
-            var inicioMes = new DateTime(ano, mes, 1);
-            var fimMes = inicioMes.AddMonths(1).AddDays(-1);
-
-            var temEntradas = await _context.Entradas
-                .AnyAsync(e => e.CentroCustoId == centroCustoId && e.Data >= inicioMes && e.Data <= fimMes);
-
-            var temSaidas = await _context.Saidas
-                .AnyAsync(s => s.CentroCustoId == centroCustoId && s.Data >= inicioMes && s.Data <= fimMes);
-
-            if (!temEntradas && !temSaidas)
-                return (false, "Não há movimentações para fechar neste período.");
-
-            // Verifica se o período anterior está fechado (se não for o primeiro mês)
-            if (mes > 1 || ano > DateTime.Now.Year - 10)
+            // Verifica CPF duplicado
+            if (!string.IsNullOrEmpty(membro.CPF))
             {
-                var mesAnterior = mes == 1 ? 12 : mes - 1;
-                var anoAnterior = mes == 1 ? ano - 1 : ano;
-
-                var fechamentoAnterior = await _context.FechamentosPeriodo
-                    .Where(f => f.CentroCustoId == centroCustoId && f.Ano == anoAnterior && f.Mes == mesAnterior)
+                var cpfExistente = await _context.Membros
+                    .Where(m => m.CPF == membro.CPF &&
+                               (membroIdToIgnore == null || m.Id != membroIdToIgnore))
                     .FirstOrDefaultAsync();
 
-                if (fechamentoAnterior == null)
-                    return (false, "O período anterior deve ser fechado primeiro.");
+                if (cpfExistente != null)
+                    return (false, "Já existe um membro cadastrado com este CPF.");
             }
 
+            // Verifica se o centro de custo está ativo
+            var centroCusto = await _context.CentrosCusto.FindAsync(membro.CentroCustoId);
+            if (centroCusto == null || !centroCusto.Ativo)
+                return (false, "O centro de custo selecionado não está ativo.");
+
             return (true, string.Empty);
         }
 
         /// <summary>
-        /// Verifica se um membro pode ser inativado
+        /// Calcula saldo disponível em um centro de custo
         /// </summary>
-        public async Task<(bool CanDeactivate, string ErrorMessage)> CanDeactivateMemberAsync(int membroId)
+        public async Task<decimal> CalcularSaldoCentroCustoAsync(int centroCustoId, DateTime? dataLimite = null)
         {
-            // Verifica se há entradas vinculadas ao membro nos últimos 12 meses
-            var dataLimite = DateTime.Now.AddMonths(-12);
-            var temEntradasRecentes = await _context.Entradas
-                .AnyAsync(e => e.MembroId == membroId && e.Data >= dataLimite);
+            var dataFim = dataLimite ?? DateTime.Now;
 
-            if (temEntradasRecentes)
-                return (false, "Não é possível inativar um membro que possui entradas nos últimos 12 meses.");
+            var totalEntradas = await _context.Entradas
+                .Where(e => e.CentroCustoId == centroCustoId && e.Data <= dataFim)
+                .SumAsync(e => e.Valor);
+
+            var totalSaidas = await _context.Saidas
+                .Where(s => s.CentroCustoId == centroCustoId && s.Data <= dataFim)
+                .SumAsync(s => s.Valor);
+
+            return totalEntradas - totalSaidas;
+        }
+
+        /// <summary>
+        /// Verifica se há saldo suficiente para uma saída
+        /// </summary>
+        public async Task<bool> VerificarSaldoSuficienteAsync(int centroCustoId, decimal valor, DateTime data)
+        {
+            var saldoDisponivel = await CalcularSaldoCentroCustoAsync(centroCustoId, data);
+            return saldoDisponivel >= valor;
+        }
+
+        /// <summary>
+        /// Verifica se um plano de contas pode ser desativado
+        /// </summary>
+        public async Task<(bool CanDeactivate, string ErrorMessage)> CanDeactivatePlanoContasAsync(int planoContasId)
+        {
+            // Verifica se há entradas ou saídas usando este plano
+            var hasEntradas = await _context.Entradas.AnyAsync(e => e.PlanoDeContasId == planoContasId);
+            var hasSaidas = await _context.Saidas.AnyAsync(s => s.PlanoDeContasId == planoContasId);
+
+            if (hasEntradas || hasSaidas)
+                return (false, "Não é possível desativar este plano de contas pois existem movimentações vinculadas a ele.");
 
             return (true, string.Empty);
         }
 
         /// <summary>
-        /// Verifica se um centro de custo pode ser inativado
+        /// Verifica se um centro de custo pode ser desativado
         /// </summary>
         public async Task<(bool CanDeactivate, string ErrorMessage)> CanDeactivateCentroCustoAsync(int centroCustoId)
         {
-            // Verifica se há movimentações vinculadas ao centro de custo nos últimos 6 meses
-            var dataLimite = DateTime.Now.AddMonths(-6);
-            
-            var temEntradasRecentes = await _context.Entradas
-                .AnyAsync(e => e.CentroCustoId == centroCustoId && e.Data >= dataLimite);
+            // Verifica se há membros ativos
+            var hasMembrosAtivos = await _context.Membros.AnyAsync(m => m.CentroCustoId == centroCustoId && m.Ativo);
+            if (hasMembrosAtivos)
+                return (false, "Não é possível desativar este centro de custo pois existem membros ativos vinculados a ele.");
 
-            var temSaidasRecentes = await _context.Saidas
-                .AnyAsync(s => s.CentroCustoId == centroCustoId && s.Data >= dataLimite);
+            // Verifica se há usuários ativos
+            var hasUsuariosAtivos = await _context.Users.AnyAsync(u => u.CentroCustoId == centroCustoId && u.Ativo);
+            if (hasUsuariosAtivos)
+                return (false, "Não é possível desativar este centro de custo pois existem usuários ativos vinculados a ele.");
 
-            if (temEntradasRecentes || temSaidasRecentes)
-                return (false, "Não é possível inativar um centro de custo que possui movimentações nos últimos 6 meses.");
+            // Verifica se há movimentações recentes (últimos 3 meses)
+            var tresMesesAtras = DateTime.Now.AddMonths(-3);
+            var hasMovimentacaoRecente = await _context.Entradas.AnyAsync(e => e.CentroCustoId == centroCustoId && e.Data >= tresMesesAtras) ||
+                                        await _context.Saidas.AnyAsync(s => s.CentroCustoId == centroCustoId && s.Data >= tresMesesAtras);
+
+            if (hasMovimentacaoRecente)
+                return (false, "Não é possível desativar este centro de custo pois existem movimentações recentes (últimos 3 meses).");
 
             return (true, string.Empty);
         }

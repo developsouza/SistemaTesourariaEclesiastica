@@ -1,38 +1,185 @@
 @{
     ViewData["Title"] = "Acesso Negado";
+    Layout = "_LoginLayout";
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="text-center">
-            <i class="bi bi-shield-exclamation display-1 text-warning"></i>
-            <h1 class="h3 mt-3">Acesso Negado</h1>
-            <p class="text-muted mb-4">
-                Você não tem permissão para acessar esta página ou recurso.
-            </p>
-            
-            <div class="alert alert-warning">
-                <h6 class="alert-heading">
-                    <i class="bi bi-info-circle me-2"></i>
-                    O que fazer?
-                </h6>
-                <ul class="mb-0 text-start">
-                    <li>Verifique se você está logado com a conta correta</li>
-                    <li>Entre em contato com o administrador do sistema</li>
-                    <li>Solicite as permissões necessárias</li>
-                </ul>
-            </div>
-            
-            <div class="d-flex gap-2 justify-content-center">
-                <a href="javascript:history.back()" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-2"></i>
-                    Voltar
-                </a>
-                <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
-                    <i class="bi bi-house me-2"></i>
-                    Ir para Início
-                </a>
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-gradient-danger">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-xl-8 col-lg-10 col-md-12">
+                <div class="card border-0 shadow-lg">
+                    <div class="card-body p-0">
+                        <div class="row">
+                            <div class="col-lg-6 d-none d-lg-block bg-access-denied-image">
+                                <div class="access-denied-panel d-flex flex-column justify-content-center align-items-center h-100 text-white p-5">
+                                    <div class="text-center">
+                                        <div class="access-denied-icon mb-4">
+                                            <i class="fas fa-shield-alt fa-5x text-white-50"></i>
+                                        </div>
+                                        <h2 class="h3 mb-4">Área Protegida</h2>
+                                        <p class="lead">
+                                            Esta seção do sistema requer permissões específicas para acesso.
+                                        </p>
+                                        <div class="security-info mt-4">
+                                            <div class="info-item mb-3">
+                                                <i class="fas fa-lock me-3"></i>
+                                                <span>Controle de Acesso Ativo</span>
+                                            </div>
+                                            <div class="info-item mb-3">
+                                                <i class="fas fa-user-shield me-3"></i>
+                                                <span>Auditoria de Segurança</span>
+                                            </div>
+                                            <div class="info-item mb-3">
+                                                <i class="fas fa-eye me-3"></i>
+                                                <span>Monitoramento Contínuo</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="access-denied-content p-5">
+                                    <div class="text-center">
+                                        <div class="d-lg-none mb-4">
+                                            <i class="fas fa-ban fa-4x text-danger"></i>
+                                        </div>
+                                        <h1 class="display-1 text-danger fw-bold">403</h1>
+                                        <h2 class="h4 text-gray-900 mb-4">Acesso Negado</h2>
+                                        <p class="text-muted mb-4">
+                                            Você não possui permissão para acessar esta página ou recurso.
+                                        </p>
+                                    </div>
+
+                                    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+                                        <i class="fas fa-exclamation-triangle me-3"></i>
+                                        <div>
+                                            <strong>Permissão Insuficiente:</strong>
+                                            Sua conta não possui o nível de acesso necessário para esta operação.
+                                        </div>
+                                    </div>
+
+                                    <div class="possible-actions mb-4">
+                                        <h6 class="text-muted mb-3">O que você pode fazer:</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2">
+                                                <i class="fas fa-arrow-left text-primary me-2"></i>
+                                                Voltar para a página anterior
+                                            </li>
+                                            <li class="mb-2">
+                                                <i class="fas fa-home text-primary me-2"></i>
+                                                Ir para o Dashboard principal
+                                            </li>
+                                            <li class="mb-2">
+                                                <i class="fas fa-user-cog text-primary me-2"></i>
+                                                Entrar em contato com o administrador
+                                            </li>
+                                            <li class="mb-2">
+                                                <i class="fas fa-sign-out-alt text-primary me-2"></i>
+                                                Fazer logout e entrar com outra conta
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="action-buttons">
+                                        <a href="javascript:history.back()" class="btn btn-secondary btn-lg me-2">
+                                            <i class="fas fa-arrow-left me-2"></i>
+                                            Voltar
+                                        </a>
+                                        <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-lg me-2">
+                                            <i class="fas fa-home me-2"></i>
+                                            Dashboard
+                                        </a>
+                                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-outline-danger btn-lg">
+                                                <i class="fas fa-sign-out-alt me-2"></i>
+                                                Logout
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .bg-gradient-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        min-height: 100vh;
+    }
+
+    .bg-access-denied-image {
+        background: linear-gradient(135deg, rgba(220, 53, 69, 0.9) 0%, rgba(200, 35, 51, 0.9) 100%), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="security-pattern" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M25,5 L45,25 L25,45 L5,25 Z" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="1000" height="1000" fill="url(%23security-pattern)"/></svg>');
+        background-size: cover;
+        background-position: center;
+    }
+
+    .access-denied-panel {
+        background: rgba(0,0,0,0.2);
+        backdrop-filter: blur(10px);
+    }
+
+    .info-item {
+        font-size: 0.95rem;
+        opacity: 0.9;
+    }
+
+    .access-denied-content {
+        position: relative;
+    }
+
+    .display-1 {
+        font-size: 6rem;
+        line-height: 1;
+    }
+
+    .possible-actions ul li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+    }
+
+        .possible-actions ul li:last-child {
+            border-bottom: none;
+        }
+
+    .action-buttons .btn {
+        min-width: 120px;
+    }
+
+    @@media (max-width: 991.98px) {
+        .display-1
+
+    {
+        font-size: 4rem;
+    }
+
+    .action-buttons .btn {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+
+    }
+
+    .card {
+        animation: slideInUp 0.8s ease-out;
+    }
+
+    @@keyframes slideInUp {
+        from
+
+    {
+        opacity: 0;
+        transform: translate3d(0, 50px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+
+    }</style>

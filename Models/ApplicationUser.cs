@@ -19,8 +19,10 @@ namespace SistemaTesourariaEclesiastica.Models
         [Display(Name = "Data de Criação")]
         public DateTime DataCriacao { get; set; } = DateTime.Now;
 
+        [Display(Name = "Último Acesso")]
+        public DateTime? UltimoAcesso { get; set; }
+
         // Navigation property
         public virtual CentroCusto? CentroCusto { get; set; }
     }
 }
-

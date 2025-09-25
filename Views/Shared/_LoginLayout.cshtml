@@ -1,0 +1,284 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR" class="h-100">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Sistema de Tesouraria Eclesiástica</title>
+
+    <!-- Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f9fa;
+        }
+
+        /* Remove outline padrão dos elementos focados */
+        :focus {
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+        }
+
+        /* Scrollbar customizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: #555;
+            }
+
+        /* Preloader */
+        .preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+        }
+
+            .preloader.fade-out {
+                opacity: 0;
+                visibility: hidden;
+            }
+
+        .preloader-content {
+            text-align: center;
+            color: white;
+        }
+
+        .preloader-logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        @@keyframes pulse {
+            0%
+
+        {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        50% {
+            transform: scale(1.1);
+            opacity: 0.7;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        }
+
+        .preloader-text {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-bottom: 2rem;
+        }
+
+        .preloader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @@keyframes spin {
+            0%
+
+        {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+
+        }
+
+        /* Container principal */
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Animação de entrada suave */
+        .fade-in {
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        @@keyframes fadeIn {
+            from
+
+        {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        }
+    </style>
+
+    <!-- Meta tags para SEO e compartilhamento -->
+    <meta name="description" content="Sistema de Gestão de Tesouraria Eclesiástica - Faça login para acessar">
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico">
+
+    <!-- Prevent FOUC (Flash of Unstyled Content) -->
+    <style>
+        html {
+            visibility: hidden;
+        }
+    </style>
+</head>
+
+<body class="h-100">
+    <!-- Preloader -->
+    <div class="preloader" id="preloader">
+        <div class="preloader-content">
+            <div class="preloader-logo">
+                <i class="fas fa-church"></i>
+            </div>
+            <div class="preloader-text">Sistema de Tesouraria</div>
+            <div class="preloader-spinner"></div>
+        </div>
+    </div>
+
+    <!-- Conteúdo principal -->
+    <main role="main" class="auth-container fade-in">
+        @RenderBody()
+    </main>
+
+    <!-- Scripts essenciais -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    <!-- Validation Scripts -->
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        // Remover preloader após carregamento
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mostrar conteúdo
+            document.documentElement.style.visibility = 'visible';
+
+            // Remover preloader após 1 segundo
+            setTimeout(function() {
+                const preloader = document.getElementById('preloader');
+                if (preloader) {
+                    preloader.classList.add('fade-out');
+                    setTimeout(() => preloader.remove(), 500);
+                }
+            }, 1000);
+        });
+
+        // Configuração global para requisições AJAX
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!settings.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", $('meta[name=csrf-token]').attr('content'));
+                }
+            }
+        });
+
+        // Tratamento global de erros
+        window.addEventListener('error', function(e) {
+            console.error('Erro JavaScript:', e.error);
+        });
+
+        // Prevenir envio duplo de formulários
+        document.addEventListener('submit', function(e) {
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            if (submitBtn && !submitBtn.disabled) {
+                setTimeout(() => {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processando...';
+                }, 100);
+            }
+        });
+
+        // Função utilitária para mostrar notificações
+        function showToast(message, type = 'info', duration = 5000) {
+            const toastContainer = document.querySelector('.toast-container') ||
+                (() => {
+                    const container = document.createElement('div');
+                    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    document.body.appendChild(container);
+                    return container;
+                })();
+
+            const toastId = 'toast-' + Date.now();
+            const bgClass = {
+                'success': 'bg-success',
+                'error': 'bg-danger',
+                'warning': 'bg-warning',
+                'info': 'bg-info'
+            }[type] || 'bg-info';
+
+            const toastHTML = `
+                <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: duration });
+
+            toast.show();
+            toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
+        }
+
+        // Disponibilizar função globalmente
+        window.showToast = showToast;
+    </script>
+</body>
+</html>

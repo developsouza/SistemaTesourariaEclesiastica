@@ -11,255 +11,358 @@ using SistemaTesourariaEclesiastica.Attributes;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
-    [Authorize(Roles = Roles.TodosExcetoUsuario)]
+    [Authorize(Policy = "OperacoesFinanceiras")]
     public class EntradasController : Controller
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly AuditService _auditService;
+        private readonly BusinessRulesService _businessRules;
+        private readonly ILogger<EntradasController> _logger;
 
-        public EntradasController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, AuditService auditService)
+        public EntradasController(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            AuditService auditService,
+            BusinessRulesService businessRules,
+            ILogger<EntradasController> logger)
         {
             _context = context;
             _userManager = userManager;
             _auditService = auditService;
+            _businessRules = businessRules;
+            _logger = logger;
         }
 
         // GET: Entradas
-        public async Task<IActionResult> Index(DateTime? dataInicio, DateTime? dataFim, int? centroCustoId, 
-            int? planoContasId, int? membroId, int page = 1, int pageSize = 10)
+        public async Task<IActionResult> Index(DateTime? dataInicio, DateTime? dataFim, int? centroCustoId,
+            int? planoContasId, int? meioPagamentoId, int? membroId, int page = 1, int pageSize = 50)
         {
-            ViewData["DataInicio"] = dataInicio?.ToString("yyyy-MM-dd");
-            ViewData["DataFim"] = dataFim?.ToString("yyyy-MM-dd");
-            ViewData["CentroCustoId"] = centroCustoId;
-            ViewData["PlanoContasId"] = planoContasId;
-            ViewData["MembroId"] = membroId;
-
-            var entradas = _context.Entradas
-                .Include(e => e.MeioDePagamento)
-                .Include(e => e.CentroCusto)
-                .Include(e => e.PlanoDeContas)
-                .Include(e => e.Membro)
-                .Include(e => e.Usuario)
-                .AsQueryable();
-
-            // Filtros
-            if (dataInicio.HasValue)
+            try
             {
-                entradas = entradas.Where(e => e.Data >= dataInicio.Value);
-            }
+                var user = await _userManager.GetUserAsync(User);
+                await _auditService.LogAsync("Visualização", "Entradas", "Listagem de entradas acessada");
 
-            if (dataFim.HasValue)
+                // Aplicar filtros de data padrão se não informados
+                if (!dataInicio.HasValue)
+                    dataInicio = DateTime.Now.AddMonths(-3);
+                if (!dataFim.HasValue)
+                    dataFim = DateTime.Now;
+
+                // Query base
+                var query = _context.Entradas
+                    .Include(e => e.Membro)
+                    .Include(e => e.PlanoDeContas)
+                    .Include(e => e.CentroCusto)
+                    .Include(e => e.MeioDePagamento)
+                    .AsQueryable();
+
+                // Aplicar filtros baseados no perfil do usuário
+                if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+                {
+                    // Tesoureiros Locais e Pastores só veem dados do seu centro de custo
+                    if (user.CentroCustoId.HasValue)
+                    {
+                        query = query.Where(e => e.CentroCustoId == user.CentroCustoId.Value);
+                    }
+                    else
+                    {
+                        // Se não tem centro de custo, não vê nada
+                        query = query.Where(e => false);
+                    }
+                }
+
+                // Aplicar filtros de pesquisa
+                if (dataInicio.HasValue)
+                    query = query.Where(e => e.Data.Date >= dataInicio.Value.Date);
+                if (dataFim.HasValue)
+                    query = query.Where(e => e.Data.Date <= dataFim.Value.Date);
+                if (centroCustoId.HasValue)
+                    query = query.Where(e => e.CentroCustoId == centroCustoId.Value);
+                if (planoContasId.HasValue)
+                    query = query.Where(e => e.PlanoDeContasId == planoContasId.Value);
+                if (meioPagamentoId.HasValue)
+                    query = query.Where(e => e.MeioDePagamentoId == meioPagamentoId.Value);
+                if (membroId.HasValue)
+                    query = query.Where(e => e.MembroId == membroId.Value);
+
+                // Paginação
+                var totalItems = await query.CountAsync();
+                var entradas = await query
+                    .OrderByDescending(e => e.Data)
+                    .ThenByDescending(e => e.Id)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                // Preparar dados para os filtros (respeitando permissões)
+                var centrosCustoQuery = _context.CentrosCusto.Where(c => c.Ativo);
+                if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+                {
+                    if (user.CentroCustoId.HasValue)
+                    {
+                        centrosCustoQuery = centrosCustoQuery.Where(c => c.Id == user.CentroCustoId.Value);
+                    }
+                }
+
+                ViewBag.CentrosCusto = new SelectList(await centrosCustoQuery.ToListAsync(), "Id", "Nome", centroCustoId);
+                ViewBag.PlanosContas = new SelectList(await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Receita && p.Ativo).ToListAsync(), "Id", "Nome", planoContasId);
+                ViewBag.MeiosPagamento = new SelectList(await _context.MeiosDePagamento.Where(m => m.Ativo).ToListAsync(), "Id", "Nome", meioPagamentoId);
+                ViewBag.Membros = new SelectList(await _context.Membros.Where(m => m.Ativo).ToListAsync(), "Id", "NomeCompleto", membroId);
+
+                // Dados de paginação
+                ViewBag.CurrentPage = page;
+                ViewBag.PageSize = pageSize;
+                ViewBag.TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+                ViewBag.TotalItems = totalItems;
+
+                // Dados dos filtros atuais
+                ViewBag.DataInicio = dataInicio?.ToString("yyyy-MM-dd");
+                ViewBag.DataFim = dataFim?.ToString("yyyy-MM-dd");
+                ViewBag.CentroCustoId = centroCustoId;
+                ViewBag.PlanoContasId = planoContasId;
+                ViewBag.MeioPagamentoId = meioPagamentoId;
+                ViewBag.MembroId = membroId;
+
+                // Estatísticas resumidas
+                var totalValor = entradas.Sum(e => e.Valor);
+                ViewBag.TotalValor = totalValor;
+                ViewBag.TotalRegistros = totalItems;
+
+                return View(entradas);
+            }
+            catch (Exception ex)
             {
-                entradas = entradas.Where(e => e.Data <= dataFim.Value);
+                _logger.LogError(ex, "Erro ao listar entradas");
+                TempData["Erro"] = "Erro ao carregar a listagem de entradas.";
+                return View(new List<Entrada>());
             }
-
-            if (centroCustoId.HasValue)
-            {
-                entradas = entradas.Where(e => e.CentroCustoId == centroCustoId);
-            }
-
-            if (planoContasId.HasValue)
-            {
-                entradas = entradas.Where(e => e.PlanoDeContasId == planoContasId);
-            }
-
-            if (membroId.HasValue)
-            {
-                entradas = entradas.Where(e => e.MembroId == membroId);
-            }
-
-            var totalItems = await entradas.CountAsync();
-            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-            var totalValor = await entradas.SumAsync(e => e.Valor);
-
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = totalPages;
-            ViewBag.PageSize = pageSize;
-            ViewBag.TotalItems = totalItems;
-            ViewBag.TotalValor = totalValor;
-
-            // Dropdowns para filtros
-            ViewBag.CentrosCusto = new SelectList(await _context.CentrosCusto.ToListAsync(), "Id", "Nome", centroCustoId);
-            ViewBag.PlanosContas = new SelectList(
-                await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Receita).ToListAsync(), 
-                "Id", "Descricao", planoContasId);
-            ViewBag.Membros = new SelectList(await _context.Membros.ToListAsync(), "Id", "NomeCompleto", membroId);
-
-            var paginatedEntradas = await entradas
-                .OrderByDescending(e => e.Data)
-                .ThenByDescending(e => e.DataCriacao)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            return View(paginatedEntradas);
         }
 
         // GET: Entradas/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
+            if (id == null) return NotFound();
+
+            try
             {
-                return NotFound();
+                var entrada = await _context.Entradas
+                    .Include(e => e.Membro)
+                    .Include(e => e.PlanoDeContas)
+                    .Include(e => e.CentroCusto)
+                    .Include(e => e.MeioDePagamento)
+                    .FirstOrDefaultAsync(m => m.Id == id);
+
+                if (entrada == null) return NotFound();
+
+                // Verificar permissão de acesso
+                if (!await CanAccessEntry(entrada))
+                {
+                    return Forbid();
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                await _auditService.LogAsync("Visualização", "Entrada", $"Detalhes da entrada #{id} visualizados");
+
+                return View(entrada);
             }
-
-            var entrada = await _context.Entradas
-                .Include(e => e.MeioDePagamento)
-                .Include(e => e.CentroCusto)
-                .Include(e => e.PlanoDeContas)
-                .Include(e => e.Membro)
-                .Include(e => e.ModeloRateioEntrada)
-                .Include(e => e.Usuario)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
-            if (entrada == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                _logger.LogError(ex, "Erro ao exibir detalhes da entrada {EntradaId}", id);
+                TempData["Erro"] = "Erro ao carregar os detalhes da entrada.";
+                return RedirectToAction(nameof(Index));
             }
-
-            return View(entrada);
         }
 
         // GET: Entradas/Create
         public async Task<IActionResult> Create()
         {
-            await PopulateDropdowns();
-            
-            var entrada = new Entrada
+            try
             {
-                Data = DateTime.Today
-            };
+                await PrepareViewBags();
+                var model = new Entrada
+                {
+                    Data = DateTime.Now,
+                    CentroCustoId = await GetUserCentroCustoId() ?? 0
+                };
 
-            return View(entrada);
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao preparar tela de criação de entrada");
+                TempData["Erro"] = "Erro ao carregar a tela de criação.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         // POST: Entradas/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Data,Valor,Descricao,MeioDePagamentoId,CentroCustoId,PlanoDeContasId,MembroId,ModeloRateioEntradaId,ComprovanteUrl")] Entrada entrada)
+        public async Task<IActionResult> Create([Bind("Data,Valor,Descricao,MembroId,PlanoDeContasId,CentroCustoId,MeioDePagamentoId,Observacoes")] Entrada entrada)
         {
-            if (ModelState.IsValid)
+            try
             {
-                var user = await _userManager.GetUserAsync(User);
-                entrada.UsuarioId = user!.Id;
-                entrada.DataCriacao = DateTime.Now;
-
-                // Se for dízimo e tiver membro selecionado, pega o centro de custo do membro
-                if (entrada.MembroId.HasValue)
+                // Validações de negócio
+                var validationResult = await _businessRules.ValidateEntradaAsync(entrada);
+                if (!validationResult.IsValid)
                 {
-                    var membro = await _context.Membros.FindAsync(entrada.MembroId);
-                    if (membro != null)
-                    {
-                        entrada.CentroCustoId = membro.CentroCustoId;
-                    }
+                    ModelState.AddModelError(string.Empty, validationResult.ErrorMessage);
                 }
 
-                _context.Add(entrada);
-                await _context.SaveChangesAsync();
-                if (user != null)
+                // Verificar se pode criar entrada no centro de custo especificado
+                if (!await CanAccessCentroCusto(entrada.CentroCustoId))
                 {
-                    await _auditService.LogAuditAsync(user.Id, "Criar", "Entrada", entrada.Id.ToString(), $"Entrada de {entrada.Valor:C2} registrada.");
+                    ModelState.AddModelError("CentroCustoId", "Você não tem permissão para criar entradas neste centro de custo.");
                 }
-                TempData["SuccessMessage"] = "Entrada registrada com sucesso!";
-                return RedirectToAction(nameof(Index));
+
+                if (ModelState.IsValid)
+                {
+                    var user = await _userManager.GetUserAsync(User);
+
+                    // Definir dados de auditoria
+                    entrada.DataCriacao = DateTime.Now;
+                    entrada.UsuarioId = user.Id;
+
+                    _context.Add(entrada);
+                    await _context.SaveChangesAsync();
+
+                    await _auditService.LogCreateAsync(user.Id, entrada, entrada.Id.ToString());
+
+                    TempData["Sucesso"] = "Entrada cadastrada com sucesso!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                await PrepareViewBags(entrada);
+                return View(entrada);
             }
-
-            await PopulateDropdowns(entrada);
-            return View(entrada);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar entrada");
+                ModelState.AddModelError(string.Empty, "Erro interno ao salvar entrada. Tente novamente.");
+                await PrepareViewBags(entrada);
+                return View(entrada);
+            }
         }
 
         // GET: Entradas/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var entrada = await _context.Entradas.FindAsync(id);
-            if (entrada == null)
+            try
             {
-                return NotFound();
-            }
+                var entrada = await _context.Entradas.FindAsync(id);
+                if (entrada == null) return NotFound();
 
-            await PopulateDropdowns(entrada);
-            return View(entrada);
+                // Verificar permissão de acesso
+                if (!await CanAccessEntry(entrada))
+                {
+                    return Forbid();
+                }
+
+                await PrepareViewBags(entrada);
+                return View(entrada);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao carregar entrada para edição {EntradaId}", id);
+                TempData["Erro"] = "Erro ao carregar entrada para edição.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         // POST: Entradas/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Data,Valor,Descricao,MeioDePagamentoId,CentroCustoId,PlanoDeContasId,MembroId,ModeloRateioEntradaId,ComprovanteUrl,UsuarioId,DataCriacao")] Entrada entrada)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Data,Valor,Descricao,MembroId,PlanoDeContasId,CentroCustoId,MeioDePagamentoId,Observacoes,DataCriacao,UsuarioId")] Entrada entrada)
         {
-            if (id != entrada.Id)
-            {
-                return NotFound();
-            }
+            if (id != entrada.Id) return NotFound();
 
-            if (ModelState.IsValid)
+            try
             {
-                try
+                // Buscar entrada original
+                var originalEntrada = await _context.Entradas.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id);
+                if (originalEntrada == null) return NotFound();
+
+                // Verificar permissão de acesso
+                if (!await CanAccessEntry(originalEntrada))
                 {
-                    // Se for dízimo e tiver membro selecionado, pega o centro de custo do membro
-                    if (entrada.MembroId.HasValue)
-                    {
-                        var membro = await _context.Membros.FindAsync(entrada.MembroId);
-                        if (membro != null)
-                        {
-                            entrada.CentroCustoId = membro.CentroCustoId;
-                        }
-                    }
+                    return Forbid();
+                }
+
+                // Validações de negócio
+                var validationResult = await _businessRules.ValidateEntradaAsync(entrada, id);
+                if (!validationResult.IsValid)
+                {
+                    ModelState.AddModelError(string.Empty, validationResult.ErrorMessage);
+                }
+
+                if (ModelState.IsValid)
+                {
+                    var user = await _userManager.GetUserAsync(User);
+
+                    // Manter dados de criação originais
+                    entrada.DataCriacao = originalEntrada.DataCriacao;
+                    entrada.UsuarioId = originalEntrada.UsuarioId;
 
                     _context.Update(entrada);
                     await _context.SaveChangesAsync();
-                    var user = await _userManager.GetUserAsync(User);
-                    if (user != null)
-                    {
-                        await _auditService.LogAuditAsync(user.Id, "Editar", "Entrada", entrada.Id.ToString(), $"Entrada de {entrada.Valor:C2} atualizada.");
-                    }
-                    TempData["SuccessMessage"] = "Entrada atualizada com sucesso!";
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!EntradaExists(entrada.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
 
-            await PopulateDropdowns(entrada);
-            return View(entrada);
+                    await _auditService.LogUpdateAsync(user.Id, originalEntrada, entrada, entrada.Id.ToString());
+
+                    TempData["Sucesso"] = "Entrada atualizada com sucesso!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                await PrepareViewBags(entrada);
+                return View(entrada);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!EntradaExists(entrada.Id))
+                    return NotFound();
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao atualizar entrada {EntradaId}", id);
+                ModelState.AddModelError(string.Empty, "Erro interno ao atualizar entrada. Tente novamente.");
+                await PrepareViewBags(entrada);
+                return View(entrada);
+            }
         }
 
         // GET: Entradas/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
+            if (id == null) return NotFound();
+
+            try
             {
-                return NotFound();
+                var entrada = await _context.Entradas
+                    .Include(e => e.Membro)
+                    .Include(e => e.PlanoDeContas)
+                    .Include(e => e.CentroCusto)
+                    .Include(e => e.MeioDePagamento)
+                    .FirstOrDefaultAsync(m => m.Id == id);
+
+                if (entrada == null) return NotFound();
+
+                // Verificar permissão de acesso
+                if (!await CanAccessEntry(entrada))
+                {
+                    return Forbid();
+                }
+
+                return View(entrada);
             }
-
-            var entrada = await _context.Entradas
-                .Include(e => e.MeioDePagamento)
-                .Include(e => e.CentroCusto)
-                .Include(e => e.PlanoDeContas)
-                .Include(e => e.Membro)
-                .Include(e => e.Usuario)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
-            if (entrada == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                _logger.LogError(ex, "Erro ao carregar entrada para exclusão {EntradaId}", id);
+                TempData["Erro"] = "Erro ao carregar entrada para exclusão.";
+                return RedirectToAction(nameof(Index));
             }
-
-            return View(entrada);
         }
 
         // POST: Entradas/Delete/5
@@ -267,71 +370,92 @@ namespace SistemaTesourariaEclesiastica.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var entrada = await _context.Entradas.FindAsync(id);
-            if (entrada != null)
+            try
             {
+                var entrada = await _context.Entradas.FindAsync(id);
+                if (entrada == null) return NotFound();
+
+                // Verificar permissão de acesso
+                if (!await CanAccessEntry(entrada))
+                {
+                    return Forbid();
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+
                 _context.Entradas.Remove(entrada);
                 await _context.SaveChangesAsync();
-                var user = await _userManager.GetUserAsync(User);
-                if (user != null)
-                {
-                    await _auditService.LogAuditAsync(user.Id, "Excluir", "Entrada", entrada.Id.ToString(), $"Entrada de {entrada.Valor:C2} excluída.");
-                }
-                TempData["SuccessMessage"] = "Entrada excluída com sucesso!";
+
+                await _auditService.LogDeleteAsync(user.Id, entrada, entrada.Id.ToString());
+
+                TempData["Sucesso"] = "Entrada excluída com sucesso!";
+                return RedirectToAction(nameof(Index));
             }
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        // AJAX: Obter centro de custo do membro
-        [HttpGet]
-        public async Task<IActionResult> ObterCentroCustoMembro(int membroId)
-        {
-            var membro = await _context.Membros
-                .Include(m => m.CentroCusto)
-                .FirstOrDefaultAsync(m => m.Id == membroId);
-
-            if (membro == null)
+            catch (Exception ex)
             {
-                return Json(new { success = false });
+                _logger.LogError(ex, "Erro ao excluir entrada {EntradaId}", id);
+                TempData["Erro"] = "Erro ao excluir entrada. Verifique se não há dependências.";
+                return RedirectToAction(nameof(Index));
             }
-
-            return Json(new 
-            { 
-                success = true, 
-                centroCustoId = membro.CentroCustoId,
-                centroCustoNome = membro.CentroCusto.Nome
-            });
         }
 
-        private async Task PopulateDropdowns(Entrada? entrada = null)
+        #region Métodos Auxiliares
+
+        private async Task PrepareViewBags(Entrada entrada = null)
         {
-            ViewData["MeioDePagamentoId"] = new SelectList(
-                await _context.MeiosDePagamento.Where(m => m.Ativo).OrderBy(m => m.Nome).ToListAsync(), 
-                "Id", "Nome", entrada?.MeioDePagamentoId);
+            var user = await _userManager.GetUserAsync(User);
 
-            ViewData["CentroCustoId"] = new SelectList(
-                await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(), 
-                "Id", "Nome", entrada?.CentroCustoId);
+            // Centros de custo (baseado em permissões)
+            var centrosCustoQuery = _context.CentrosCusto.Where(c => c.Ativo);
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                if (user.CentroCustoId.HasValue)
+                {
+                    centrosCustoQuery = centrosCustoQuery.Where(c => c.Id == user.CentroCustoId.Value);
+                }
+            }
 
-            ViewData["PlanoDeContasId"] = new SelectList(
-                await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Receita && p.Ativo).OrderBy(p => p.Nome).ToListAsync(), 
-                "Id", "Nome", entrada?.PlanoDeContasId);
+            ViewData["CentroCustoId"] = new SelectList(await centrosCustoQuery.ToListAsync(), "Id", "Nome", entrada?.CentroCustoId);
+            ViewData["MembroId"] = new SelectList(await _context.Membros.Where(m => m.Ativo).ToListAsync(), "Id", "NomeCompleto", entrada?.MembroId);
+            ViewData["PlanoDeContasId"] = new SelectList(await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Receita && p.Ativo).ToListAsync(), "Id", "Nome", entrada?.PlanoDeContasId);
+            ViewData["MeioDePagamentoId"] = new SelectList(await _context.MeiosDePagamento.Where(m => m.Ativo).ToListAsync(), "Id", "Nome", entrada?.MeioDePagamentoId);
+        }
 
-            ViewData["MembroId"] = new SelectList(
-                await _context.Membros.Where(m => m.Ativo).OrderBy(m => m.NomeCompleto).ToListAsync(), 
-                "Id", "NomeCompleto", entrada?.MembroId);
+        private async Task<bool> CanAccessEntry(Entrada entrada)
+        {
+            // Administradores e Tesoureiros Gerais podem acessar tudo
+            if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                return true;
 
-            ViewData["ModeloRateioEntradaId"] = new SelectList(
-                await _context.ModelosRateioEntrada.ToListAsync(), 
-                "Id", "Nome", entrada?.ModeloRateioEntradaId);
+            var user = await _userManager.GetUserAsync(User);
+
+            // Outros usuários só podem acessar entradas do seu centro de custo
+            return user.CentroCustoId.HasValue && entrada.CentroCustoId == user.CentroCustoId.Value;
+        }
+
+        private async Task<bool> CanAccessCentroCusto(int centroCustoId)
+        {
+            // Administradores e Tesoureiros Gerais podem acessar qualquer centro de custo
+            if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                return true;
+
+            var user = await _userManager.GetUserAsync(User);
+
+            // Outros usuários só podem acessar seu próprio centro de custo
+            return user.CentroCustoId.HasValue && centroCustoId == user.CentroCustoId.Value;
+        }
+
+        private async Task<int?> GetUserCentroCustoId()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            return user.CentroCustoId;
         }
 
         private bool EntradaExists(int id)
         {
             return _context.Entradas.Any(e => e.Id == id);
         }
+
+        #endregion
     }
 }
-
-

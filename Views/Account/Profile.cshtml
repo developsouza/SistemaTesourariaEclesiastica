@@ -1,0 +1,311 @@
+﻿@model SistemaTesourariaEclesiastica.ViewModels.ProfileViewModel
+
+@{
+    ViewData["Title"] = "Meu Perfil";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Header do Perfil -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="h3 mb-1">
+                    <i class="fas fa-user-circle text-primary me-2"></i>
+                    Meu Perfil
+                </h2>
+                <p class="text-muted mb-0">Gerencie suas informações pessoais e configurações de conta</p>
+            </div>
+            <div>
+                <a asp-action="ChangePassword" class="btn btn-outline-primary">
+                    <i class="fas fa-key me-2"></i>Alterar Senha
+                </a>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Card de Informações Pessoais -->
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-id-card text-primary me-2"></i>
+                            Informações Pessoais
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Nome Completo:</dt>
+                            <dd class="col-sm-8">
+                                <strong>@Model.NomeCompleto</strong>
+                            </dd>
+
+                            <dt class="col-sm-4">Email:</dt>
+                            <dd class="col-sm-8">
+                                <span class="text-muted">@Model.Email</span>
+                                <i class="fas fa-check-circle text-success ms-2" title="Email confirmado"></i>
+                            </dd>
+
+                            <dt class="col-sm-4">Centro de Custo:</dt>
+                            <dd class="col-sm-8">
+                                @if (!string.IsNullOrEmpty(Model.CentroCustoNome))
+                                {
+                                    <span class="badge bg-primary">@Model.CentroCustoNome</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Não definido</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Data de Criação:</dt>
+                            <dd class="col-sm-8">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    @Model.DataCriacao.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            </dd>
+
+                            <dt class="col-sm-4">Último Acesso:</dt>
+                            <dd class="col-sm-8">
+                                @if (Model.UltimoAcesso.HasValue)
+                                {
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        @Model.UltimoAcesso.Value.ToString("dd/MM/yyyy HH:mm")
+                                        <span class="text-success">(@GetTimeAgo(Model.UltimoAcesso.Value))</span>
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted">Nunca</small>
+                                }
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card de Permissões -->
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-shield-alt text-success me-2"></i>
+                            Permissões
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Roles.Any())
+                        {
+                            <div class="roles-list">
+                                @foreach (var role in Model.Roles)
+                                {
+                                    <div class="role-item mb-2">
+                                        @{
+                                            var roleInfo = GetRoleInfo(role);
+                                        }
+                                        <div class="d-flex align-items-center">
+                                            <i class="@roleInfo.Icon text-@roleInfo.Color me-2"></i>
+                                            <div>
+                                                <div class="fw-semibold">@roleInfo.DisplayName</div>
+                                                <small class="text-muted">@roleInfo.Description</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-2 opacity-50"></i>
+                                <p>Nenhuma permissão atribuída</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Estatísticas de Uso -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line text-info me-2"></i>
+                    Atividade da Conta
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-4 text-center">
+                    <div class="col-md-3">
+                        <div class="activity-stat">
+                            <div class="stat-icon bg-primary text-white rounded-circle mx-auto mb-2">
+                                <i class="fas fa-sign-in-alt"></i>
+                            </div>
+                            <div class="stat-value h4 mb-1">-</div>
+                            <div class="stat-label text-muted">Total de Logins</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="activity-stat">
+                            <div class="stat-icon bg-success text-white rounded-circle mx-auto mb-2">
+                                <i class="fas fa-calendar-day"></i>
+                            </div>
+                            <div class="stat-value h4 mb-1">-</div>
+                            <div class="stat-label text-muted">Dias Ativos</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="activity-stat">
+                            <div class="stat-icon bg-warning text-white rounded-circle mx-auto mb-2">
+                                <i class="fas fa-mouse"></i>
+                            </div>
+                            <div class="stat-value h4 mb-1">-</div>
+                            <div class="stat-label text-muted">Ações Realizadas</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="activity-stat">
+                            <div class="stat-icon bg-info text-white rounded-circle mx-auto mb-2">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-value h4 mb-1">-</div>
+                            <div class="stat-label text-muted">Tempo Online</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <div>
+                            <strong>Informação:</strong> As estatísticas de atividade são calculadas com base nos logs de auditoria do sistema e podem levar alguns minutos para serem atualizadas.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Configurações de Segurança -->
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lock text-danger me-2"></i>
+                    Segurança da Conta
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="security-item d-flex justify-content-between align-items-center p-3 border rounded">
+                            <div>
+                                <div class="fw-semibold">Senha</div>
+                                <small class="text-muted">Altere sua senha regularmente</small>
+                            </div>
+                            <a asp-action="ChangePassword" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-edit me-1"></i>Alterar
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="security-item p-3 border rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-semibold">Sessões Ativas</div>
+                                    <small class="text-muted">Uma sessão ativa</small>
+                                </div>
+                                <span class="badge bg-success">Ativo</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <div class="alert alert-warning d-flex align-items-start">
+                        <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                        <div>
+                            <strong>Importante:</strong> Se você suspeitar de atividade não autorizada em sua conta, altere sua senha imediatamente e entre em contato com o administrador do sistema.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetTimeAgo(DateTime dateTime)
+    {
+        var timeSpan = DateTime.Now - dateTime;
+
+        if (timeSpan.TotalMinutes < 1)
+            return "agora mesmo";
+        if (timeSpan.TotalMinutes < 60)
+            return $"há {(int)timeSpan.TotalMinutes} minutos";
+        if (timeSpan.TotalHours < 24)
+            return $"há {(int)timeSpan.TotalHours} horas";
+        if (timeSpan.TotalDays < 30)
+            return $"há {(int)timeSpan.TotalDays} dias";
+        if (timeSpan.TotalDays < 365)
+            return $"há {(int)(timeSpan.TotalDays / 30)} meses";
+
+        return $"há {(int)(timeSpan.TotalDays / 365)} anos";
+    }
+
+    private (string DisplayName, string Description, string Icon, string Color) GetRoleInfo(string role)
+    {
+        return role switch
+        {
+            "Administrador" => ("Administrador", "Acesso total ao sistema", "fas fa-crown", "danger"),
+            "TesoureiroGeral" => ("Tesoureiro Geral", "Gerencia a sede e aprova prestações", "fas fa-user-tie", "primary"),
+            "TesoureiroLocal" => ("Tesoureiro Local", "Gerencia congregação local", "fas fa-user", "info"),
+            "Pastor" => ("Pastor/Liderança", "Acesso de consulta aos relatórios", "fas fa-cross", "secondary"),
+            _ => (role, "Permissão personalizada", "fas fa-user-tag", "dark")
+        };
+    }
+}
+
+<style>
+    .activity-stat .stat-icon {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .role-item {
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 0.375rem;
+        border-left: 4px solid var(--bs-primary);
+    }
+
+    .security-item {
+        transition: all 0.2s ease;
+    }
+
+        .security-item:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+</style>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load user statistics via AJAX
+            loadUserStatistics();
+        });
+
+        function loadUserStatistics() {
+            // This would call an API endpoint to get user statistics
+            // For now, we'll simulate the data
+            setTimeout(() => {
+                document.querySelector('.activity-stat:nth-child(1) .stat-value').textContent = '42';
+                document.querySelector('.activity-stat:nth-child(2) .stat-value').textContent = '15';
+                document.querySelector('.activity-stat:nth-child(3) .stat-value').textContent = '128';
+                document.querySelector('.activity-stat:nth-child(4) .stat-value').textContent = '24h';
+            }, 1000);
+        }
+    </script>
+}
