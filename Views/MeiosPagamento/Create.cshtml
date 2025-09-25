@@ -1,0 +1,236 @@
+@model SistemaTesourariaEclesiastica.Models.MeioDePagamento
+
+@{
+    ViewData["Title"] = "Novo Meio de Pagamento";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-credit-card-2-front me-2"></i>
+            Novo Meio de Pagamento
+        </h1>
+        <p class="text-muted mb-0">Cadastrar nova forma de recebimento ou pagamento</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informações do Meio de Pagamento
+                </h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post" id="meioPagamentoForm">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <!-- Nome -->
+                    <div class="mb-3">
+                        <label asp-for="Nome" class="form-label required"></label>
+                        <input asp-for="Nome" class="form-control" placeholder="Ex: Dinheiro, PIX, Cartão de Débito...">
+                        <span asp-validation-for="Nome" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Nome que identificará este meio de pagamento no sistema
+                        </div>
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="mb-3">
+                        <label asp-for="Descricao" class="form-label"></label>
+                        <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Descrição detalhada sobre este meio de pagamento..."></textarea>
+                        <span asp-validation-for="Descricao" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Informações adicionais que ajudem a identificar ou usar este meio de pagamento
+                        </div>
+                    </div>
+
+                    <!-- Status Ativo -->
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input asp-for="Ativo" class="form-check-input" type="checkbox" checked>
+                            <label asp-for="Ativo" class="form-check-label">
+                                Meio de pagamento ativo
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Apenas meios de pagamento ativos aparecerão nas opções de entrada e saída
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Salvar Meio de Pagamento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar de Ajuda -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>
+                    Exemplos de Meios de Pagamento
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-cash-coin me-1"></i>
+                        Dinheiro em Espécie
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Para recebimentos e pagamentos em dinheiro físico.
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-qr-code me-1"></i>
+                        PIX
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Transferências instantâneas via PIX.
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-credit-card me-1"></i>
+                        Cartão de Débito/Crédito
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Pagamentos com cartão através de maquininha.
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-bank me-1"></i>
+                        Transferência Bancária
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        TED, DOC ou transferências entre bancos.
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-receipt me-1"></i>
+                        Cheque
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Pagamentos através de cheques.
+                    </p>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Dica:</strong> Você pode desativar temporariamente um meio de pagamento sem excluí-lo do sistema.
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Estatísticas -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    Estatísticas Atuais
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border rounded p-2">
+                            <i class="bi bi-credit-card text-primary"></i>
+                            <div class="fw-bold small">@ViewBag.TotalMeios</div>
+                            <small class="text-muted">Total</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            <div class="fw-bold small">@ViewBag.MeiosAtivos</div>
+                            <small class="text-muted">Ativos</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Validação do nome único
+            $('#Nome').blur(function() {
+                var nome = $(this).val();
+                if (nome) {
+                    $.post('@Url.Action("ValidarNomeUnico", "MeiosPagamento")', { nome: nome }, function(data) {
+                        if (!data.valido) {
+                            $('#Nome').addClass('is-invalid');
+                            $('#Nome').next('.text-danger').text('Já existe um meio de pagamento com este nome');
+                        } else {
+                            $('#Nome').removeClass('is-invalid');
+                            $('#Nome').next('.text-danger').text('');
+                        }
+                    });
+                }
+            });
+
+            // Preview do status
+            $('#Ativo').change(function() {
+                var label = $(this).next('label');
+                if ($(this).is(':checked')) {
+                    label.removeClass('text-muted').addClass('text-success');
+                    label.html('<i class="bi bi-check-circle me-1"></i>Meio de pagamento ativo');
+                } else {
+                    label.removeClass('text-success').addClass('text-muted');
+                    label.html('<i class="bi bi-pause-circle me-1"></i>Meio de pagamento inativo');
+                }
+            });
+
+            // Sugestões de nomes baseadas no que foi digitado
+            $('#Nome').on('input', function() {
+                var valor = $(this).val().toLowerCase();
+                var sugestoes = [];
+                
+                if (valor.includes('dinheiro') || valor.includes('especie')) {
+                    $(this).prev('label').html('<i class="bi bi-cash-coin me-1"></i>Nome');
+                } else if (valor.includes('pix')) {
+                    $(this).prev('label').html('<i class="bi bi-qr-code me-1"></i>Nome');
+                } else if (valor.includes('cartao') || valor.includes('card')) {
+                    $(this).prev('label').html('<i class="bi bi-credit-card me-1"></i>Nome');
+                } else if (valor.includes('transferencia') || valor.includes('ted') || valor.includes('doc')) {
+                    $(this).prev('label').html('<i class="bi bi-arrow-left-right me-1"></i>Nome');
+                } else if (valor.includes('cheque')) {
+                    $(this).prev('label').html('<i class="bi bi-receipt me-1"></i>Nome');
+                } else {
+                    $(this).prev('label').html('<i class="bi bi-wallet2 me-1"></i>Nome');
+                }
+            });
+        });
+    </script>
+}
+

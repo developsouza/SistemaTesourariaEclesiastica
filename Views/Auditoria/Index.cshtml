@@ -1,0 +1,158 @@
+@model IEnumerable<SistemaTesourariaEclesiastica.Models.LogAuditoria>
+
+@{
+    ViewData["Title"] = "Logs de Auditoria";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-shield-alt me-2"></i>Logs de Auditoria</h2>
+    <div>
+        <a asp-action="Estatisticas" class="btn btn-info me-2">
+            <i class="fas fa-chart-bar me-2"></i>Estatísticas
+        </a>
+        <a asp-action="ExportarExcel" asp-route-dataInicio="@ViewBag.DataInicio" asp-route-dataFim="@ViewBag.DataFim" class="btn btn-success">
+            <i class="fas fa-file-excel me-2"></i>Excel
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="dataInicio" class="form-label">Data Início</label>
+                <input type="date" class="form-control" id="dataInicio" name="dataInicio" value="@ViewBag.DataInicio" />
+            </div>
+            <div class="col-md-3">
+                <label for="dataFim" class="form-label">Data Fim</label>
+                <input type="date" class="form-control" id="dataFim" name="dataFim" value="@ViewBag.DataFim" />
+            </div>
+            <div class="col-md-3">
+                <label for="usuarioId" class="form-label">Usuário</label>
+                <select class="form-select" id="usuarioId" name="usuarioId" asp-items="ViewBag.Usuarios">
+                    <option value="">Todos os usuários</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="entidade" class="form-label">Entidade</label>
+                <select class="form-select" id="entidade" name="entidade" asp-items="ViewBag.Entidades">
+                    <option value="">Todas as entidades</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            Registros encontrados: @ViewBag.TotalLogs
+        </h5>
+        <small class="text-muted">
+            Página @ViewBag.CurrentPage de @ViewBag.TotalPages
+        </small>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Ação</th>
+                        <th>Entidade</th>
+                        <th>ID</th>
+                        <th>IP</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (dynamic item in ViewBag.LogsWithUsers)
+                    {
+                        var log = item.Log;
+                        var usuario = item.Usuario;
+                        
+                        <tr>
+                            <td>@log.DataHora.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            <td>
+                                @if (usuario != null)
+                                {
+                                    <span class="badge bg-primary">@usuario.Email</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Usuário não encontrado</span>
+                                }
+                            </td>
+                            <td>
+                                @{
+                                    string badgeClass = log.Acao switch
+                                    {
+                                        "CREATE" => "bg-success",
+                                        "UPDATE" => "bg-warning",
+                                        "DELETE" => "bg-danger",
+                                        "LOGIN_SUCCESS" => "bg-info",
+                                        "LOGIN_FAILED" => "bg-danger",
+                                        "LOGOUT" => "bg-secondary",
+                                        _ => "bg-primary"
+                                    };
+                                }
+                                <span class="badge @badgeClass">@log.Acao</span>
+                            </td>
+                            <td>@log.Entidade</td>
+                            <td>@log.EntidadeId</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(log.EnderecoIP))
+                                {
+                                    <small class="text-muted">@log.EnderecoIP</small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted">-</small>
+                                }
+                            </td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@log.Id" class="btn btn-sm btn-outline-info" title="Detalhes">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (ViewBag.TotalPages > 1)
+{
+    <nav aria-label="Navegação de páginas" class="mt-4">
+        <ul class="pagination justify-content-center">
+            @if (ViewBag.CurrentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" asp-route-page="@(ViewBag.CurrentPage - 1)" asp-route-dataInicio="@ViewBag.DataInicio" asp-route-dataFim="@ViewBag.DataFim">Anterior</a>
+                </li>
+            }
+
+            @for (int i = Math.Max(1, ViewBag.CurrentPage - 2); i <= Math.Min(ViewBag.TotalPages, ViewBag.CurrentPage + 2); i++)
+            {
+                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                    <a class="page-link" asp-route-page="@i" asp-route-dataInicio="@ViewBag.DataInicio" asp-route-dataFim="@ViewBag.DataFim">@i</a>
+                </li>
+            }
+
+            @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link" asp-route-page="@(ViewBag.CurrentPage + 1)" asp-route-dataInicio="@ViewBag.DataInicio" asp-route-dataFim="@ViewBag.DataFim">Próxima</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

@@ -1,0 +1,148 @@
+@model SistemaTesourariaEclesiastica.Models.Saida
+@using SistemaTesourariaEclesiastica.Extensions
+
+@{
+    ViewData["Title"] = "Detalhes da Saída";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-arrow-up-circle-fill me-2"></i>
+            Detalhes da Saída
+        </h1>
+        <p class="text-muted mb-0">Informações detalhadas sobre a despesa ou pagamento</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Dados da Saída
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Data)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Data)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Valor)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Valor)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.MeioDePagamento)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.MeioDePagamento.Nome)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.CentroCusto)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.CentroCusto.Nome)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.PlanoDeContas)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.PlanoDeContas.Descricao)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Fornecedor)</dt>
+                    <dd class="col-sm-9">@(Model.Fornecedor?.Nome ?? "N/A")</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.TipoDespesa)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.TipoDespesa)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.NumeroDocumento)</dt>
+                    <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.NumeroDocumento) ? "N/A" : Html.DisplayFor(model => model.NumeroDocumento))</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataVencimento)</dt>
+                    <dd class="col-sm-9">@(Model.DataVencimento.HasValue ? Html.DisplayFor(model => model.DataVencimento) : (object)"N/A")</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.ComprovanteUrl)</dt>
+                    <dd class="col-sm-9">
+                        @if (!string.IsNullOrEmpty(Model.ComprovanteUrl))
+                        {
+                            <a href="@Model.ComprovanteUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-file-earmark-text me-1"></i>
+                                Ver Comprovante
+                            </a>
+                        }
+                        else
+                        {
+                            <span>N/A</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Usuario)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Usuario.UserName)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataCriacao)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.DataCriacao)</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                <i class="bi bi-pencil me-2"></i>
+                Editar
+            </a>
+            <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
+                <i class="bi bi-trash me-2"></i>
+                Excluir
+            </a>
+        </div>
+    </div>
+
+    <!-- Sidebar de Estatísticas -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    Resumo da Saída
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-cash-coin me-1"></i>
+                        Valor Total
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        R$ @(Model.Valor.ToString("N2"))
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-calendar-event me-1"></i>
+                        Data da Saída
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        @Model.Data.ToString("dd/MM/yyyy")
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-tags me-1"></i>
+                        Tipo de Despesa
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        @Model.TipoDespesa.GetDisplayName()
+                    </p>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Dica:</strong> Revise os detalhes cuidadosamente antes de qualquer alteração.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+

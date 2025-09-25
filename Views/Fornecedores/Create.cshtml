@@ -1,0 +1,335 @@
+@model SistemaTesourariaEclesiastica.Models.Fornecedor
+
+@{
+    ViewData["Title"] = "Novo Fornecedor";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-building-add me-2"></i>
+            Novo Fornecedor
+        </h1>
+        <p class="text-muted mb-0">Cadastrar novo fornecedor ou prestador de serviços</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informações do Fornecedor
+                </h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post" id="fornecedorForm">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <!-- Nome -->
+                    <div class="mb-3">
+                        <label asp-for="Nome" class="form-label required"></label>
+                        <input asp-for="Nome" class="form-control" placeholder="Nome completo do fornecedor">
+                        <span asp-validation-for="Nome" class="text-danger"></span>
+                    </div>
+
+                    <!-- Tipo de Documento -->
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Documento</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="tipoDocumento" id="tipoCPF" value="CPF" checked>
+                            <label class="btn btn-outline-primary" for="tipoCPF">
+                                <i class="bi bi-person me-1"></i>
+                                CPF (Pessoa Física)
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="tipoDocumento" id="tipoCNPJ" value="CNPJ">
+                            <label class="btn btn-outline-primary" for="tipoCNPJ">
+                                <i class="bi bi-building me-1"></i>
+                                CNPJ (Pessoa Jurídica)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- CPF -->
+                    <div class="mb-3" id="cpfGroup">
+                        <label asp-for="CPF" class="form-label"></label>
+                        <input asp-for="CPF" class="form-control" placeholder="000.000.000-00" data-mask="000.000.000-00">
+                        <span asp-validation-for="CPF" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Apenas números, a formatação será aplicada automaticamente
+                        </div>
+                    </div>
+
+                    <!-- CNPJ -->
+                    <div class="mb-3 d-none" id="cnpjGroup">
+                        <label asp-for="CNPJ" class="form-label"></label>
+                        <input asp-for="CNPJ" class="form-control" placeholder="00.000.000/0000-00" data-mask="00.000.000/0000-00">
+                        <span asp-validation-for="CNPJ" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Apenas números, a formatação será aplicada automaticamente
+                        </div>
+                    </div>
+
+                    <!-- Contato -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Telefone" class="form-label"></label>
+                                <input asp-for="Telefone" class="form-control" placeholder="(00) 00000-0000" data-mask="(00) 00000-0000">
+                                <span asp-validation-for="Telefone" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Email" class="form-label"></label>
+                                <input asp-for="Email" class="form-control" type="email" placeholder="email@exemplo.com">
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Endereço -->
+                    <h6 class="mt-4 mb-3">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        Endereço
+                    </h6>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="CEP" class="form-label"></label>
+                                <div class="input-group">
+                                    <input asp-for="CEP" class="form-control" placeholder="00000-000" data-mask="00000-000" id="cep">
+                                    <button type="button" class="btn btn-outline-secondary" id="buscarCep">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
+                                <span asp-validation-for="CEP" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label asp-for="Endereco" class="form-label"></label>
+                                <input asp-for="Endereco" class="form-control" placeholder="Rua, número, complemento" id="endereco">
+                                <span asp-validation-for="Endereco" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label asp-for="Cidade" class="form-label"></label>
+                                <input asp-for="Cidade" class="form-control" placeholder="Nome da cidade" id="cidade">
+                                <span asp-validation-for="Cidade" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="Estado" class="form-label"></label>
+                                <input asp-for="Estado" class="form-control" placeholder="UF" maxlength="2" id="estado">
+                                <span asp-validation-for="Estado" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observações -->
+                    <div class="mb-3">
+                        <label asp-for="Observacoes" class="form-label"></label>
+                        <textarea asp-for="Observacoes" class="form-control" rows="3" placeholder="Informações adicionais sobre o fornecedor..."></textarea>
+                        <span asp-validation-for="Observacoes" class="text-danger"></span>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Salvar Fornecedor
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar de Ajuda -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>
+                    Dicas de Preenchimento
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-person-check me-1"></i>
+                        Pessoa Física vs Jurídica
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Escolha CPF para pessoas físicas (prestadores individuais) ou CNPJ para empresas.
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-geo-alt me-1"></i>
+                        Busca de CEP
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Digite o CEP e clique no botão de busca para preencher automaticamente o endereço.
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-telephone me-1"></i>
+                        Contato
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Telefone e email são opcionais, mas recomendados para facilitar o contato.
+                    </p>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Importante:</strong> Apenas o nome é obrigatório. Os demais campos são opcionais.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Alternar entre CPF e CNPJ
+            $('input[name="tipoDocumento"]').change(function() {
+                if ($(this).val() === 'CPF') {
+                    $('#cpfGroup').removeClass('d-none');
+                    $('#cnpjGroup').addClass('d-none');
+                    $('#CNPJ').val('');
+                } else {
+                    $('#cnpjGroup').removeClass('d-none');
+                    $('#cpfGroup').addClass('d-none');
+                    $('#CPF').val('');
+                }
+            });
+
+            // Buscar CEP
+            $('#buscarCep').click(function() {
+                var cep = $('#cep').val().replace(/\D/g, '');
+                if (cep.length === 8) {
+                    $.get('https://viacep.com.br/ws/' + cep + '/json/', function(data) {
+                        if (!data.erro) {
+                            $('#endereco').val(data.logradouro);
+                            $('#cidade').val(data.localidade);
+                            $('#estado').val(data.uf);
+                        } else {
+                            toastr.error('CEP não encontrado');
+                        }
+                    }).fail(function() {
+                        toastr.error('Erro ao buscar CEP');
+                    });
+                } else {
+                    toastr.warning('Digite um CEP válido');
+                }
+            });
+
+            // Validação de CPF
+            $('#CPF').blur(function() {
+                var cpf = $(this).val();
+                if (cpf && !validarCPF(cpf)) {
+                    $(this).addClass('is-invalid');
+                    $(this).next('.text-danger').text('CPF inválido');
+                } else {
+                    $(this).removeClass('is-invalid');
+                    $(this).next('.text-danger').text('');
+                }
+            });
+
+            // Validação de CNPJ
+            $('#CNPJ').blur(function() {
+                var cnpj = $(this).val();
+                if (cnpj && !validarCNPJ(cnpj)) {
+                    $(this).addClass('is-invalid');
+                    $(this).next('.text-danger').text('CNPJ inválido');
+                } else {
+                    $(this).removeClass('is-invalid');
+                    $(this).next('.text-danger').text('');
+                }
+            });
+        });
+
+        function validarCPF(cpf) {
+            cpf = cpf.replace(/\D/g, '');
+            if (cpf.length !== 11) return false;
+            
+            var soma = 0;
+            for (var i = 0; i < 9; i++) {
+                soma += parseInt(cpf.charAt(i)) * (10 - i);
+            }
+            var resto = 11 - (soma % 11);
+            if (resto === 10 || resto === 11) resto = 0;
+            if (resto !== parseInt(cpf.charAt(9))) return false;
+            
+            soma = 0;
+            for (var i = 0; i < 10; i++) {
+                soma += parseInt(cpf.charAt(i)) * (11 - i);
+            }
+            resto = 11 - (soma % 11);
+            if (resto === 10 || resto === 11) resto = 0;
+            if (resto !== parseInt(cpf.charAt(10))) return false;
+            
+            return true;
+        }
+
+        function validarCNPJ(cnpj) {
+            cnpj = cnpj.replace(/\D/g, '');
+            if (cnpj.length !== 14) return false;
+            
+            var tamanho = cnpj.length - 2;
+            var numeros = cnpj.substring(0, tamanho);
+            var digitos = cnpj.substring(tamanho);
+            var soma = 0;
+            var pos = tamanho - 7;
+            
+            for (var i = tamanho; i >= 1; i--) {
+                soma += numeros.charAt(tamanho - i) * pos--;
+                if (pos < 2) pos = 9;
+            }
+            
+            var resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+            if (resultado !== parseInt(digitos.charAt(0))) return false;
+            
+            tamanho = tamanho + 1;
+            numeros = cnpj.substring(0, tamanho);
+            soma = 0;
+            pos = tamanho - 7;
+            
+            for (var i = tamanho; i >= 1; i--) {
+                soma += numeros.charAt(tamanho - i) * pos--;
+                if (pos < 2) pos = 9;
+            }
+            
+            resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+            if (resultado !== parseInt(digitos.charAt(1))) return false;
+            
+            return true;
+        }
+    </script>
+}
+

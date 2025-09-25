@@ -1,0 +1,142 @@
+@model IEnumerable<SistemaTesourariaEclesiastica.Models.Entrada>
+
+@{
+    ViewData["Title"] = "Relatório de Entradas por Período";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-arrow-down-left me-2"></i>
+            Relatório de Entradas por Período
+        </h1>
+        <p class="text-muted mb-0">Visualize as entradas detalhadas por período</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar para Relatórios
+    </a>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="bi bi-funnel me-2"></i>Filtros</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="EntradasPorPeriodo" method="get">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="dataInicio" class="form-label">Data Início</label>
+                    <input type="date" class="form-control" id="dataInicio" name="dataInicio" value="@ViewBag.DataInicio">
+                </div>
+                <div class="col-md-4">
+                    <label for="dataFim" class="form-label">Data Fim</label>
+                    <input type="date" class="form-control" id="dataFim" name="dataFim" value="@ViewBag.DataFim">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-filter me-2"></i>
+                        Aplicar Filtros
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info text-center" role="alert">
+        <h4 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Nenhuma Entrada Encontrada</h4>
+        <p>Não há registros de entradas para o período selecionado.</p>
+    </div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0"><i class="bi bi-table me-2"></i>Detalhes das Entradas</h5>
+            <div>
+                <button class="btn btn-outline-success btn-sm me-2" onclick="exportToExcel()">
+                    <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="exportToPdf()">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>Exportar PDF
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0" id="entradasTable">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Valor</th>
+                            <th>Descrição</th>
+                            <th>Membro</th>
+                            <th>Centro de Custo</th>
+                            <th>Meio de Pagamento</th>
+                            <th>Plano de Contas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.Data.ToString("dd/MM/yyyy")</td>
+                                <td class="text-success">@item.Valor.ToString("C2")</td>
+                                <td>@item.Descricao</td>
+                                <td>@item.Membro?.NomeCompleto</td>
+                                <td>@item.CentroCusto?.Nome</td>
+                                <td>@item.MeioDePagamento?.Nome</td>
+                                <td>@item.PlanoDeContas?.Descricao</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="1">Total</th>
+                            <th class="text-success">@Model.Sum(x => x.Valor).ToString("C2")</th>
+                            <th colspan="5"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.autotable.min.js"></script>
+    <script>
+        function exportToExcel() {
+            const table = document.getElementById("entradasTable");
+            const ws = XLSX.utils.table_to_sheet(table);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Entradas por Período");
+            XLSX.writeFile(wb, "EntradasPorPeriodo.xlsx");
+        }
+
+        function exportToPdf() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.autoTable({
+                html: '#entradasTable',
+                startY: 20,
+                headStyles: { fillColor: [40, 167, 69] }, // Bootstrap success color
+                styles: { fontSize: 8, cellPadding: 2 },
+                columnStyles: {
+                    1: { halign: 'right' }
+                },
+                didDrawPage: function (data) {
+                    doc.text("Relatório de Entradas por Período", data.settings.margin.left, 10);
+                }
+            });
+            doc.save("EntradasPorPeriodo.pdf");
+        }
+    </script>
+}
+
+

@@ -1,0 +1,282 @@
+@{
+    ViewData["Title"] = "Estatísticas de Auditoria";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-chart-bar me-2"></i>Estatísticas de Auditoria</h2>
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="dataInicio" class="form-label">Data Início</label>
+                <input type="date" class="form-control" id="dataInicio" name="dataInicio" value="@ViewBag.DataInicio" />
+            </div>
+            <div class="col-md-4">
+                <label for="dataFim" class="form-label">Data Fim</label>
+                <input type="date" class="form-control" id="dataFim" name="dataFim" value="@ViewBag.DataFim" />
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cards de Estatísticas Gerais -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">Total de Logs</h5>
+                <h2 class="text-primary">@ViewBag.TotalLogs</h2>
+                <small class="text-muted">Registros no período</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">Usuários Ativos</h5>
+                <h2 class="text-info">@ViewBag.TotalUsuarios</h2>
+                <small class="text-muted">Usuários únicos</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Ações Mais Comuns</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="acoesChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Entidades Mais Acessadas</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="entidadesChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Atividade por Hora do Dia</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="atividadeHoraChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Atividade por Dia da Semana</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="atividadeDiaChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabelas de Top 10 -->
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Top 10 - Usuários Mais Ativos</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var usuario in ViewBag.UsuariosMaisAtivos)
+                            {
+                                <tr>
+                                    <td>@usuario.Usuario</td>
+                                    <td class="text-end">@usuario.Quantidade</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Top 10 - Ações Mais Realizadas</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Ação</th>
+                                <th class="text-end">Quantidade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var acao in ViewBag.AcoesMaisComuns)
+                            {
+                                <tr>
+                                    <td>
+                                        @{
+                                            string badgeClass = acao.Acao switch
+                                            {
+                                                "CREATE" => "bg-success",
+                                                "UPDATE" => "bg-warning",
+                                                "DELETE" => "bg-danger",
+                                                "LOGIN_SUCCESS" => "bg-info",
+                                                "LOGIN_FAILED" => "bg-danger",
+                                                "LOGOUT" => "bg-secondary",
+                                                _ => "bg-primary"
+                                            };
+                                        }
+                                        <span class="badge @badgeClass">@acao.Acao</span>
+                                    </td>
+                                    <td class="text-end">@acao.Quantidade</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Dados vindos do controller
+            const acoesMaisComuns = @Html.Raw(Json.Serialize(ViewBag.AcoesMaisComuns ?? new List<object>()));
+            const entidadesMaisAcessadas = @Html.Raw(Json.Serialize(ViewBag.EntidadesMaisAcessadas ?? new List<object>()));
+            const atividadePorHora = @Html.Raw(Json.Serialize(ViewBag.AtividadePorHora ?? new List<object>()));
+            const atividadePorDiaSemana = @Html.Raw(Json.Serialize(ViewBag.AtividadePorDiaSemana ?? new List<object>()));
+
+            // Gráfico de Ações Mais Comuns
+            const acoesCtx = document.getElementById('acoesChart').getContext('2d');
+            new Chart(acoesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: acoesMaisComuns.map(item => item.acao),
+                    datasets: [{
+                        data: acoesMaisComuns.map(item => item.quantidade),
+                        backgroundColor: [
+                            '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6c757d', '#007bff'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Entidades Mais Acessadas
+            const entidadesCtx = document.getElementById('entidadesChart').getContext('2d');
+            new Chart(entidadesCtx, {
+                type: 'bar',
+                data: {
+                    labels: entidadesMaisAcessadas.map(item => item.entidade),
+                    datasets: [{
+                        label: 'Acessos',
+                        data: entidadesMaisAcessadas.map(item => item.quantidade),
+                        backgroundColor: '#007bff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Atividade por Hora
+            const atividadeHoraCtx = document.getElementById('atividadeHoraChart').getContext('2d');
+            new Chart(atividadeHoraCtx, {
+                type: 'line',
+                data: {
+                    labels: atividadePorHora.map(item => item.hora + 'h'),
+                    datasets: [{
+                        label: 'Atividades',
+                        data: atividadePorHora.map(item => item.quantidade),
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Atividade por Dia da Semana
+            const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+            const atividadeDiaCtx = document.getElementById('atividadeDiaChart').getContext('2d');
+            new Chart(atividadeDiaCtx, {
+                type: 'bar',
+                data: {
+                    labels: atividadePorDiaSemana.map(item => diasSemana[item.diaSemana]),
+                    datasets: [{
+                        label: 'Atividades',
+                        data: atividadePorDiaSemana.map(item => item.quantidade),
+                        backgroundColor: '#17a2b8'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+}

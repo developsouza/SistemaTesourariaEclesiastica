@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Sistema de Tesouraria Eclesiástica</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/SistemaTesourariaEclesiastica.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <i class="bi bi-church"></i>
+                    <span class="brand-text">Tesouraria</span>
+                </div>
+                <button type="button" id="sidebarCollapse" class="btn btn-link sidebar-toggle">
+                    <i class="bi bi-list"></i>
+                </button>
+            </div>
+
+            <div class="sidebar-content">
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Home" asp-action="Index">
+                            <i class="bi bi-speedometer2"></i>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </li>
+                    
+                    <!-- Cadastros -->
+                    <li class="nav-item">
+                        <a class="nav-link dropdown-toggle" data-bs-toggle="collapse" href="#cadastrosMenu" role="button" aria-expanded="false">
+                            <i class="bi bi-person-plus"></i>
+                            <span class="nav-text">Cadastros</span>
+                        </a>
+                        <div class="collapse" id="cadastrosMenu">
+                            <ul class="nav nav-pills flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Membros" asp-action="Index">
+                                        <i class="bi bi-people"></i>
+                                        <span class="nav-text">Membros</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="CentrosCusto" asp-action="Index">
+                                        <i class="bi bi-building"></i>
+                                        <span class="nav-text">Centros de Custo</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="PlanoDeContas" asp-action="Index">
+                                        <i class="bi bi-list-ul"></i>
+                                        <span class="nav-text">Plano de Contas</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="MeiosPagamento" asp-action="Index">
+                                        <i class="bi bi-credit-card"></i>
+                                        <span class="nav-text">Meios de Pagamento</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Fornecedores" asp-action="Index">
+                                        <i class="bi bi-truck"></i>
+                                        <span class="nav-text">Fornecedores</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+
+                    <!-- Operações -->
+                    <li class="nav-item">
+                        <a class="nav-link dropdown-toggle" data-bs-toggle="collapse" href="#operacoesMenu" role="button" aria-expanded="false">
+                            <i class="bi bi-arrow-left-right"></i>
+                            <span class="nav-text">Operações</span>
+                        </a>
+                        <div class="collapse" id="operacoesMenu">
+                            <ul class="nav nav-pills flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Entradas" asp-action="Index">
+                                        <i class="bi bi-arrow-down-circle text-success"></i>
+                                        <span class="nav-text">Entradas</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Saidas" asp-action="Index">
+                                        <i class="bi bi-arrow-up-circle text-danger"></i>
+                                        <span class="nav-text">Saídas</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="TransferenciasInternas" asp-action="Index">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                        <span class="nav-text">Transferências</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+
+                    <!-- Prestação de Contas -->
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="FechamentoPeriodo" asp-action="Index">
+                            <i class="bi bi-calendar-check"></i>
+                            <span class="nav-text">Prestação de Contas</span>
+                        </a>
+                    </li>
+
+                    <!-- Relatórios -->
+                    <li class="nav-item">
+                        <a class="nav-link dropdown-toggle" data-bs-toggle="collapse" href="#relatoriosMenu" role="button" aria-expanded="false">
+                            <i class="bi bi-graph-up"></i>
+                            <span class="nav-text">Relatórios</span>
+                        </a>
+                        <div class="collapse" id="relatoriosMenu">
+                            <ul class="nav nav-pills flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Relatorios" asp-action="FluxoDeCaixa">
+                                        <i class="bi bi-cash-stack"></i>
+                                        <span class="nav-text">Fluxo de Caixa</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Relatorios" asp-action="ContribuicoesPorMembro">
+                                        <i class="bi bi-heart"></i>
+                                        <span class="nav-text">Dízimos</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Relatorios" asp-action="DespesasPorCentroCusto">
+                                        <i class="bi bi-receipt"></i>
+                                        <span class="nav-text">Despesas</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+
+                    <!-- Administração -->
+                    <li class="nav-item">
+                        <a class="nav-link dropdown-toggle" data-bs-toggle="collapse" href="#adminMenu" role="button" aria-expanded="false">
+                            <i class="bi bi-gear"></i>
+                            <span class="nav-text">Administração</span>
+                        </a>
+                        <div class="collapse" id="adminMenu">
+                            <ul class="nav nav-pills flex-column ms-3">
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Usuarios" asp-action="Index">
+                                        <i class="bi bi-people"></i>
+                                        <span class="nav-text">Usuários</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="RegrasRateio" asp-action="Index">
+                                        <i class="bi bi-share"></i>
+                                        <span class="nav-text">Regras de Rateio</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Auditoria" asp-action="Index">
+                                        <i class="bi bi-shield-check"></i>
+                                        <span class="nav-text">Logs de Auditoria</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- User Menu -->
+            <div class="navbar-nav ms-auto">
+                <partial name="_LoginPartial" />
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div id="content" class="content">
+            <!-- Top Navigation Bar -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapseTop" class="btn btn-outline-secondary d-lg-none">
+                        <i class="bi bi-list"></i>
+                    </button>
+
+                    <div class="navbar-nav ms-auto">
+                        <!-- Theme Toggle -->
+                        <div class="nav-item dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-sun-fill" id="themeIcon"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="themeDropdown">
+                                <li><button class="dropdown-item" type="button" data-theme="light"><i class="bi bi-sun-fill"></i> Claro</button></li>
+                                <li><button class="dropdown-item" type="button" data-theme="dark"><i class="bi bi-moon-stars-fill"></i> Escuro</button></li>
+                                <li><button class="dropdown-item" type="button" data-theme="auto"><i class="bi bi-circle-half"></i> Automático</button></li>
+                            </ul>
+                        </div>
+
+                        <!-- User Menu -->
+                        <div class="nav-item dropdown ms-2">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle"></i>
+                                <span class="d-none d-md-inline">Usuário</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> Perfil</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Configurações</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Page Content -->
+            <main class="main-content">
+                <div class="container-fluid">
+                    @RenderBody()
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/validations.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+

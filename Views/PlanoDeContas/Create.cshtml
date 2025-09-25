@@ -1,0 +1,247 @@
+@model SistemaTesourariaEclesiastica.Models.PlanoDeContas
+
+@{
+    ViewData["Title"] = "Nova Conta";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-list-ul me-2"></i>
+            Nova Conta
+        </h1>
+        <p class="text-muted mb-0">Adicionar nova conta ao plano de contas</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Dados da Conta</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label asp-for="Codigo" class="form-label"></label>
+                            <input asp-for="Codigo" class="form-control font-monospace" placeholder="Ex: 1.01.001">
+                            <span asp-validation-for="Codigo" class="text-danger"></span>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Código único da conta contábil
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-8">
+                            <label asp-for="Nome" class="form-label"></label>
+                            <input asp-for="Nome" class="form-control" placeholder="Ex: Dízimos e Ofertas">
+                            <span asp-validation-for="Nome" class="text-danger"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label asp-for="Descricao" class="form-label"></label>
+                            <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Descrição detalhada da conta (opcional)"></textarea>
+                            <span asp-validation-for="Descricao" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label asp-for="Tipo" class="form-label"></label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check form-check-card">
+                                        <input class="form-check-input" type="radio" asp-for="Tipo" value="Receita" id="tipoReceita">
+                                        <label class="form-check-label card h-100" for="tipoReceita">
+                                            <div class="card-body text-center">
+                                                <i class="bi bi-arrow-down-circle text-success display-6"></i>
+                                                <h6 class="card-title mt-2 mb-1">Receita</h6>
+                                                <p class="card-text small text-muted">
+                                                    Entradas de recursos financeiros (dízimos, ofertas, doações)
+                                                </p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check form-check-card">
+                                        <input class="form-check-input" type="radio" asp-for="Tipo" value="Despesa" id="tipoDespesa">
+                                        <label class="form-check-label card h-100" for="tipoDespesa">
+                                            <div class="card-body text-center">
+                                                <i class="bi bi-arrow-up-circle text-danger display-6"></i>
+                                                <h6 class="card-title mt-2 mb-1">Despesa</h6>
+                                                <p class="card-text small text-muted">
+                                                    Saídas de recursos financeiros (gastos, pagamentos, custos)
+                                                </p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <span asp-validation-for="Tipo" class="text-danger"></span>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Criar Conta
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Estrutura do Plano
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        Sugestão de Códigos
+                    </h6>
+                    <div class="small">
+                        <p class="mb-2"><strong>Receitas (1.x.xxx):</strong></p>
+                        <ul class="mb-3">
+                            <li>1.01.001 - Dízimos</li>
+                            <li>1.01.002 - Ofertas</li>
+                            <li>1.02.001 - Doações</li>
+                            <li>1.03.001 - Eventos</li>
+                        </ul>
+                        
+                        <p class="mb-2"><strong>Despesas (2.x.xxx):</strong></p>
+                        <ul class="mb-0">
+                            <li>2.01.001 - Salários</li>
+                            <li>2.01.002 - Encargos</li>
+                            <li>2.02.001 - Aluguel</li>
+                            <li>2.03.001 - Materiais</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Importante
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>O código deve ser único</li>
+                        <li>Use uma estrutura hierárquica</li>
+                        <li>Mantenha consistência na numeração</li>
+                        <li>Descrições claras e objetivas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    Estatísticas Atuais
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 text-center">
+                    <div class="col-6">
+                        <div class="border rounded p-2">
+                            <i class="bi bi-arrow-down-circle text-success"></i>
+                            <div class="fw-bold" id="totalReceitas">-</div>
+                            <small class="text-muted">Receitas</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-2">
+                            <i class="bi bi-arrow-up-circle text-danger"></i>
+                            <div class="fw-bold" id="totalDespesas">-</div>
+                            <small class="text-muted">Despesas</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Validação de código único
+            $('#Codigo').on('blur', function() {
+                var codigo = $(this).val();
+                if (codigo) {
+                    $.get('@Url.Action("VerificarCodigo", "PlanoDeContas")', { codigo: codigo }, function(data) {
+                        if (!data) {
+                            $('#Codigo').addClass('is-invalid');
+                            if (!$('#Codigo').next('.invalid-feedback').length) {
+                                $('#Codigo').after('<div class="invalid-feedback">Este código já está cadastrado.</div>');
+                            }
+                        } else {
+                            $('#Codigo').removeClass('is-invalid');
+                            $('#Codigo').next('.invalid-feedback').remove();
+                        }
+                    });
+                }
+            });
+            
+            // Carregar estatísticas
+            carregarEstatisticas();
+            
+            // Foco no primeiro campo
+            $('#Codigo').focus();
+        });
+        
+        function carregarEstatisticas() {
+            // Simulação - em produção, fazer chamada AJAX
+            $('#totalReceitas').text('0');
+            $('#totalDespesas').text('0');
+        }
+    </script>
+    
+    <style>
+        .form-check-card .form-check-input {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .form-check-card .card {
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid #dee2e6;
+        }
+        
+        .form-check-card .form-check-input:checked + .card {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.1);
+        }
+        
+        .form-check-card .card:hover {
+            border-color: #0d6efd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+}
+

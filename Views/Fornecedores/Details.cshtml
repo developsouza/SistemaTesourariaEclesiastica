@@ -1,0 +1,177 @@
+@model SistemaTesourariaEclesiastica.Models.Fornecedor
+
+@{
+    ViewData["Title"] = "Detalhes do Fornecedor";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-building-fill-check me-2"></i>
+            Detalhes do Fornecedor
+        </h1>
+        <p class="text-muted mb-0">Informações detalhadas sobre o fornecedor</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Dados Cadastrais
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Nome)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Nome)</dd>
+
+                    @if (!string.IsNullOrEmpty(Model.CNPJ))
+                    {
+                        <dt class="col-sm-3">@Html.DisplayNameFor(model => model.CNPJ)</dt>
+                        <dd class="col-sm-9">@Html.DisplayFor(model => model.CNPJ)</dd>
+                    }
+                    else if (!string.IsNullOrEmpty(Model.CPF))
+                    {
+                        <dt class="col-sm-3">@Html.DisplayNameFor(model => model.CPF)</dt>
+                        <dd class="col-sm-9">@Html.DisplayFor(model => model.CPF)</dd>
+                    }
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Telefone)</dt>
+                    <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Telefone) ? "Não informado" : Html.DisplayFor(model => model.Telefone))</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Email)</dt>
+                    <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Email) ? "Não informado" : Html.DisplayFor(model => model.Email))</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Endereco)</dt>
+                    <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Endereco) ? "Não informado" : Html.DisplayFor(model => model.Endereco))</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Cidade)</dt>
+                    <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Cidade) ? "Não informado" : Html.DisplayFor(model => model.Cidade))</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Estado)</dt>
+                    <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Estado) ? "Não informado" : Html.DisplayFor(model => model.Estado))</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.CEP)</dt>
+                    <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.CEP) ? "Não informado" : Html.DisplayFor(model => model.CEP))</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Observacoes)</dt>
+                    <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Observacoes) ? "Nenhuma observação" : Html.DisplayFor(model => model.Observacoes))</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Histórico de Saídas
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (Model.Saidas != null && Model.Saidas.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Valor</th>
+                                    <th>Meio de Pagamento</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var saida in Model.Saidas.OrderByDescending(s => s.Data))
+                                {
+                                    <tr>
+                                        <td>@Html.DisplayFor(modelItem => saida.Data)</td>
+                                        <td>@Html.DisplayFor(modelItem => saida.Descricao)</td>
+                                        <td>@Html.DisplayFor(modelItem => saida.Valor)</td>
+                                        <td>@Html.DisplayFor(modelItem => saida.MeioDePagamento.Nome)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Nenhuma saída registrada para este fornecedor.
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                <i class="bi bi-pencil me-2"></i>
+                Editar
+            </a>
+            <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
+                <i class="bi bi-trash me-2"></i>
+                Excluir
+            </a>
+        </div>
+    </div>
+
+    <!-- Sidebar de Estatísticas -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    Estatísticas do Fornecedor
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-cash-coin me-1"></i>
+                        Total Gasto
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        R$ @(Model.Saidas?.Sum(s => s.Valor).ToString("N2") ?? "0,00")
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-calendar-check me-1"></i>
+                        Última Saída
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        @(Model.Saidas?.Any() == true ? Model.Saidas.Max(s => s.Data).ToString("dd/MM/yyyy") : "N/A")
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-receipt me-1"></i>
+                        Número de Saídas
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        @(Model.Saidas?.Count() ?? 0)
+                    </p>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Dica:</strong> Clique em 
+
+
+Editar para modificar os dados do fornecedor.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

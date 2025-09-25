@@ -1,0 +1,94 @@
+@model SistemaTesourariaEclesiastica.Models.Entrada
+
+@{
+    ViewData["Title"] = "Excluir Entrada";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-trash me-2 text-danger"></i>Excluir Entrada</h2>
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="alert alert-warning" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Atenção!</strong> Você está prestes a excluir esta entrada financeira. Esta ação não pode ser desfeita e pode afetar os relatórios financeiros.
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Confirmar Exclusão</h5>
+        <p class="card-text">Tem certeza de que deseja excluir esta entrada?</p>
+        
+        <dl class="row">
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Data)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Data)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Valor)</dt>
+            <dd class="col-sm-9">
+                <span class="h5 text-success">@Model.Valor.ToString("C")</span>
+            </dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Membro)</dt>
+            <dd class="col-sm-9">
+                @if (Model.Membro != null)
+                {
+                    @Model.Membro.Nome
+                }
+                else
+                {
+                    <span class="text-muted">Não informado</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.PlanoDeContas)</dt>
+            <dd class="col-sm-9">
+                @if (Model.PlanoDeContas != null)
+                {
+                    <span class="badge bg-primary">@Model.PlanoDeContas.Nome</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.CentroCusto)</dt>
+            <dd class="col-sm-9">
+                @if (Model.CentroCusto != null)
+                {
+                    <span class="badge bg-info">@Model.CentroCusto.Nome</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.MeioDePagamento)</dt>
+            <dd class="col-sm-9">
+                @if (Model.MeioDePagamento != null)
+                {
+                    <span class="badge bg-secondary">@Model.MeioDePagamento.Nome</span>
+                }
+            </dd>
+
+            @if (!string.IsNullOrEmpty(Model.Observacoes))
+            {
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Observacoes)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Observacoes)</dd>
+            }
+        </dl>
+
+        <form asp-action="Delete" class="d-inline">
+            <input type="hidden" asp-for="Id" />
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a asp-action="Index" class="btn btn-secondary me-md-2">Cancelar</a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash me-2"></i>Confirmar Exclusão
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="alert alert-info mt-3" role="alert">
+    <i class="fas fa-info-circle me-2"></i>
+    <strong>Nota:</strong> A exclusão desta entrada afetará o saldo dos meios de pagamento e centros de custo associados.
+</div>

@@ -1,0 +1,201 @@
+@model SistemaTesourariaEclesiastica.Models.MeioDePagamento
+@using SistemaTesourariaEclesiastica.Extensions
+
+@{
+    ViewData["Title"] = "Detalhes do Meio de Pagamento";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-credit-card-fill me-2"></i>
+            Detalhes do Meio de Pagamento
+        </h1>
+        <p class="text-muted mb-0">Informações detalhadas sobre o meio de pagamento</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            Dados do Meio de Pagamento
+        </h5>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Nome)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Nome)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
+            <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Descricao) ? "Nenhuma descrição" : Html.DisplayFor(model => model.Descricao))</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Ativo)</dt>
+            <dd class="col-sm-9">
+                @if (Model.Ativo)
+                {
+                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Ativo</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary"><i class="bi bi-pause-circle me-1"></i>Inativo</span>
+                }
+            </dd>
+        </dl>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-arrow-down-up me-2"></i>
+            Movimentações Associadas
+        </h5>
+    </div>
+    <div class="card-body">
+        @if ((Model.Entradas != null && Model.Entradas.Any()) || (Model.Saidas != null && Model.Saidas.Any()))
+        {
+            <ul class="nav nav-tabs mb-3" id="movimentacoesTab" role="tablist">
+                @if (Model.Entradas != null && Model.Entradas.Any())
+                {
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="entradas-tab" data-bs-toggle="tab" data-bs-target="#entradas" type="button" role="tab" aria-controls="entradas" aria-selected="true">
+                            Entradas (@Model.Entradas.Count())
+                        </button>
+                    </li>
+                }
+                @if (Model.Saidas != null && Model.Saidas.Any())
+                {
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(Model.Entradas == null || !Model.Entradas.Any() ? "active" : "")" id="saidas-tab" data-bs-toggle="tab" data-bs-target="#saidas" type="button" role="tab" aria-controls="saidas" aria-selected="false">
+                            Saídas (@Model.Saidas.Count())
+                        </button>
+                    </li>
+                }
+            </ul>
+            <div class="tab-content" id="movimentacoesTabContent">
+                @if (Model.Entradas != null && Model.Entradas.Any())
+                {
+                    <div class="tab-pane fade show active" id="entradas" role="tabpanel" aria-labelledby="entradas-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Descrição</th>
+                                        <th>Valor</th>
+                                        <th>Membro</th>
+                                        <th>Plano de Contas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var entrada in Model.Entradas.OrderByDescending(e => e.Data))
+                                    {
+                                        <tr>
+                                            <td>@Html.DisplayFor(modelItem => entrada.Data)</td>
+                                            <td>@Html.DisplayFor(modelItem => entrada.Descricao)</td>
+                                            <td>@Html.DisplayFor(modelItem => entrada.Valor)</td>
+                                            <td>@(entrada.Membro?.NomeCompleto ?? "N/A")</td>
+                                            <td>@Html.DisplayFor(modelItem => entrada.PlanoDeContas.Descricao)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+                @if (Model.Saidas != null && Model.Saidas.Any())
+                {
+                    <div class="tab-pane fade @(Model.Entradas == null || !Model.Entradas.Any() ? "show active" : "")" id="saidas" role="tabpanel" aria-labelledby="saidas-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Descrição</th>
+                                        <th>Valor</th>
+                                        <th>Fornecedor</th>
+                                        <th>Plano de Contas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var saida in Model.Saidas.OrderByDescending(s => s.Data))
+                                    {
+                                        <tr>
+                                            <td>@Html.DisplayFor(modelItem => saida.Data)</td>
+                                            <td>@Html.DisplayFor(modelItem => saida.Descricao)</td>
+                                            <td>@Html.DisplayFor(modelItem => saida.Valor)</td>
+                                            <td>@(saida.Fornecedor?.Nome ?? "N/A")</td>
+                                            <td>@Html.DisplayFor(modelItem => saida.PlanoDeContas.Descricao)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                Nenhuma movimentação associada a este meio de pagamento.
+            </div>
+        }
+    </div>
+</div>
+
+<div class="d-flex justify-content-end gap-2">
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+        <i class="bi bi-pencil me-2"></i>
+        Editar
+    </a>
+    <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
+        <i class="bi bi-trash me-2"></i>
+        Excluir
+    </a>
+</div>
+
+<!-- Sidebar de Estatísticas -->
+<div class="col-lg-4 d-none">
+    <div class="card">
+        <div class="card-header">
+            <h6 class="card-title mb-0">
+                <i class="bi bi-graph-up me-2"></i>
+                Estatísticas do Meio de Pagamento
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <h6 class="text-primary">
+                    <i class="bi bi-arrow-down-circle me-1"></i>
+                    Total de Entradas
+                </h6>
+                <p class="small text-muted mb-0">
+                    R$ @(Model.Entradas?.Sum(e => e.Valor).ToString("N2") ?? "0,00")
+                </p>
+            </div>
+
+            <div class="mb-3">
+                <h6 class="text-primary">
+                    <i class="bi bi-arrow-up-circle me-1"></i>
+                    Total de Saídas
+                </h6>
+                <p class="small text-muted mb-0">
+                    R$ @(Model.Saidas?.Sum(s => s.Valor).ToString("N2") ?? "0,00")
+                </p>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Dica:</strong> Analise as movimentações para entender o fluxo financeiro deste meio de pagamento.
+            </div>
+        </div>
+    </div>
+</div>
+

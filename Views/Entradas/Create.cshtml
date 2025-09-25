@@ -1,0 +1,131 @@
+@model SistemaTesourariaEclesiastica.Models.Entrada
+
+@{
+    ViewData["Title"] = "Nova Entrada";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-plus-circle me-2 text-success"></i>Nova Entrada</h2>
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form asp-action="Create">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Data" class="form-label"></label>
+                            <input asp-for="Data" class="form-control" type="date" />
+                            <span asp-validation-for="Data" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Valor" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input asp-for="Valor" class="form-control money-input" />
+                            </div>
+                            <span asp-validation-for="Valor" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="MembroId" class="form-label"></label>
+                            <select asp-for="MembroId" class="form-select" asp-items="ViewBag.MembroId">
+                                <option value="">Selecione o membro</option>
+                            </select>
+                            <span asp-validation-for="MembroId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PlanoDeContasId" class="form-label"></label>
+                            <select asp-for="PlanoDeContasId" class="form-select" asp-items="ViewBag.PlanoDeContasId">
+                                <option value="">Selecione a conta</option>
+                            </select>
+                            <span asp-validation-for="PlanoDeContasId" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="CentroCustoId" class="form-label"></label>
+                            <select asp-for="CentroCustoId" class="form-select" asp-items="ViewBag.CentroCustoId">
+                                <option value="">Selecione o centro de custo</option>
+                            </select>
+                            <span asp-validation-for="CentroCustoId" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="MeioDePagamentoId" class="form-label"></label>
+                            <select asp-for="MeioDePagamentoId" class="form-select" asp-items="ViewBag.MeioDePagamentoId">
+                                <option value="">Selecione o meio de pagamento</option>
+                            </select>
+                            <span asp-validation-for="MeioDePagamentoId" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Descricao" class="form-label"></label>
+                        <textarea asp-for="Descricao" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="Descricao" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Observacoes" class="form-label"></label>
+                        <textarea asp-for="Observacoes" class="form-control" rows="2"></textarea>
+                        <span asp-validation-for="Observacoes" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a asp-action="Index" class="btn btn-secondary me-md-2">Cancelar</a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Salvar Entrada
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Registre aqui todas as entradas financeiras da igreja, como dízimos, ofertas, 
+                    doações e outras receitas.
+                </p>
+                <hr>
+                <h6>Campos Obrigatórios:</h6>
+                <ul class="small text-muted">
+                    <li>Data da entrada</li>
+                    <li>Valor</li>
+                    <li>Descrição</li>
+                    <li>Plano de contas</li>
+                    <li>Centro de custo</li>
+                    <li>Meio de pagamento</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function() {
+            // Máscara para valores monetários
+            $('.money-input').mask('#.##0,00', {reverse: true});
+            
+            // Define data atual como padrão
+            if (!$('#Data').val()) {
+                $('#Data').val(new Date().toISOString().split('T')[0]);
+            }
+        });
+    </script>
+}

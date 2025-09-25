@@ -1,0 +1,217 @@
+@{
+    ViewData["Title"] = "Relatórios";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-graph-up me-2"></i>
+            Relatórios
+        </h1>
+        <p class="text-muted mb-0">Visualize e gere relatórios financeiros detalhados</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Card de Resumo Financeiro -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <span class="badge bg-success-subtle text-success p-3 rounded-circle">
+                            <i class="bi bi-arrow-down-left-square fs-4"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0 text-muted">Total de Entradas</h6>
+                        <h4 class="mb-0 text-success">@ViewBag.TotalEntradas</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <span class="badge bg-danger-subtle text-danger p-3 rounded-circle">
+                            <i class="bi bi-arrow-up-right-square fs-4"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0 text-muted">Total de Saídas</h6>
+                        <h4 class="mb-0 text-danger">@ViewBag.TotalSaidas</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-12 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <span class="badge bg-primary-subtle text-primary p-3 rounded-circle">
+                            <i class="bi bi-cash-coin fs-4"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0 text-muted">Saldo Atual</h6>
+                        <h4 class="mb-0 text-primary">@ViewBag.SaldoAtual</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Gráficos -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-pie-chart me-2"></i>Entradas por Centro de Custo</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="entradasPorCentroCustoChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-bar-chart me-2"></i>Saídas por Plano de Contas</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="saidasPorPlanoContasChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Relatórios Detalhados -->
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="bi bi-journal-text me-2"></i>Relatórios Detalhados</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a asp-action="FluxoDeCaixa" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-graph-up me-2 text-primary"></i>
+                        Fluxo de Caixa
+                    </div>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+                <a asp-action="EntradasPorPeriodo" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-arrow-down-left me-2 text-success"></i>
+                        Entradas por Período
+                    </div>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+                <a asp-action="SaidasPorPeriodo" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-arrow-up-right me-2 text-danger"></i>
+                        Saídas por Período
+                    </div>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+                <a asp-action="BalanceteGeral" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-calculator me-2 text-info"></i>
+                        Balancete Geral
+                    </div>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+                <a asp-action="ContribuicoesPorMembro" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-people me-2 text-warning"></i>
+                        Contribuições por Membro
+                    </div>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+                <a asp-action="DespesasPorCentroCusto" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-building me-2 text-secondary"></i>
+                        Despesas por Centro de Custo
+                    </div>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Gráfico de Entradas por Centro de Custo
+            var ctxEntradas = document.getElementById('entradasPorCentroCustoChart').getContext('2d');
+            new Chart(ctxEntradas, {
+                type: 'pie',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(ViewBag.EntradasPorCentroCustoLabels)),
+                    datasets: [{
+                        data: @Html.Raw(Json.Serialize(ViewBag.EntradasPorCentroCustoData)),
+                        backgroundColor: [
+                            '#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722', '#F44336'
+                        ],
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: false,
+                            text: 'Entradas por Centro de Custo'
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Saídas por Plano de Contas
+            var ctxSaidas = document.getElementById('saidasPorPlanoContasChart').getContext('2d');
+            new Chart(ctxSaidas, {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(ViewBag.SaidasPorPlanoContasLabels)),
+                    datasets: [{
+                        label: 'Total de Saídas',
+                        data: @Html.Raw(Json.Serialize(ViewBag.SaidasPorPlanoContasData)),
+                        backgroundColor: [
+                            '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3', '#03A9F4', '#00BCD4'
+                        ],
+                        borderColor: [
+                            '#D32F2F', '#C2185B', '#7B1FA2', '#512DA8', '#303F9F', '#1976D2', '#0288D1', '#0097A7'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: false,
+                            text: 'Saídas por Plano de Contas'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+}
+
+

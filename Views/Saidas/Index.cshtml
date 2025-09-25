@@ -1,0 +1,290 @@
+@model IEnumerable<SistemaTesourariaEclesiastica.Models.Saida>
+
+@{
+    ViewData["Title"] = "Saídas";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-arrow-up-circle text-danger me-2"></i>
+            Saídas
+        </h1>
+        <p class="text-muted mb-0">Gerenciar despesas e pagamentos</p>
+    </div>
+    <a asp-action="Create" class="btn btn-danger">
+        <i class="bi bi-plus-circle me-2"></i>
+        Nova Saída
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Data Início</label>
+                <input type="date" class="form-control" name="dataInicio" value="@ViewData["DataInicio"]">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Data Fim</label>
+                <input type="date" class="form-control" name="dataFim" value="@ViewData["DataFim"]">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Centro de Custo</label>
+                @Html.DropDownList("centroCustoId", ViewBag.CentrosCusto as SelectList, "Todos", 
+                    new { @class = "form-select" })
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tipo de Despesa</label>
+                @Html.DropDownList("tipoDespesa", Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.TipoDespesa>(), "Todas", 
+                    new { @class = "form-select" })
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Plano de Contas</label>
+                @Html.DropDownList("planoContasId", ViewBag.PlanosContas as SelectList, "Todos", 
+                    new { @class = "form-select" })
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Fornecedor</label>
+                @Html.DropDownList("fornecedorId", ViewBag.Fornecedores as SelectList, "Todos", 
+                    new { @class = "form-select" })
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-search me-1"></i>
+                    Filtrar
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-clockwise me-1"></i>
+                    Limpar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Resumo -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Total de Saídas</h6>
+                        <h4 class="mb-0">@ViewBag.TotalValor.ToString("C")</h4>
+                    </div>
+                    <i class="bi bi-cash-stack display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Quantidade</h6>
+                        <h4 class="mb-0">@ViewBag.TotalItems</h4>
+                    </div>
+                    <i class="bi bi-list-ol display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Média por Saída</h6>
+                        <h4 class="mb-0">@((ViewBag.TotalItems > 0 ? ViewBag.TotalValor / ViewBag.TotalItems : 0).ToString("C"))</h4>
+                    </div>
+                    <i class="bi bi-calculator display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resultados -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            @ViewBag.TotalItems saída(s) encontrada(s)
+        </h5>
+        <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-secondary">
+                <i class="bi bi-download"></i>
+                Exportar
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrição</th>
+                            <th>Valor</th>
+                            <th>Tipo</th>
+                            <th>Fornecedor</th>
+                            <th>Centro de Custo</th>
+                            <th width="120">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="fw-semibold">@item.Data.ToString("dd/MM/yyyy")</span>
+                                    <br>
+                                    <small class="text-muted">@item.DataCriacao.ToString("HH:mm")</small>
+                                </td>
+                                <td>
+                                    <div>
+                                        <span class="fw-semibold">@item.PlanoDeContas.Descricao</span>
+                                        @if (!string.IsNullOrEmpty(item.Descricao))
+                                        {
+                                            <br>
+                                            <small class="text-muted">@item.Descricao</small>
+                                        }
+                                        @if (!string.IsNullOrEmpty(item.NumeroDocumento))
+                                        {
+                                            <br>
+                                            <small class="text-muted">Doc: @item.NumeroDocumento</small>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-danger">@item.Valor.ToString("C")</span>
+                                </td>
+                                <td>
+                                    @{
+                                        var badgeClass = item.TipoDespesa == SistemaTesourariaEclesiastica.Enums.TipoDespesa.Fixa ? "bg-primary" : "bg-secondary";
+                                    }
+                                    <span class="badge @badgeClass">@item.TipoDespesa.ToString()</span>
+                                </td>
+                                <td>
+                                    @if (item.Fornecedor != null)
+                                    {
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-xs bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                @item.Fornecedor.Nome.Substring(0, 1).ToUpper()
+                                            </div>
+                                            <span class="small">@item.Fornecedor.Nome</span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@item.CentroCusto.Nome</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info" title="Detalhes">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Excluir"
+                                           data-confirm="Tem certeza que deseja excluir esta saída?">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-arrow-up-circle display-1 text-muted"></i>
+                <h5 class="mt-3">Nenhuma saída encontrada</h5>
+                <p class="text-muted">Não há saídas cadastradas com os filtros aplicados.</p>
+                <a asp-action="Create" class="btn btn-danger">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Registrar Primeira Saída
+                </a>
+            </div>
+        }
+    </div>
+    
+    @if (ViewBag.TotalPages > 1)
+    {
+        <div class="card-footer">
+            <nav aria-label="Navegação de páginas">
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    @if (ViewBag.CurrentPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" asp-action="Index" 
+                               asp-route-page="@(ViewBag.CurrentPage - 1)"
+                               asp-route-dataInicio="@ViewData["DataInicio"]"
+                               asp-route-dataFim="@ViewData["DataFim"]"
+                               asp-route-centroCustoId="@ViewData["CentroCustoId"]"
+                               asp-route-planoContasId="@ViewData["PlanoContasId"]"
+                               asp-route-fornecedorId="@ViewData["FornecedorId"]"
+                               asp-route-tipoDespesa="@ViewData["TipoDespesa"]">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    }
+                    
+                    @for (int i = Math.Max(1, ViewBag.CurrentPage - 2); i <= Math.Min(ViewBag.TotalPages, ViewBag.CurrentPage + 2); i++)
+                    {
+                        <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                            <a class="page-link" asp-action="Index" 
+                               asp-route-page="@i"
+                               asp-route-dataInicio="@ViewData["DataInicio"]"
+                               asp-route-dataFim="@ViewData["DataFim"]"
+                               asp-route-centroCustoId="@ViewData["CentroCustoId"]"
+                               asp-route-planoContasId="@ViewData["PlanoContasId"]"
+                               asp-route-fornecedorId="@ViewData["FornecedorId"]"
+                               asp-route-tipoDespesa="@ViewData["TipoDespesa"]">
+                                @i
+                            </a>
+                        </li>
+                    }
+                    
+                    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" asp-action="Index" 
+                               asp-route-page="@(ViewBag.CurrentPage + 1)"
+                               asp-route-dataInicio="@ViewData["DataInicio"]"
+                               asp-route-dataFim="@ViewData["DataFim"]"
+                               asp-route-centroCustoId="@ViewData["CentroCustoId"]"
+                               asp-route-planoContasId="@ViewData["PlanoContasId"]"
+                               asp-route-fornecedorId="@ViewData["FornecedorId"]"
+                               asp-route-tipoDespesa="@ViewData["TipoDespesa"]">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+
+<style>
+    .avatar-xs {
+        width: 24px;
+        height: 24px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+

@@ -1,0 +1,105 @@
+@model SistemaTesourariaEclesiastica.Models.Saida
+
+@{
+    ViewData["Title"] = "Excluir Saída";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0 text-danger">
+            <i class="bi bi-trash me-2"></i>
+            Excluir Saída
+        </h1>
+        <p class="text-muted mb-0">Confirme a exclusão desta despesa ou pagamento</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="alert alert-danger" role="alert">
+    <h4 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Atenção!</h4>
+    <p>Você está prestes a excluir a saída de <strong>R$ @Model.Valor.ToString("N2")</strong> referente a <strong>@Model.Descricao</strong>. Esta ação é irreversível.</p>
+    <hr>
+    <p class="mb-0">Tem certeza que deseja prosseguir com a exclusão?</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            Detalhes da Saída
+        </h5>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Data)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Data)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Valor)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Valor)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.MeioDePagamento)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.MeioDePagamento.Nome)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.CentroCusto)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.CentroCusto.Nome)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.PlanoDeContas)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.PlanoDeContas.Descricao)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Fornecedor)</dt>
+            <dd class="col-sm-9">@(Model.Fornecedor?.Nome ?? "N/A")</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.TipoDespesa)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.TipoDespesa)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.NumeroDocumento)</dt>
+            <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.NumeroDocumento) ? "N/A" : Html.DisplayFor(model => model.NumeroDocumento))</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataVencimento)</dt>
+            <dd class="col-sm-9">@(Model.DataVencimento.HasValue ? Html.DisplayFor(model => model.DataVencimento) : (object)"N/A")</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.ComprovanteUrl)</dt>
+            <dd class="col-sm-9">
+                @if (!string.IsNullOrEmpty(Model.ComprovanteUrl))
+                {
+                    <a href="@Model.ComprovanteUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-file-earmark-text me-1"></i>
+                        Ver Comprovante
+                    </a>
+                }
+                else
+                {
+                    <span>N/A</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Usuario)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Usuario.UserName)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataCriacao)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.DataCriacao)</dd>
+        </dl>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end gap-2 mt-4">
+    <form asp-action="Delete">
+        <input type="hidden" asp-for="Id" />
+        <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash me-2"></i>
+            Confirmar Exclusão
+        </button>
+    </form>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-x-circle me-2"></i>
+        Cancelar
+    </a>
+</div>
+
+

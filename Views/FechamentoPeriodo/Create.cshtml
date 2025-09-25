@@ -1,0 +1,238 @@
+@model SistemaTesourariaEclesiastica.Models.FechamentoPeriodo
+
+@{
+    ViewData["Title"] = "Novo Fechamento";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-calendar-check me-2"></i>
+            Novo Fechamento de Período
+        </h1>
+        <p class="text-muted mb-0">Realizar fechamento mensal do centro de custo</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Dados do Fechamento</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label asp-for="CentroCustoId" class="form-label required"></label>
+                            <select asp-for="CentroCustoId" class="form-select" asp-items="ViewBag.CentroCustoId">
+                                <option value="">Selecione o centro de custo</option>
+                            </select>
+                            <span asp-validation-for="CentroCustoId" class="text-danger"></span>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Centro de custo que será fechado
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label asp-for="Ano" class="form-label required"></label>
+                            <input asp-for="Ano" class="form-control" type="number" min="2000" max="2100">
+                            <span asp-validation-for="Ano" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label asp-for="Mes" class="form-label required"></label>
+                            <select asp-for="Mes" class="form-select">
+                                <option value="">Selecione</option>
+                                <option value="1">Janeiro</option>
+                                <option value="2">Fevereiro</option>
+                                <option value="3">Março</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Maio</option>
+                                <option value="6">Junho</option>
+                                <option value="7">Julho</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                            <span asp-validation-for="Mes" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label asp-for="BalancoFisico" class="form-label required"></label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input asp-for="BalancoFisico" class="form-control" type="number" step="0.01" min="0">
+                            </div>
+                            <span asp-validation-for="BalancoFisico" class="text-danger"></span>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Valor físico contado no caixa
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label asp-for="DataInicio" class="form-label required"></label>
+                            <input asp-for="DataInicio" class="form-control" type="date">
+                            <span asp-validation-for="DataInicio" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label asp-for="DataFim" class="form-label required"></label>
+                            <input asp-for="DataFim" class="form-control" type="date">
+                            <span asp-validation-for="DataFim" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label asp-for="Observacoes" class="form-label"></label>
+                            <textarea asp-for="Observacoes" class="form-control" rows="4" placeholder="Observações sobre o fechamento (opcional)"></textarea>
+                            <span asp-validation-for="Observacoes" class="text-danger"></span>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Realizar Fechamento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informações Importantes
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        Como Funciona
+                    </h6>
+                    <div class="small">
+                        <p class="mb-2"><strong>1. Cálculo Automático:</strong></p>
+                        <ul class="mb-3">
+                            <li>Total de entradas do período</li>
+                            <li>Total de saídas do período</li>
+                            <li>Balanço digital calculado</li>
+                        </ul>
+                        
+                        <p class="mb-2"><strong>2. Rateios (SEDE):</strong></p>
+                        <ul class="mb-3">
+                            <li>Aplicação automática de regras</li>
+                            <li>Cálculo de valores a repassar</li>
+                            <li>Saldo final após rateios</li>
+                        </ul>
+                        
+                        <p class="mb-2"><strong>3. Relatório PDF:</strong></p>
+                        <ul class="mb-0">
+                            <li>Detalhamento completo</li>
+                            <li>Todas as movimentações</li>
+                            <li>Assinaturas digitais</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Atenção
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>Verifique o período selecionado</li>
+                        <li>Confira o valor físico do caixa</li>
+                        <li>Fechamento não pode ser duplicado</li>
+                        <li>Após aprovação, não pode ser editado</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-calculator me-2"></i>
+                    Prévia de Cálculos
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="previa-calculos">
+                    <div class="text-center text-muted">
+                        <i class="bi bi-calculator display-6"></i>
+                        <p class="mt-2">Selecione o centro de custo e período para ver a prévia</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Auto-preencher datas baseado no mês/ano
+            $('#Mes, #Ano').on('change', function() {
+                var ano = $('#Ano').val();
+                var mes = $('#Mes').val();
+                
+                if (ano && mes) {
+                    var dataInicio = new Date(ano, mes - 1, 1);
+                    var dataFim = new Date(ano, mes, 0);
+                    
+                    $('#DataInicio').val(dataInicio.toISOString().split('T')[0]);
+                    $('#DataFim').val(dataFim.toISOString().split('T')[0]);
+                    
+                    carregarPrevia();
+                }
+            });
+            
+            $('#CentroCustoId').on('change', function() {
+                carregarPrevia();
+            });
+            
+            function carregarPrevia() {
+                var centroCustoId = $('#CentroCustoId').val();
+                var ano = $('#Ano').val();
+                var mes = $('#Mes').val();
+                
+                if (centroCustoId && ano && mes) {
+                    $.get('@Url.Action("PreviewCalculos", "FechamentoPeriodo")', {
+                        centroCustoId: centroCustoId,
+                        ano: ano,
+                        mes: mes
+                    }, function(data) {
+                        $('#previa-calculos').html(data);
+                    }).fail(function() {
+                        $('#previa-calculos').html('<div class="text-danger">Erro ao carregar prévia</div>');
+                    });
+                }
+            }
+            
+            // Foco no primeiro campo
+            $('#CentroCustoId').focus();
+        });
+    </script>
+}

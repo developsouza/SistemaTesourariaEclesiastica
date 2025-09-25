@@ -1,0 +1,169 @@
+@model SistemaTesourariaEclesiastica.Models.LogAuditoria
+
+@{
+    ViewData["Title"] = "Detalhes do Log de Auditoria";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-info-circle me-2"></i>Detalhes do Log de Auditoria</h2>
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Informações Gerais</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">ID do Log</dt>
+                    <dd class="col-sm-9">#@Model.Id</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataHora)</dt>
+                    <dd class="col-sm-9">@Model.DataHora.ToString("dd/MM/yyyy HH:mm:ss")</dd>
+
+                    <dt class="col-sm-3">Usuário</dt>
+                    <dd class="col-sm-9">
+                        @if (ViewBag.Usuario != null)
+                        {
+                            <span class="badge bg-primary">@ViewBag.Usuario.Email</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Usuário não encontrado</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Acao)</dt>
+                    <dd class="col-sm-9">
+                        @{
+                            string badgeClass = Model.Acao switch
+                            {
+                                "CREATE" => "bg-success",
+                                "UPDATE" => "bg-warning",
+                                "DELETE" => "bg-danger",
+                                "LOGIN_SUCCESS" => "bg-info",
+                                "LOGIN_FAILED" => "bg-danger",
+                                "LOGOUT" => "bg-secondary",
+                                _ => "bg-primary"
+                            };
+                        }
+                        <span class="badge @badgeClass">@Model.Acao</span>
+                    </dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Entidade)</dt>
+                    <dd class="col-sm-9">@Model.Entidade</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.EntidadeId)</dt>
+                    <dd class="col-sm-9">@Model.EntidadeId</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.EnderecoIP)</dt>
+                    <dd class="col-sm-9">
+                        @if (!string.IsNullOrEmpty(Model.EnderecoIP))
+                        {
+                            @Model.EnderecoIP
+                        }
+                        else
+                        {
+                            <span class="text-muted">Não informado</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.UserAgent)</dt>
+                    <dd class="col-sm-9">
+                        @if (!string.IsNullOrEmpty(Model.UserAgent))
+                        {
+                            <small class="text-muted">@Model.UserAgent</small>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Não informado</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Detalhes))
+        {
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Detalhes da Operação</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded"><code>@Model.Detalhes</code></pre>
+                </div>
+            </div>
+        }
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações Adicionais</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    <strong>Tipo de Ação:</strong>
+                    @{
+                        string acaoDescricao = Model.Acao switch
+                        {
+                            "CREATE" => "Criação de registro",
+                            "UPDATE" => "Atualização de registro",
+                            "DELETE" => "Exclusão de registro",
+                            "LOGIN_SUCCESS" => "Login bem-sucedido",
+                            "LOGIN_FAILED" => "Tentativa de login falhada",
+                            "LOGOUT" => "Logout do sistema",
+                            _ => "Ação personalizada"
+                        };
+                    }
+                    @acaoDescricao
+                </p>
+                
+                <hr>
+                
+                <p class="small text-muted">
+                    <strong>Entidade Afetada:</strong> @Model.Entidade
+                </p>
+                
+                <p class="small text-muted">
+                    <strong>Identificador:</strong> @Model.EntidadeId
+                </p>
+                
+                @if (!string.IsNullOrEmpty(Model.EnderecoIP))
+                {
+                    <hr>
+                    <p class="small text-muted">
+                        <strong>Localização:</strong> Endereço IP @Model.EnderecoIP
+                    </p>
+                }
+                
+                <hr>
+                
+                <p class="small text-muted">
+                    <strong>Timestamp:</strong> @Model.DataHora.ToString("yyyy-MM-dd HH:mm:ss.fff")
+                </p>
+            </div>
+        </div>
+
+        @if (ViewBag.Usuario != null)
+        {
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Informações do Usuário</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>Email:</strong> @ViewBag.Usuario.Email</p>
+                    <p class="mb-1"><strong>ID:</strong> @ViewBag.Usuario.Id</p>
+                    @if (!string.IsNullOrEmpty(ViewBag.Usuario.UserName))
+                    {
+                        <p class="mb-0"><strong>Username:</strong> @ViewBag.Usuario.UserName</p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

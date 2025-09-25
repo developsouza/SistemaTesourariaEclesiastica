@@ -1,0 +1,193 @@
+@model SistemaTesourariaEclesiastica.Models.PlanoDeContas
+
+@{
+    ViewData["Title"] = "Editar Plano de Contas";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-journal-text me-2"></i>
+            Editar Plano de Contas
+        </h1>
+        <p class="text-muted mb-0">Atualizar informações do plano de contas</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informações do Plano de Contas
+                </h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    <input type="hidden" asp-for="Id" />
+
+                    <!-- Código -->
+                    <div class="mb-3">
+                        <label asp-for="Codigo" class="form-label required"></label>
+                        <input asp-for="Codigo" class="form-control" placeholder="Ex: 1.0.0.0.00 (Receitas), 2.0.0.0.00 (Despesas)">
+                        <span asp-validation-for="Codigo" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Código único para identificar a conta (Ex: 1.1.0.0.00 para Dízimos)
+                        </div>
+                    </div>
+
+                    <!-- Nome -->
+                    <div class="mb-3">
+                        <label asp-for="Nome" class="form-label required"></label>
+                        <input asp-for="Nome" class="form-control" placeholder="Ex: Dízimos, Ofertas, Salários, Aluguel...">
+                        <span asp-validation-for="Nome" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Nome descritivo da conta (Ex: Dízimos, Salários, Aluguel)
+                        </div>
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="mb-3">
+                        <label asp-for="Descricao" class="form-label"></label>
+                        <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Descrição detalhada da conta (opcional)"></textarea>
+                        <span asp-validation-for="Descricao" class="text-danger"></span>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="Ativo" id="ativo">
+                            <label class="form-check-label" for="ativo">
+                                Conta Ativa
+                            </label>
+                        </div>
+                        <span asp-validation-for="Ativo" class="text-danger"></span>
+                    </div>
+
+                    <!-- Tipo -->
+                    <div class="mb-3">
+                        <label asp-for="Tipo" class="form-label required"></label>
+                        <select asp-for="Tipo" class="form-select" asp-items="Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.TipoPlanoContas>()">
+                            <option value="">Selecione o Tipo</option>
+                        </select>
+                        <span asp-validation-for="Tipo" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Indica se a conta é de Receita ou Despesa
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar de Ajuda -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>
+                    Dicas de Preenchimento
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-key me-1"></i>
+                        Código da Conta
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Utilize um padrão numérico para organizar as contas, como um plano de contas contábil.
+                        Ex: 1.0.0.0.00 para Receitas, 2.0.0.0.00 para Despesas.
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-tag me-1"></i>
+                        Descrição Clara
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Seja específico na descrição para facilitar a identificação da conta em lançamentos futuros.
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-arrow-left-right me-1"></i>
+                        Tipo de Conta
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Classifique corretamente como Receita ou Despesa para que os relatórios financeiros sejam precisos.
+                    </p>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Importante:</strong> O código e a descrição devem ser únicos para evitar duplicidade.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Validação de código único (AJAX)
+            $("#Codigo").blur(function() {
+                var codigo = $(this).val();
+                var id = $("#Id").val(); // Pega o ID para ignorar a própria conta na validação
+                if (codigo) {
+                    $.post("@Url.Action("ValidarCodigoUnico", "PlanoDeContas")", { codigo: codigo, id: id }, function(data) {
+                        if (!data.valido) {
+                            $("#Codigo").addClass("is-invalid");
+                            $("#Codigo").next(".text-danger").text("Já existe um plano de contas com este código.");
+                        } else {
+                            $("#Codigo").removeClass("is-invalid");
+                            $("#Codigo").next(".text-danger").text("");
+                        }
+                    });
+                }
+            });
+
+            // Validação de descrição única (AJAX)
+            $("#Descricao").blur(function() {
+                var descricao = $(this).val();
+                var id = $("#Id").val(); // Pega o ID para ignorar a própria conta na validação
+                if (descricao) {
+                    $.post("@Url.Action("ValidarDescricaoUnica", "PlanoDeContas")", { descricao: descricao, id: id }, function(data) {
+                        if (!data.valido) {
+                            $("#Descricao").addClass("is-invalid");
+                            $("#Descricao").next(".text-danger").text("Já existe um plano de contas com esta descrição.");
+                        } else {
+                            $("#Descricao").removeClass("is-invalid");
+                            $("#Descricao").next(".text-danger").text("");
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}
+

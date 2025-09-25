@@ -1,0 +1,145 @@
+@model IEnumerable<SistemaTesourariaEclesiastica.Models.Entrada>
+
+@{
+    ViewData["Title"] = "Contribuições por Membro";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-users me-2"></i>Contribuições por Membro</h2>
+    <div>
+        <a asp-action="ExportarEntradasExcel" asp-route-dataInicio="@ViewBag.DataInicio" asp-route-dataFim="@ViewBag.DataFim" class="btn btn-success me-2">
+            <i class="fas fa-file-excel me-2"></i>Excel
+        </a>
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="dataInicio" class="form-label">Data Início</label>
+                <input type="date" class="form-control" id="dataInicio" name="dataInicio" value="@ViewBag.DataInicio" />
+            </div>
+            <div class="col-md-3">
+                <label for="dataFim" class="form-label">Data Fim</label>
+                <input type="date" class="form-control" id="dataFim" name="dataFim" value="@ViewBag.DataFim" />
+            </div>
+            <div class="col-md-4">
+                <label for="membroId" class="form-label">Membro</label>
+                <select class="form-select" id="membroId" name="membroId" asp-items="ViewBag.Membros">
+                    <option value="">Todos os membros</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (ViewBag.ResumoPorMembro != null)
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Resumo por Membro</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Membro</th>
+                            <th class="text-end">Total Contribuições</th>
+                            <th class="text-center">Quantidade</th>
+                            <th class="text-center">Última Contribuição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var resumo in ViewBag.ResumoPorMembro)
+                        {
+                            <tr>
+                                <td>@resumo.MembroNome</td>
+                                <td class="text-end text-success">@resumo.TotalContribuicoes.ToString("C")</td>
+                                <td class="text-center">@resumo.QuantidadeContribuicoes</td>
+                                <td class="text-center">@resumo.UltimaContribuicao.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Detalhamento das Contribuições</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="contribuicoesTable">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Membro</th>
+                        <th>Descrição</th>
+                        <th>Centro de Custo</th>
+                        <th>Plano de Contas</th>
+                        <th>Meio de Pagamento</th>
+                        <th class="text-end">Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        decimal totalContribuicoes = 0;
+                    }
+                    @foreach (var item in Model)
+                    {
+                        totalContribuicoes += item.Valor;
+                        <tr>
+                            <td>@item.Data.ToString("dd/MM/yyyy")</td>
+                            <td>@item.Membro?.Nome</td>
+                            <td>@item.Descricao</td>
+                            <td>
+                                <span class="badge bg-info">@item.CentroCusto?.Nome</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">@item.PlanoDeContas?.Nome</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">@item.MeioDePagamento?.Nome</span>
+                            </td>
+                            <td class="text-end text-success">@item.Valor.ToString("C")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="table-dark">
+                        <th colspan="6">TOTAL GERAL</th>
+                        <th class="text-end text-success">@totalContribuicoes.ToString("C")</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#contribuicoesTable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+                },
+                responsive: true,
+                order: [[0, 'desc']],
+                pageLength: 25
+            });
+        });
+    </script>
+}

@@ -1,0 +1,122 @@
+@model SistemaTesourariaEclesiastica.Models.Entrada
+
+@{
+    ViewData["Title"] = "Detalhes da Entrada";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-plus-circle me-2 text-success"></i>Detalhes da Entrada</h2>
+    <div>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary me-2">
+            <i class="fas fa-edit me-2"></i>Editar
+        </a>
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Data)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Data)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Valor)</dt>
+                    <dd class="col-sm-9">
+                        <span class="h5 text-success">@Model.Valor.ToString("C")</span>
+                    </dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Membro)</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.Membro != null)
+                        {
+                            <a asp-controller="Membros" asp-action="Details" asp-route-id="@Model.MembroId" class="text-decoration-none">
+                                @Model.Membro.Nome
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Não informado</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.PlanoDeContas)</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.PlanoDeContas != null)
+                        {
+                            <span class="badge bg-primary">@Model.PlanoDeContas.Nome</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.CentroCusto)</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.CentroCusto != null)
+                        {
+                            <span class="badge bg-info">@Model.CentroCusto.Nome</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.MeioDePagamento)</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.MeioDePagamento != null)
+                        {
+                            <span class="badge bg-secondary">@Model.MeioDePagamento.Nome</span>
+                        }
+                    </dd>
+
+                    @if (!string.IsNullOrEmpty(Model.Observacoes))
+                    {
+                        <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Observacoes)</dt>
+                        <dd class="col-sm-9">@Html.DisplayFor(model => model.Observacoes)</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações Adicionais</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    <strong>ID da Entrada:</strong> #@Model.Id
+                </p>
+                <p class="small text-muted">
+                    <strong>Data de Registro:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                </p>
+                <hr>
+                <div class="text-center">
+                    <h6>Valor da Entrada</h6>
+                    <h3 class="text-success">@Model.Valor.ToString("C")</h3>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.Membro != null)
+        {
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Informações do Membro</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>Nome:</strong> @Model.Membro.Nome</p>
+                    @if (!string.IsNullOrEmpty(Model.Membro.Email))
+                    {
+                        <p class="mb-1"><strong>Email:</strong> @Model.Membro.Email</p>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Membro.Telefone))
+                    {
+                        <p class="mb-0"><strong>Telefone:</strong> @Model.Membro.Telefone</p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

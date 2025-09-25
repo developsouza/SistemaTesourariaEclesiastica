@@ -1,0 +1,121 @@
+@model IEnumerable<SistemaTesourariaEclesiastica.Models.TransferenciaInterna>
+
+@{
+    ViewData["Title"] = "Transferências Internas";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-arrow-left-right me-2"></i>
+            Transferências Internas
+        </h1>
+        <p class="text-muted mb-0">Gerencie as transferências de valores entre contas bancárias</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>
+        Nova Transferência
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        @if (Model == null || !Model.Any())
+        {
+            <div class="alert alert-info text-center" role="alert">
+                <h4 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Nenhuma Transferência Encontrada</h4>
+                <p>Parece que você ainda não registrou nenhuma transferência interna.</p>
+                <hr>
+                <p class="mb-0">Clique no botão "Nova Transferência" para começar a registrar.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>
+                                @Html.DisplayNameFor(model => model.Data)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.Valor)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.Descricao)
+                            </th>
+                            <th>
+                                Meio de Pagamento Origem
+                            </th>
+                            <th>
+                                Meio de Pagamento Destino
+                            </th>
+                            <th>
+                                Centro de Custo Origem
+                            </th>
+                            <th>
+                                Centro de Custo Destino
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.Usuario)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.DataCriacao)
+                            </th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Data)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Valor)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Descricao)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.MeioDePagamentoOrigem.Nome)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.MeioDePagamentoDestino.Nome)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.CentroCustoOrigem.Nome)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.CentroCustoDestino.Nome)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Usuario.UserName)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.DataCriacao)
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info" title="Detalhes">
+                                            <i class="bi bi-info-circle"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger" title="Excluir">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+

@@ -1,0 +1,229 @@
+@model SistemaTesourariaEclesiastica.Models.Saida
+
+@{
+    ViewData["Title"] = "Nova Saída";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-arrow-up-circle text-danger me-2"></i>
+            Nova Saída
+        </h1>
+        <p class="text-muted mb-0">Registrar nova despesa ou pagamento</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Dados da Saída</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label asp-for="Data" class="form-label"></label>
+                            <input asp-for="Data" class="form-control" type="date">
+                            <span asp-validation-for="Data" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label asp-for="Valor" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input asp-for="Valor" class="form-control" data-mask="currency" placeholder="0,00">
+                            </div>
+                            <span asp-validation-for="Valor" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label asp-for="TipoDespesa" class="form-label"></label>
+                            <select asp-for="TipoDespesa" class="form-select" asp-items="Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.TipoDespesa>()">
+                                <option value="">Selecione o tipo</option>
+                            </select>
+                            <span asp-validation-for="TipoDespesa" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label asp-for="PlanoDeContasId" class="form-label"></label>
+                            <select asp-for="PlanoDeContasId" class="form-select" asp-items="ViewBag.PlanoDeContasId">
+                                <option value="">Selecione o plano de contas</option>
+                            </select>
+                            <span asp-validation-for="PlanoDeContasId" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label asp-for="CentroCustoId" class="form-label"></label>
+                            <select asp-for="CentroCustoId" class="form-select" asp-items="ViewBag.CentroCustoId">
+                                <option value="">Selecione o centro de custo</option>
+                            </select>
+                            <span asp-validation-for="CentroCustoId" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label asp-for="FornecedorId" class="form-label"></label>
+                            <select asp-for="FornecedorId" class="form-select" asp-items="ViewBag.FornecedorId">
+                                <option value="">Selecione o fornecedor (opcional)</option>
+                            </select>
+                            <span asp-validation-for="FornecedorId" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label asp-for="MeioDePagamentoId" class="form-label"></label>
+                            <select asp-for="MeioDePagamentoId" class="form-select" asp-items="ViewBag.MeioDePagamentoId">
+                                <option value="">Selecione o meio de pagamento</option>
+                            </select>
+                            <span asp-validation-for="MeioDePagamentoId" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label asp-for="NumeroDocumento" class="form-label"></label>
+                            <input asp-for="NumeroDocumento" class="form-control" placeholder="Número da nota fiscal, recibo, etc.">
+                            <span asp-validation-for="NumeroDocumento" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label asp-for="DataVencimento" class="form-label"></label>
+                            <input asp-for="DataVencimento" class="form-control" type="date">
+                            <span asp-validation-for="DataVencimento" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label asp-for="Descricao" class="form-label"></label>
+                            <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Descrição detalhada da despesa"></textarea>
+                            <span asp-validation-for="Descricao" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label asp-for="ComprovanteUrl" class="form-label"></label>
+                            <input asp-for="ComprovanteUrl" class="form-control" placeholder="URL do comprovante (opcional)">
+                            <span asp-validation-for="ComprovanteUrl" class="text-danger"></span>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Link para o comprovante digital (Google Drive, Dropbox, etc.)
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Registrar Saída
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informações
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        Dicas
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>Classifique corretamente o tipo de despesa (Fixa ou Variável)</li>
+                        <li>Selecione o plano de contas apropriado</li>
+                        <li>Informe o fornecedor quando aplicável</li>
+                        <li>Mantenha os comprovantes organizados</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Tipos de Despesa
+                    </h6>
+                    <p class="mb-2 small">
+                        <strong>Fixa:</strong> Despesas recorrentes e previsíveis (aluguel, salários, etc.)
+                    </p>
+                    <p class="mb-0 small">
+                        <strong>Variável:</strong> Despesas que podem variar mensalmente (materiais, manutenção, etc.)
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card de Fornecedor Selecionado -->
+        <div class="card mt-3" id="fornecedorInfo" style="display: none;">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-building me-2"></i>
+                    Dados do Fornecedor
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="fornecedorDetalhes">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Buscar dados do fornecedor quando selecionado
+            $('#FornecedorId').on('change', function() {
+                var fornecedorId = $(this).val();
+                if (fornecedorId) {
+                    $.get('@Url.Action("ObterDadosFornecedor", "Saidas")', { fornecedorId: fornecedorId }, function(data) {
+                        if (data.success) {
+                            var html = `
+                                <p class="mb-2"><strong>Nome:</strong> ${data.nome}</p>
+                                <p class="mb-2"><strong>Documento:</strong> ${data.documento || 'Não informado'}</p>
+                                <p class="mb-2"><strong>Telefone:</strong> ${data.telefone || 'Não informado'}</p>
+                                <p class="mb-0"><strong>Email:</strong> ${data.email || 'Não informado'}</p>
+                            `;
+                            $('#fornecedorDetalhes').html(html);
+                            $('#fornecedorInfo').show();
+                        }
+                    });
+                } else {
+                    $('#fornecedorInfo').hide();
+                }
+            });
+            
+            // Definir data de vencimento automaticamente
+            $('#Data').on('change', function() {
+                var data = new Date($(this).val());
+                if (!isNaN(data.getTime())) {
+                    // Adiciona 30 dias à data
+                    data.setDate(data.getDate() + 30);
+                    var dataVencimento = data.toISOString().split('T')[0];
+                    $('#DataVencimento').val(dataVencimento);
+                }
+            });
+            
+            // Foco no primeiro campo
+            $('#Data').focus();
+        });
+    </script>
+}
+

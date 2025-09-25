@@ -1,0 +1,81 @@
+@model SistemaTesourariaEclesiastica.Models.TransferenciaInterna
+
+@{
+    ViewData["Title"] = "Excluir Transferência Interna";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0 text-danger">
+            <i class="bi bi-trash me-2"></i>
+            Excluir Transferência Interna
+        </h1>
+        <p class="text-muted mb-0">Tem certeza que deseja excluir esta transferência?</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="alert alert-danger d-flex align-items-center" role="alert">
+    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2"></i>
+    <div>
+        <strong>Atenção!</strong> A exclusão desta transferência é irreversível e afetará os saldos das contas envolvidas.
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            Detalhes da Transferência a Ser Excluída
+        </h5>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Data)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Data)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Valor)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Valor)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
+
+            <dt class="col-sm-3">Meio de Pagamento Origem</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.MeioDePagamentoOrigem.Nome)</dd>
+
+            <dt class="col-sm-3">Meio de Pagamento Destino</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.MeioDePagamentoDestino.Nome)</dd>
+
+            <dt class="col-sm-3">Centro de Custo Origem</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.CentroCustoOrigem.Nome)</dd>
+
+            <dt class="col-sm-3">Centro de Custo Destino</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.CentroCustoDestino.Nome)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Usuario)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.Usuario.UserName)</dd>
+
+            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataCriacao)</dt>
+            <dd class="col-sm-9">@Html.DisplayFor(model => model.DataCriacao)</dd>
+        </dl>
+    </div>
+</div>
+
+<form asp-action="Delete">
+    <input type="hidden" asp-for="Id" />
+    <div class="d-flex justify-content-end gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle me-2"></i>
+            Cancelar
+        </a>
+        <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash me-2"></i>
+            Confirmar Exclusão
+        </button>
+    </div>
+</form>
+
+
