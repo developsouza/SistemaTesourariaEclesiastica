@@ -19,6 +19,9 @@ namespace SistemaTesourariaEclesiastica.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
+            // Aplicar headers de segurança
+            ApplySecurityHeaders(context);
+
             // Adicionar claims personalizados se o usuário estiver autenticado
             if (context.User.Identity.IsAuthenticated)
             {
@@ -37,40 +40,22 @@ namespace SistemaTesourariaEclesiastica.Middleware
                         identity.AddClaim(new Claim("CentroCustoId", user.CentroCustoId?.ToString() ?? ""));
                     }
 
-                    if (!context.User.HasClaim("NomeCompleto", user.NomeCompleto))
+                    if (!context.User.HasClaim("NomeCompleto", user.NomeCompleto ?? ""))
                     {
-                        identity.AddClaim(new Claim("NomeCompleto", user.NomeCompleto));
+                        identity.AddClaim(new Claim("NomeCompleto", user.NomeCompleto ?? ""));
                     }
 
-                    // Log de acesso para auditoria (apenas para páginas importantes)
-                    var path = context.Request.Path.Value?.ToLower();
-                    var shouldAudit = ShouldAuditPath(path);
-
-                    if (shouldAudit && context.Request.Method == "GET")
-                    {
-                        // CORREÇÃO: Usar LogAuditAsync ao invés de LogAsync com 5 argumentos
-                        await auditService.LogAuditAsync(user.Id, "PAGE_ACCESS", "Navigation", "0",
-                            $"Acesso à página: {path}");
-                    }
-
-                    // Verificar se usuário ainda está ativo
-                    if (!user.Ativo)
-                    {
-                        await userManager.UpdateSecurityStampAsync(user);
-                        context.Response.Redirect("/Account/Login?message=AccountDeactivated");
-                        return;
-                    }
-                }
-                else if (user?.Ativo == false)
-                {
-                    // Usuário desativado - forçar logout
-                    context.Response.Redirect("/Account/Login?message=AccountDeactivated");
-                    return;
+                    // Log de auditoria para rotas importantes
+                    //if (ShouldAuditPath(context.Request.Path.Value))
+                    //{
+                    //    await auditService.LogAcessoAsync(
+                    //        user.Id,
+                    //        $"{context.Request.Method} {context.Request.Path}",
+                    //        context.Connection.RemoteIpAddress?.ToString()
+                    //    );
+                    //}
                 }
             }
-
-            // Aplicar headers de segurança
-            ApplySecurityHeaders(context);
 
             await _next(context);
         }
@@ -89,7 +74,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
                 "/relatorios"
             };
 
-            return auditPaths.Any(p => path.StartsWith(p));
+            return auditPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
         }
 
         private static void ApplySecurityHeaders(HttpContext context)
@@ -108,14 +93,17 @@ namespace SistemaTesourariaEclesiastica.Middleware
             // Referrer Policy
             headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
 
-            // Content Security Policy (ajustar conforme necessário)
+            // Content Security Policy (CSP) - Configuração mais permissiva para desenvolvimento
             headers["Content-Security-Policy"] =
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
-                "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-                "img-src 'self' data: https:; " +
-                "connect-src 'self';";
+                "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
+                "img-src 'self' data: https: blob:; " +
+                "connect-src 'self'; " +
+                "frame-ancestors 'none'; " +
+                "base-uri 'self'; " +
+                "form-action 'self';";
         }
     }
 
@@ -197,7 +185,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
                 return false;
             }
 
-            // Extrair centro de custo da requisição (pode vir de route params, query string, ou form data)
+            // Extrair centro de custo da requisição
             var requestCentroCustoId = ExtractCentroCustoFromRequest(context);
 
             return string.IsNullOrEmpty(requestCentroCustoId) || userCentroCustoId == requestCentroCustoId;

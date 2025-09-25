@@ -10,25 +10,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Sistema de Tesouraria Eclesiástica</title>
-    
+
     <!-- Bootstrap 5.3 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    
+
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    
+
     <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <meta name="csrf-token" content="@Html.AntiForgeryToken()" />
 </head>
 
 <body class="d-flex flex-column h-100">
@@ -38,233 +36,207 @@
         var roles = await UserManager.GetRolesAsync(user);
         var primaryRole = roles.FirstOrDefault() ?? "Usuário";
 
-        <!-- Sidebar -->
-        <nav id="sidebar" class="sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-logo d-flex align-items-center">
-                    <i class="fas fa-church text-primary me-2"></i>
-                    <span class="fw-bold">Tesouraria</span>
-                </div>
-                <button type="button" id="sidebarCollapse" class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-bars"></i>
-                </button>
-            </div>
-
-            <div class="sidebar-content">
-                <!-- Profile Card -->
-                <div class="profile-card mb-4">
-                    <div class="profile-avatar">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <div class="profile-info">
-                        <div class="profile-name">@user.NomeCompleto</div>
-                        <div class="profile-role">@primaryRole</div>
-                        @if (user.CentroCusto != null)
-                        {
-                            <div class="profile-location">@user.CentroCusto.Nome</div>
-                        }
-                    </div>
-                </div>
-
-                <!-- Navigation Menu -->
-                <ul class="nav-menu">
-                    <li class="nav-item">
-                        <a asp-controller="Home" asp-action="Index" class="nav-link">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>Dashboard</span>
-                        </a>
-                    </li>
-
-                    @if (User.IsInRole(Roles.OperacoesFinanceiras))
-                    {
-                        <li class="nav-item has-submenu">
-                            <a href="#" class="nav-link">
-                                <i class="fas fa-money-bill-wave"></i>
-                                <span>Financeiro</span>
-                                <i class="fas fa-chevron-right submenu-arrow"></i>
-                            </a>
-                            <ul class="submenu">
-                                <li><a asp-controller="Entradas" asp-action="Index" class="nav-link">Entradas</a></li>
-                                <li><a asp-controller="Saidas" asp-action="Index" class="nav-link">Saídas</a></li>
-                                <li><a asp-controller="Transferencias" asp-action="Index" class="nav-link">Transferências</a></li>
-                            </ul>
-                        </li>
-
-                        <li class="nav-item has-submenu">
-                            <a href="#" class="nav-link">
-                                <i class="fas fa-cog"></i>
-                                <span>Cadastros</span>
-                                <i class="fas fa-chevron-right submenu-arrow"></i>
-                            </a>
-                            <ul class="submenu">
-                                <li><a asp-controller="Membros" asp-action="Index" class="nav-link">Membros</a></li>
-                                <li><a asp-controller="PlanoContas" asp-action="Index" class="nav-link">Plano de Contas</a></li>
-                                <li><a asp-controller="MeiosPagamento" asp-action="Index" class="nav-link">Meios de Pagamento</a></li>
-                                <li><a asp-controller="CentrosCusto" asp-action="Index" class="nav-link">Centros de Custo</a></li>
-                            </ul>
-                        </li>
-                    }
-
-                    @if (User.IsInRole(Roles.AprovacaoPrestacoes))
-                    {
-                        <li class="nav-item">
-                            <a asp-controller="FechamentoPeriodo" asp-action="Index" class="nav-link">
-                                <i class="fas fa-file-invoice"></i>
-                                <span>Prestações de Contas</span>
-                                @{
-                                    var pendingCount = 0; // TODO: Implementar contagem de pendências
-                                }
-                                @if (pendingCount > 0)
-                                {
-                                    <span class="badge bg-warning ms-auto">@pendingCount</span>
-                                }
-                            </a>
-                        </li>
-                    }
-
-                    @if (User.IsInRole(Roles.TodosComAcessoRelatorios))
-                    {
-                        <li class="nav-item has-submenu">
-                            <a href="#" class="nav-link">
-                                <i class="fas fa-chart-bar"></i>
-                                <span>Relatórios</span>
-                                <i class="fas fa-chevron-right submenu-arrow"></i>
-                            </a>
-                            <ul class="submenu">
-                                <li><a asp-controller="Relatorios" asp-action="FluxoCaixa" class="nav-link">Fluxo de Caixa</a></li>
-                                <li><a asp-controller="Relatorios" asp-action="DRE" class="nav-link">DRE</a></li>
-                                <li><a asp-controller="Relatorios" asp-action="Dizimos" class="nav-link">Dízimos</a></li>
-                                <li><a asp-controller="Relatorios" asp-action="Despesas" class="nav-link">Despesas</a></li>
-                            </ul>
-                        </li>
-                    }
-
-                    @if (User.IsInRole(Roles.Administrador))
-                    {
-                        <li class="nav-item has-submenu">
-                            <a href="#" class="nav-link">
-                                <i class="fas fa-users-cog"></i>
-                                <span>Administração</span>
-                                <i class="fas fa-chevron-right submenu-arrow"></i>
-                            </a>
-                            <ul class="submenu">
-                                <li><a asp-controller="Usuarios" asp-action="Index" class="nav-link">Usuários</a></li>
-                                <li><a asp-controller="Auditoria" asp-action="Index" class="nav-link">Auditoria</a></li>
-                                <li><a asp-controller="Home" asp-action="SystemManagement" class="nav-link">Sistema</a></li>
-                            </ul>
-                        </li>
-                    }
-                </ul>
-            </div>
-
-            <!-- Sidebar Footer -->
-            <div class="sidebar-footer">
-                <div class="d-grid gap-2">
-                    <a asp-controller="Account" asp-action="Profile" class="btn btn-outline-light btn-sm">
-                        <i class="fas fa-user me-2"></i>Perfil
+        <!-- Wrapper principal -->
+        <div class="wrapper">
+            <!-- Sidebar -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <a href="/" class="sidebar-brand">
+                        <i class="fas fa-church"></i>
+                        <span class="brand-text">Tesouraria</span>
                     </a>
-                    <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-danger btn-sm w-100">
-                            <i class="fas fa-sign-out-alt me-2"></i>Sair
-                        </button>
-                    </form>
+                    <button class="sidebar-toggle" id="sidebarCollapse">
+                        <i class="fas fa-bars"></i>
+                    </button>
                 </div>
-            </div>
-        </nav>
 
-        <!-- Main Content -->
-        <div id="content" class="content">
-            <!-- Top Navbar -->
-            <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
-                <div class="container-fluid">
-                    <div class="navbar-nav ms-auto">
-                        <!-- Notifications -->
-                        <div class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle position-relative" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-bell"></i>
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationCount">
-                                    0
-                                </span>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><h6 class="dropdown-header">Notificações</h6></li>
-                                <li><a class="dropdown-item" href="#">Nenhuma notificação</a></li>
-                            </ul>
+                <div class="sidebar-content">
+                    <!-- Perfil do usuário -->
+                    <div class="profile-card">
+                        <div class="profile-avatar">
+                            <i class="fas fa-user"></i>
                         </div>
-
-                        <!-- User Dropdown -->
-                        <div class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
-                                <div class="user-avatar me-2">
-                                    <i class="fas fa-user-circle"></i>
-                                </div>
-                                <span class="d-none d-md-inline">@user.NomeCompleto</span>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <div class="dropdown-header">
-                                        <strong>@user.NomeCompleto</strong>
-                                        <br><small class="text-muted">@user.Email</small>
-                                        <br><span class="badge bg-primary">@primaryRole</span>
-                                    </div>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile"><i class="fas fa-user me-2"></i>Perfil</a></li>
-                                <li><a class="dropdown-item" asp-controller="Account" asp-action="ChangePassword"><i class="fas fa-key me-2"></i>Alterar Senha</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                        <button type="submit" class="dropdown-item text-danger">
-                                            <i class="fas fa-sign-out-alt me-2"></i>Sair
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
+                        <div class="profile-info">
+                            <div class="profile-name">@user?.NomeCompleto</div>
+                            <div class="profile-role">@primaryRole</div>
+                            @if (user?.CentroCusto != null)
+                            {
+                                <div class="profile-cc">@user.CentroCusto.Nome</div>
+                            }
                         </div>
                     </div>
-                </div>
-            </nav>
 
-            <!-- Main Content Area -->
-            <main role="main" class="container-fluid">
-                <!-- Breadcrumb -->
-                <nav aria-label="breadcrumb" class="mb-3">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-                        @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Home")
+                    <!-- Menu de navegação -->
+                    <ul class="nav-menu">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">
+                                <i class="fas fa-home"></i>
+                                <span class="nav-text">Dashboard</span>
+                            </a>
+                        </li>
+
+                        @* Operações Financeiras - Administrador, Tesoureiro Geral e Tesoureiro Local *@
+                        @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.TesoureiroLocal))
                         {
-                            <li class="breadcrumb-item active">@ViewContext.RouteData.Values["controller"]</li>
+                            <li class="nav-item has-submenu">
+                                <a class="nav-link" href="#operacoesSubmenu">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    <span class="nav-text">Financeiro</span>
+                                    <i class="fas fa-chevron-right submenu-arrow ms-auto"></i>
+                                </a>
+                                <ul class="submenu collapse" id="operacoesSubmenu">
+                                    <li><a class="nav-link" asp-controller="Entradas" asp-action="Index"><i class="bi bi-arrow-down-left me-2"></i>Entradas</a></li>
+                                    <li><a class="nav-link" asp-controller="Saidas" asp-action="Index"><i class="bi bi-arrow-up-right me-2"></i>Saídas</a></li>
+                                    <li><a class="nav-link" asp-controller="TransferenciasInternas" asp-action="Index"><i class="bi bi-arrow-left-right me-2"></i>Transferências</a></li>
+                                </ul>
+                            </li>
                         }
-                    </ol>
+
+                        @* Fechamentos/Prestação de Contas *@
+                        @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="FechamentoPeriodo" asp-action="Index">
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                    <span class="nav-text">Fechamentos</span>
+                                </a>
+                            </li>
+                        }
+
+                        @* Relatórios - Todos exceto sem permissão *@
+                        @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.TesoureiroLocal) || User.IsInRole(Roles.Pastor))
+                        {
+                            <li class="nav-item has-submenu">
+                                <a class="nav-link" href="#relatoriosSubmenu">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span class="nav-text">Relatórios</span>
+                                    <i class="fas fa-chevron-right submenu-arrow ms-auto"></i>
+                                </a>
+                                <ul class="submenu collapse" id="relatoriosSubmenu">
+                                    <li><a class="nav-link" asp-controller="Relatorios" asp-action="Index"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+                                    <li><a class="nav-link" asp-controller="Relatorios" asp-action="FluxoDeCaixa"><i class="bi bi-cash-coin me-2"></i>Fluxo de Caixa</a></li>
+                                    <li><a class="nav-link" asp-controller="Relatorios" asp-action="EntradasPorPeriodo"><i class="bi bi-arrow-down-left me-2"></i>Entradas</a></li>
+                                    <li><a class="nav-link" asp-controller="Relatorios" asp-action="SaidasPorPeriodo"><i class="bi bi-arrow-up-right me-2"></i>Saídas</a></li>
+                                    <li><a class="nav-link" asp-controller="Relatorios" asp-action="BalanceteGeral"><i class="bi bi-calculator me-2"></i>Balancete</a></li>
+                                    <li><a class="nav-link" asp-controller="Relatorios" asp-action="ContribuicoesPorMembro"><i class="bi bi-people me-2"></i>Contribuições</a></li>
+                                    <li><a class="nav-link" asp-controller="Relatorios" asp-action="DespesasPorCentroCusto"><i class="bi bi-building me-2"></i>Despesas por CC</a></li>
+                                </ul>
+                            </li>
+                        }
+
+                        @* Cadastros - Apenas Administrador *@
+                        @if (User.IsInRole(Roles.Administrador))
+                        {
+                            <li class="nav-item has-submenu">
+                                <a class="nav-link" href="#cadastrosSubmenu">
+                                    <i class="fas fa-cog"></i>
+                                    <span class="nav-text">Cadastros</span>
+                                    <i class="fas fa-chevron-right submenu-arrow ms-auto"></i>
+                                </a>
+                                <ul class="submenu collapse" id="cadastrosSubmenu">
+                                    <li><a class="nav-link" asp-controller="Membros" asp-action="Index"><i class="bi bi-person me-2"></i>Membros</a></li>
+                                    <li><a class="nav-link" asp-controller="CentrosCusto" asp-action="Index"><i class="bi bi-building me-2"></i>Centros de Custo</a></li>
+                                    <li><a class="nav-link" asp-controller="PlanoDeContas" asp-action="Index"><i class="bi bi-list-check me-2"></i>Plano de Contas</a></li>
+                                    <li><a class="nav-link" asp-controller="MeiosPagamento" asp-action="Index"><i class="bi bi-credit-card me-2"></i>Meios de Pagamento</a></li>
+                                    <li><a class="nav-link" asp-controller="Fornecedores" asp-action="Index"><i class="bi bi-shop me-2"></i>Fornecedores</a></li>
+                                </ul>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Usuarios" asp-action="Index">
+                                    <i class="fas fa-users"></i>
+                                    <span class="nav-text">Usuários</span>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Auditoria" asp-action="Index">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <span class="nav-text">Auditoria</span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Conteúdo principal -->
+            <div class="content" id="content">
+                <!-- Navbar superior -->
+                <nav class="navbar navbar-expand-lg navbar-light bg-white">
+                    <div class="container-fluid">
+                        <button class="btn btn-link d-lg-none" id="sidebarCollapseTop">
+                            <i class="fas fa-bars"></i>
+                        </button>
+
+                        <div class="ms-auto d-flex align-items-center">
+                            <!-- Dropdown de perfil -->
+                            <div class="dropdown">
+                                <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-user-circle fa-lg"></i>
+                                    <span class="d-none d-md-inline ms-2">@user?.NomeCompleto</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Account" asp-action="Profile">
+                                            <i class="fas fa-user me-2"></i>Meu Perfil
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fas fa-sign-out-alt me-2"></i>Sair
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </nav>
 
-                <!-- Alerts and Messages -->
-                @if (TempData["Sucesso"] != null)
-                {
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle me-2"></i>@TempData["Sucesso"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
+                <!-- Main Content Area -->
+                <main role="main" class="container-fluid">
+                    <!-- Breadcrumb -->
+                    <nav aria-label="breadcrumb" class="mb-3">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                            @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Home")
+                            {
+                                <li class="breadcrumb-item active">@ViewContext.RouteData.Values["controller"]</li>
+                            }
+                        </ol>
+                    </nav>
 
-                @if (TempData["Erro"] != null)
-                {
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-circle me-2"></i>@TempData["Erro"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
+                    <!-- Alerts and Messages -->
+                    @if (TempData["Sucesso"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>@TempData["Sucesso"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
 
-                @if (TempData["Aviso"] != null)
-                {
-                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Aviso"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
+                    @if (TempData["Erro"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>@TempData["Erro"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
 
-                @RenderBody()
-            </main>
+                    @if (TempData["Aviso"] != null)
+                    {
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Aviso"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @RenderBody()
+                </main>
+            </div>
         </div>
     }
     else
@@ -281,7 +253,7 @@
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Carregando...</span>
             </div>
-            <div class="loading-text mt-3">Processando...</div>
+            <div class="loading-text">Processando...</div>
         </div>
     </div>
 
@@ -292,311 +264,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-    
+
     @await RenderSectionAsync("Scripts", required: false)
-
-    <script>
-        // Sidebar toggle functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebarCollapse = document.getElementById('sidebarCollapse');
-            const sidebar = document.getElementById('sidebar');
-            const content = document.getElementById('content');
-
-            if (sidebarCollapse && sidebar && content) {
-                sidebarCollapse.addEventListener('click', function() {
-                    sidebar.classList.toggle('collapsed');
-                    content.classList.toggle('expanded');
-                });
-            }
-
-            // Submenu functionality
-            const submenuItems = document.querySelectorAll('.has-submenu > .nav-link');
-            submenuItems.forEach(item => {
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const parent = this.parentElement;
-                    const submenu = parent.querySelector('.submenu');
-                    const arrow = this.querySelector('.submenu-arrow');
-                    
-                    if (submenu.classList.contains('show')) {
-                        submenu.classList.remove('show');
-                        arrow.style.transform = 'rotate(0deg)';
-                    } else {
-                        // Close other submenus
-                        document.querySelectorAll('.submenu.show').forEach(sub => {
-                            sub.classList.remove('show');
-                            sub.parentElement.querySelector('.submenu-arrow').style.transform = 'rotate(0deg)';
-                        });
-                        
-                        submenu.classList.add('show');
-                        arrow.style.transform = 'rotate(90deg)';
-                    }
-                });
-            });
-
-            // Auto-close alerts after 5 seconds
-            const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
-            alerts.forEach(alert => {
-                setTimeout(() => {
-                    if (alert.parentElement) {
-                        const bsAlert = new bootstrap.Alert(alert);
-                        bsAlert.close();
-                    }
-                }, 5000);
-            });
-
-            // Active menu highlighting
-            highlightActiveMenu();
-        });
-
-        function highlightActiveMenu() {
-            const currentPath = window.location.pathname.toLowerCase();
-            const menuLinks = document.querySelectorAll('.nav-menu .nav-link');
-            
-            menuLinks.forEach(link => {
-                const href = link.getAttribute('href')?.toLowerCase();
-                if (href && currentPath.includes(href) && href !== '/') {
-                    link.classList.add('active');
-                    
-                    // If it's in a submenu, open the submenu
-                    const submenu = link.closest('.submenu');
-                    if (submenu) {
-                        submenu.classList.add('show');
-                        const parent = submenu.closest('.has-submenu');
-                        const arrow = parent.querySelector('.submenu-arrow');
-                        if (arrow) arrow.style.transform = 'rotate(90deg)';
-                    }
-                }
-            });
-        }
-
-        // Global loading functions
-        function showLoading(message = 'Processando...') {
-            const overlay = document.getElementById('loadingOverlay');
-            const text = overlay.querySelector('.loading-text');
-            text.textContent = message;
-            overlay.classList.remove('d-none');
-        }
-
-        function hideLoading() {
-            const overlay = document.getElementById('loadingOverlay');
-            overlay.classList.add('d-none');
-        }
-
-        // Global toast function
-        function showToast(message, type = 'info', duration = 5000) {
-            const container = document.querySelector('.toast-container');
-            const toastId = 'toast-' + Date.now();
-            const bgClass = {
-                'success': 'bg-success',
-                'error': 'bg-danger', 
-                'warning': 'bg-warning',
-                'info': 'bg-info'
-            }[type] || 'bg-info';
-            
-            const toastHTML = `
-                <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">${message}</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            `;
-            
-            container.insertAdjacentHTML('beforeend', toastHTML);
-            const toastElement = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastElement, { delay: duration });
-            
-            toast.show();
-            toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
-        }
-
-        // Make functions available globally
-        window.showLoading = showLoading;
-        window.hideLoading = hideLoading;
-        window.showToast = showToast;
-    </script>
-
-    <style>
-        /* Sidebar Styles */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            width: 280px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            transition: all 0.3s ease;
-            z-index: 1000;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar.collapsed {
-            width: 70px;
-        }
-
-        .sidebar-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .sidebar-logo {
-            font-size: 1.25rem;
-            white-space: nowrap;
-        }
-
-        .sidebar.collapsed .sidebar-logo span {
-            display: none;
-        }
-
-        .sidebar-content {
-            flex: 1;
-            padding: 1rem 0;
-        }
-
-        .profile-card {
-            padding: 0 1rem;
-            text-align: center;
-        }
-
-        .profile-avatar i {
-            font-size: 3rem;
-            opacity: 0.8;
-        }
-
-        .profile-info {
-            margin-top: 0.5rem;
-        }
-
-        .profile-name {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .profile-role {
-            font-size: 0.8rem;
-            opacity: 0.8;
-        }
-
-        .profile-location {
-            font-size: 0.7rem;
-            opacity: 0.6;
-        }
-
-        .sidebar.collapsed .profile-card .profile-info {
-            display: none;
-        }
-
-        .nav-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .nav-menu .nav-item {
-            margin-bottom: 0.25rem;
-        }
-
-        .nav-menu .nav-link {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem 1.5rem;
-            color: rgba(255,255,255,0.8);
-            text-decoration: none;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .nav-menu .nav-link:hover,
-        .nav-menu .nav-link.active {
-            background: rgba(255,255,255,0.1);
-            color: white;
-        }
-
-        .nav-menu .nav-link i {
-            width: 20px;
-            margin-right: 1rem;
-            text-align: center;
-        }
-
-        .sidebar.collapsed .nav-menu .nav-link span {
-            display: none;
-        }
-
-        .submenu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            background: rgba(0,0,0,0.2);
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .submenu.show {
-            max-height: 300px;
-        }
-
-        .submenu .nav-link {
-            padding-left: 3rem;
-            font-size: 0.9rem;
-        }
-
-        .sidebar-footer {
-            padding: 1rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
-        /* Content Styles */
-        .content {
-            margin-left: 280px;
-            min-height: 100vh;
-            background: #f8f9fa;
-            transition: all 0.3s ease;
-        }
-
-        .content.expanded {
-            margin-left: 70px;
-        }
-
-        /* Loading Overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255,255,255,0.9);
-            z-index: 9999;
-            display: flex !important;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .loading-content {
-            text-align: center;
-        }
-
-        /* Responsive */
-        @@media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            
-            .content {
-                margin-left: 0;
-            }
-        }
-    </style>
 </body>
 </html>

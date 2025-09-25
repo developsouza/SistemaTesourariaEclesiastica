@@ -1,0 +1,119 @@
+﻿/* ===== ESTILOS DA PÁGINA DE LOGIN ===== */
+
+/* Container de autenticação */
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Gradiente de fundo */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+/* Painel esquerdo com informações */
+.bg-login-image {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="church-pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M20,80 L50,50 L80,80 L80,90 L20,90 Z" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="30" r="8" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="1000" height="1000" fill="url(%23church-pattern)"/></svg>');
+    background-size: cover;
+    background-position: center;
+}
+
+.login-info-panel {
+    background: rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 0 0 0 1rem;
+}
+
+.feature-item {
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+
+/* Painel do formulário */
+.login-form-panel {
+    background: white;
+    position: relative;
+    overflow: hidden;
+}
+
+    .login-form-panel::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(102, 126, 234, 0.03) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+/* Estilização do formulário */
+.form-control-user {
+    border: 2px solid #e3e6f0;
+    transition: all 0.3s ease;
+}
+
+    .form-control-user:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+.input-group-text {
+    border: 2px solid #e3e6f0;
+    border-right: none;
+}
+
+.btn-user {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 0.35rem;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+    .btn-user:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 7px 14px rgba(102, 126, 234, 0.4);
+    }
+
+/* Loading overlay para login */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+    .loading-overlay.d-none {
+        display: none !important;
+    }
+
+/* Animação de entrada suave */
+.fade-in {
+    animation: fadeIn 0.6s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

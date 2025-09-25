@@ -33,33 +33,53 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // Exemplo de dados para o dashboard
-            var totalEntradas = await _context.Entradas.SumAsync(e => e.Valor);
-            var totalSaidas = await _context.Saidas.SumAsync(s => s.Valor);
+            // Cálculo otimizado dos totais
+            var totaisTask = _context.Entradas
+                .Select(e => e.Valor)
+                .SumAsync();
+
+            var totalSaidasTask = _context.Saidas
+                .Select(s => s.Valor)
+                .SumAsync();
+
+            await Task.WhenAll(totaisTask, totalSaidasTask);
+
+            var totalEntradas = await totaisTask;
+            var totalSaidas = await totalSaidasTask;
             var saldoAtual = totalEntradas - totalSaidas;
 
             ViewBag.TotalEntradas = totalEntradas.ToString("C2");
             ViewBag.TotalSaidas = totalSaidas.ToString("C2");
             ViewBag.SaldoAtual = saldoAtual.ToString("C2");
 
-            // Dados para gráficos (exemplo: Entradas por Centro de Custo)
+            // Dados para gráficos - Entradas por Centro de Custo (CORRIGIDO)
             var entradasPorCentroCusto = await _context.Entradas
-                .Include(e => e.CentroCusto)
-                .GroupBy(e => e.CentroCusto.Nome)
-                .Select(g => new { CentroCusto = g.Key, Total = g.Sum(e => e.Valor) })
+                .GroupBy(e => new { e.CentroCustoId, e.CentroCusto.Nome })
+                .Select(g => new {
+                    CentroCusto = g.Key.Nome ?? "Sem Centro de Custo",
+                    Total = g.Sum(e => e.Valor)
+                })
+                .ToListAsync(); // Materializa primeiro
+
+            // Ordena em memória (LINQ to Objects)
+            entradasPorCentroCusto = entradasPorCentroCusto
                 .OrderByDescending(x => x.Total)
-                .ToListAsync();
+                .ToList();
 
             ViewBag.EntradasPorCentroCustoLabels = entradasPorCentroCusto.Select(x => x.CentroCusto).ToList();
             ViewBag.EntradasPorCentroCustoData = entradasPorCentroCusto.Select(x => x.Total).ToList();
 
-            // Dados para gráficos (exemplo: Saídas por Plano de Contas)
+            // Dados para gráficos - Saídas por Plano de Contas (CORRIGIDO)
             var saidasPorPlanoContas = await _context.Saidas
                 .Include(s => s.PlanoDeContas)
-                .GroupBy(s => s.PlanoDeContas.Descricao)
-                .Select(g => new { PlanoContas = g.Key, Total = g.Sum(s => s.Valor) })
+                .GroupBy(s => new { Nome = s.PlanoDeContas.Nome ?? "Sem Plano de Contas" })
+                .Select(g => new { PlanoContas = g.Key.Nome, Total = g.Sum(s => s.Valor) })
+                .ToListAsync(); // Materializa primeiro
+
+            // Ordena em memória (LINQ to Objects)
+            saidasPorPlanoContas = saidasPorPlanoContas
                 .OrderByDescending(x => x.Total)
-                .ToListAsync();
+                .ToList();
 
             ViewBag.SaidasPorPlanoContasLabels = saidasPorPlanoContas.Select(x => x.PlanoContas).ToList();
             ViewBag.SaidasPorPlanoContasData = saidasPorPlanoContas.Select(x => x.Total).ToList();
@@ -205,9 +225,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
             ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
 
-            var balancete = new List<dynamic>();
-
-            // Entradas por Plano de Contas
+            // Entradas por Plano de Contas (CORRIGIDO)
             var entradas = await _context.Entradas
                 .Include(e => e.PlanoDeContas)
                 .Where(e => e.Data >= dataInicio && e.Data <= dataFim)
@@ -220,9 +238,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     TotalEntradas = g.Sum(e => e.Valor),
                     TotalSaidas = 0m
                 })
-                .ToListAsync();
+                .ToListAsync(); // Materializa primeiro
 
-            // Saídas por Plano de Contas
+            // Saídas por Plano de Contas (CORRIGIDO)
             var saidas = await _context.Saidas
                 .Include(s => s.PlanoDeContas)
                 .Where(s => s.Data >= dataInicio && s.Data <= dataFim)
@@ -235,9 +253,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     TotalEntradas = 0m,
                     TotalSaidas = g.Sum(s => s.Valor)
                 })
-                .ToListAsync();
+                .ToListAsync(); // Materializa primeiro
 
-            // Combinar entradas e saídas
+            // Combinar entradas e saídas (Ordenação em memória)
             var balanceteCompleto = entradas.Concat(saidas)
                 .GroupBy(x => new { x.PlanoContasId, x.PlanoContasNome, x.Tipo })
                 .Select(g => new
@@ -270,7 +288,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
 
             // Filtro para dropdown de membros
-            ViewBag.Membros = new SelectList(await _context.Membros.Where(m => m.Ativo).OrderBy(m => m.Nome).ToListAsync(), "Id", "Nome", membroId);
+            ViewBag.Membros = new SelectList(await _context.Membros.Where(m => m.Ativo).OrderBy(m => m.NomeCompleto).ToListAsync(), "Id", "Nome", membroId);
 
             var query = _context.Entradas
                 .Include(e => e.Membro)
@@ -285,16 +303,16 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
 
             var contribuicoes = await query
-                .OrderBy(e => e.Membro.Nome)
+                .OrderBy(e => e.Membro.NomeCompleto) // Mudança aqui: Nome -> NomeCompleto
                 .ThenBy(e => e.Data)
                 .ToListAsync();
 
-            // Resumo por membro
+            // Resumo por membro (em memória - CORRIGIDO)
             var resumoPorMembro = contribuicoes
-                .GroupBy(e => new { e.MembroId, e.Membro.Nome })
+                .GroupBy(e => new { e.MembroId, e.Membro.NomeCompleto }) // Mudança aqui também
                 .Select(g => new
                 {
-                    MembroNome = g.Key.Nome,
+                    MembroNome = g.Key.NomeCompleto, // E aqui
                     TotalContribuicoes = g.Sum(e => e.Valor),
                     QuantidadeContribuicoes = g.Count(),
                     UltimaContribuicao = g.Max(e => e.Data)
@@ -339,7 +357,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             var despesas = await query.OrderBy(s => s.Data).ToListAsync();
 
-            // Resumo por centro de custo
+            // Resumo por centro de custo (em memória - CORRIGIDO)
             var resumoPorCentroCusto = despesas
                 .GroupBy(s => new { s.CentroCustoId, s.CentroCusto.Nome })
                 .Select(g => new
@@ -497,6 +515,3 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
     }
 }
-
-
-

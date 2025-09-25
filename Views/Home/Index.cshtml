@@ -25,7 +25,7 @@
             <small class="text-muted">Este mês</small>
         </div>
     </div>
-    
+
     <div class="col-xl-3 col-md-6">
         <div class="stat-card">
             <div class="stat-icon danger">
@@ -36,7 +36,7 @@
             <small class="text-muted">Este mês</small>
         </div>
     </div>
-    
+
     <div class="col-xl-3 col-md-6">
         <div class="stat-card">
             <div class="stat-icon success">
@@ -47,7 +47,7 @@
             <small class="text-muted">Todas as contas</small>
         </div>
     </div>
-    
+
     <div class="col-xl-3 col-md-6">
         <div class="stat-card">
             <div class="stat-icon warning">
@@ -72,7 +72,7 @@
                 <div class="btn-group btn-group-sm" role="group">
                     <input type="radio" class="btn-check" name="chartPeriod" id="chart6m" checked>
                     <label class="btn btn-outline-primary" for="chart6m">6M</label>
-                    
+
                     <input type="radio" class="btn-check" name="chartPeriod" id="chart1y">
                     <label class="btn btn-outline-primary" for="chart1y">1A</label>
                 </div>
@@ -82,7 +82,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-lg-4">
         <div class="card dashboard-card">
             <div class="card-header">
@@ -110,18 +110,21 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <a asp-controller="Entradas" asp-action="Create" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-2"></i>
-                        Nova Entrada
-                    </a>
-                    <a asp-controller="Saidas" asp-action="Create" class="btn btn-danger">
-                        <i class="bi bi-dash-circle me-2"></i>
-                        Nova Saída
-                    </a>
-                    <a asp-controller="TransferenciasInternas" asp-action="Create" class="btn btn-info">
-                        <i class="bi bi-arrow-repeat me-2"></i>
-                        Transferência Interna
-                    </a>
+                    @if (ViewBag.CanManageOperations)
+                    {
+                        <a asp-controller="Entradas" asp-action="Create" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Nova Entrada
+                        </a>
+                        <a asp-controller="Saidas" asp-action="Create" class="btn btn-danger">
+                            <i class="bi bi-dash-circle me-2"></i>
+                            Nova Saída
+                        </a>
+                        <a asp-controller="TransferenciasInternas" asp-action="Create" class="btn btn-info">
+                            <i class="bi bi-arrow-repeat me-2"></i>
+                            Transferência Interna
+                        </a>
+                    }
                     <a asp-controller="Relatorios" asp-action="Index" class="btn btn-warning">
                         <i class="bi bi-graph-up me-2"></i>
                         Relatórios
@@ -129,7 +132,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="card mt-4">
             <div class="card-header">
                 <h5 class="card-title mb-0">
@@ -159,7 +162,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-lg-8">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -184,9 +187,9 @@
                                         <i class="bi bi-clock me-1"></i>
                                         @{
                                             var diasDiferenca = (DateTime.Now.Date - ((DateTime)atividade.data).Date).Days;
-                                            string tempoTexto = diasDiferenca == 0 ? "Hoje" : 
-                                                              diasDiferenca == 1 ? "Ontem" : 
-                                                              $"Há {diasDiferenca} dias";
+                                            string tempoTexto = diasDiferenca == 0 ? "Hoje" :
+                                            diasDiferenca == 1 ? "Ontem" :
+                                            $"Há {diasDiferenca} dias";
                                         }
                                         @tempoTexto
                                     </small>
@@ -196,7 +199,7 @@
                     }
                     else
                     {
-                        <div class="text-center text-muted">
+                        <div class="text-center text-muted py-4">
                             <i class="bi bi-inbox display-4"></i>
                             <p class="mt-2">Nenhuma atividade recente encontrada.</p>
                         </div>
@@ -208,7 +211,6 @@
 </div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Atualiza a data atual
@@ -219,111 +221,128 @@
                 day: 'numeric'
             });
             document.getElementById('currentDate').textContent = currentDate;
-            
+
             // Dados do fluxo de caixa vindos do controller
-            const fluxoCaixaData = @Html.Raw(Json.Serialize(ViewBag.FluxoCaixaData ?? new List<object>()));
-            const despesasData = @Html.Raw(Json.Serialize(ViewBag.DespesasPorCentroCusto ?? new List<object>()));
-            
+            const fluxoCaixaData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.FluxoCaixaData ?? new List<object>()));
+            const despesasData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.DespesasData ?? new List<object>()));
+
             // Configuração do gráfico de fluxo de caixa
-            const fluxoCaixaCtx = document.getElementById('fluxoCaixaChart').getContext('2d');
-            new Chart(fluxoCaixaCtx, {
-                type: 'line',
-                data: {
-                    labels: fluxoCaixaData.map(item => item.mes),
-                    datasets: [{
-                        label: 'Entradas',
-                        data: fluxoCaixaData.map(item => item.entradas),
-                        borderColor: 'rgb(25, 135, 84)',
-                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                        tension: 0.4
-                    }, {
-                        label: 'Saídas',
-                        data: fluxoCaixaData.map(item => item.saidas),
-                        borderColor: 'rgb(220, 53, 69)',
-                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        }
+            const fluxoCaixaCtx = document.getElementById('fluxoCaixaChart');
+            if (fluxoCaixaCtx && fluxoCaixaData.length > 0) {
+                new Chart(fluxoCaixaCtx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: fluxoCaixaData.map(item => item.mes),
+                        datasets: [{
+                            label: 'Entradas',
+                            data: fluxoCaixaData.map(item => item.entradas),
+                            borderColor: 'rgb(25, 135, 84)',
+                            backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: 'Saídas',
+                            data: fluxoCaixaData.map(item => item.saidas),
+                            borderColor: 'rgb(220, 53, 69)',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return 'R$ ' + value.toLocaleString('pt-BR');
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                                    }
                                 }
                             }
-                        }
-                    }
-                }
-            });
-            
-            // Configuração do gráfico de despesas por centro de custo
-            const despesasCtx = document.getElementById('despesasChart').getContext('2d');
-            new Chart(despesasCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: despesasData.map(item => item.centroCusto),
-                    datasets: [{
-                        data: despesasData.map(item => item.valor),
-                        backgroundColor: [
-                            'rgb(13, 110, 253)',
-                            'rgb(255, 193, 7)',
-                            'rgb(25, 135, 84)',
-                            'rgb(220, 53, 69)',
-                            'rgb(108, 117, 125)'
-                        ],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
                         },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.label + ': R$ ' + context.parsed.toLocaleString('pt-BR');
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return 'R$ ' + value.toLocaleString('pt-BR');
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
+
+            // Configuração do gráfico de despesas por categoria
+            const despesasCtx = document.getElementById('despesasChart');
+            if (despesasCtx && despesasData.length > 0) {
+                new Chart(despesasCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: despesasData.map(item => item.categoria),
+                        datasets: [{
+                            data: despesasData.map(item => item.valor),
+                            backgroundColor: [
+                                'rgb(13, 110, 253)',
+                                'rgb(255, 193, 7)',
+                                'rgb(25, 135, 84)',
+                                'rgb(220, 53, 69)',
+                                'rgb(108, 117, 125)'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.label + ': R$ ' + context.parsed.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else if (despesasCtx) {
+                // Se não há dados, mostrar mensagem
+                despesasCtx.parentElement.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-pie-chart display-4"></i><p class="mt-2">Sem dados de despesas no período</p></div>';
+            }
         });
     </script>
-    
+
     <style>
         .timeline {
             position: relative;
             padding-left: 30px;
         }
-        
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 15px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--border-color);
-        }
-        
+
+            .timeline::before {
+                content: '';
+                position: absolute;
+                left: 15px;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background: var(--border-color);
+            }
+
         .timeline-item {
             position: relative;
             margin-bottom: 30px;
         }
-        
+
         .timeline-marker {
             position: absolute;
             left: -23px;
@@ -333,24 +352,42 @@
             border-radius: 50%;
             border: 3px solid var(--bg-primary);
         }
-        
+
         .timeline-content {
             background: var(--bg-primary);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 15px;
         }
-        
+
         .timeline-title {
             margin-bottom: 5px;
             font-size: 0.95rem;
             font-weight: 600;
         }
-        
+
         .timeline-text {
             font-size: 0.9rem;
             margin-bottom: 5px;
         }
+
+        /* Stat Cards melhorados */
+        .stat-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+            .stat-card:hover {
+                transform: translateY(-5px);
+            }
+
+        /* Dashboard Cards */
+        .dashboard-card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+        }
+
+            .dashboard-card .card-header {
+                background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+                border-bottom: 2px solid var(--primary-color);
+            }
     </style>
 }
-

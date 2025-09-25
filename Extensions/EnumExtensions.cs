@@ -7,11 +7,19 @@ namespace SistemaTesourariaEclesiastica.Extensions
     {
         public static string GetDisplayName(this Enum enumValue)
         {
-            return enumValue.GetType()
-                            .GetMember(enumValue.ToString())
-                            .First()
-                            .GetCustomAttribute<DisplayAttribute>()
-                            ?.GetName() ?? enumValue.ToString();
+            if (enumValue == null)
+                return string.Empty;
+
+            var memberInfo = enumValue.GetType()
+                                    .GetMember(enumValue.ToString())
+                                    .FirstOrDefault();
+
+            if (memberInfo == null)
+                return enumValue.ToString();
+
+            var displayAttribute = memberInfo.GetCustomAttribute<DisplayAttribute>();
+            
+            return displayAttribute?.GetName() ?? enumValue.ToString();
         }
     }
 }
