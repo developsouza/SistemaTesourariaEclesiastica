@@ -430,7 +430,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     Valor = entrada.Valor,
                     Data = entrada.Data,
                     PlanoContas = entrada.PlanoDeContas?.Nome,
-                    Membro = entrada.Membro?.Nome,
+                    Membro = entrada.Membro?.NomeCompleto,
                     Observacoes = entrada.Observacoes
                 };
 

@@ -5,83 +5,132 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fas fa-trash me-2 text-danger"></i>Excluir Membro</h2>
-    <a asp-action="Index" class="btn btn-secondary">
-        <i class="fas fa-arrow-left me-2"></i>Voltar
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-trash text-danger me-2"></i>
+            Excluir Membro
+        </h1>
+        <p class="text-muted mb-0">Confirmar exclusão de membro</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
     </a>
 </div>
 
 <div class="alert alert-warning" role="alert">
-    <i class="fas fa-exclamation-triangle me-2"></i>
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
     <strong>Atenção!</strong> Você está prestes a excluir este membro. Esta ação não pode ser desfeita.
 </div>
 
-<div class="card">
-    <div class="card-body">
-        <h5 class="card-title">Confirmar Exclusão</h5>
-        <p class="card-text">Tem certeza de que deseja excluir este membro?</p>
-        
-        <dl class="row">
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Nome)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(model => model.Nome)</dd>
-
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.CPF)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(model => model.CPF)</dd>
-
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Email)</dt>
-            <dd class="col-sm-9">
-                @if (!string.IsNullOrEmpty(Model.Email))
-                {
-                    @Model.Email
-                }
-                else
-                {
-                    <span class="text-muted">Não informado</span>
-                }
-            </dd>
-
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Telefone)</dt>
-            <dd class="col-sm-9">
-                @if (!string.IsNullOrEmpty(Model.Telefone))
-                {
-                    @Model.Telefone
-                }
-                else
-                {
-                    <span class="text-muted">Não informado</span>
-                }
-            </dd>
-
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataCadastro)</dt>
-            <dd class="col-sm-9">@Model.DataCadastro.ToString("dd/MM/yyyy")</dd>
-
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Ativo)</dt>
-            <dd class="col-sm-9">
-                @if (Model.Ativo)
-                {
-                    <span class="badge bg-success">Ativo</span>
-                }
-                else
-                {
-                    <span class="badge bg-secondary">Inativo</span>
-                }
-            </dd>
-        </dl>
-
-        <form asp-action="Delete" class="d-inline">
-            <input type="hidden" asp-for="Id" />
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <a asp-action="Index" class="btn btn-secondary me-md-2">Cancelar</a>
-                <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-trash me-2"></i>Confirmar Exclusão
-                </button>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-danger bg-opacity-10">
+                <h5 class="card-title text-danger mb-0">
+                    <i class="bi bi-exclamation-circle me-2"></i>
+                    Confirmar Exclusão
+                </h5>
             </div>
-        </form>
-    </div>
-</div>
+            <div class="card-body">
+                <p class="mb-4">Tem certeza de que deseja excluir este membro?</p>
 
-<div class="alert alert-info mt-3" role="alert">
-    <i class="fas fa-info-circle me-2"></i>
-    <strong>Nota:</strong> Se este membro possuir contribuições ou outras movimentações financeiras associadas, 
-    a exclusão pode não ser permitida para manter a integridade dos dados históricos.
+                <dl class="row">
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.NomeCompleto)</dt>
+                    <dd class="col-sm-8">
+                        <strong>@Html.DisplayFor(model => model.NomeCompleto)</strong>
+                    </dd>
+
+                    @if (!string.IsNullOrEmpty(Model.Apelido))
+                    {
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Apelido)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Apelido)</dd>
+                    }
+
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.CPF)</dt>
+                    <dd class="col-sm-8">
+                        <span class="font-monospace">@Html.DisplayFor(model => model.CPF)</span>
+                    </dd>
+
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.CentroCusto)</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-info">@Model.CentroCusto.Nome</span>
+                    </dd>
+
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.DataCadastro)</dt>
+                    <dd class="col-sm-8">@Model.DataCadastro.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Ativo)</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Ativo)
+                        {
+                            <span class="badge bg-success">Ativo</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inativo</span>
+                        }
+                    </dd>
+                </dl>
+
+                <hr class="my-4">
+
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-2"></i>
+                            Confirmar Exclusão
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-info">
+            <div class="card-header bg-info bg-opacity-10">
+                <h6 class="card-title text-info mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informação Importante
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-0">
+                    Se este membro possuir contribuições (dízimos) ou outras movimentações financeiras associadas,
+                    a exclusão não será permitida para manter a integridade dos dados históricos.
+                </p>
+            </div>
+        </div>
+
+        @if (Model.Entradas.Any())
+        {
+            <div class="card border-warning mt-3">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h6 class="card-title text-warning mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Registros Vinculados
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <strong>Este membro possui:</strong>
+                    </p>
+                    <ul class="small mb-0">
+                        <li>@Model.Entradas.Count contribuição(ões) registrada(s)</li>
+                        <li>Total contribuído: @Model.Entradas.Sum(e => e.Valor).ToString("C")</li>
+                    </ul>
+                    <hr>
+                    <p class="small text-danger mb-0">
+                        <strong>A exclusão não será permitida!</strong>
+                    </p>
+                </div>
+            </div>
+        }
+    </div>
 </div>

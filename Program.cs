@@ -51,8 +51,6 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     options.Cookie.SameSite = SameSiteMode.Lax;
-
-    // Nome do cookie
     options.Cookie.Name = "TesourariaAuth";
 
     // Configurações de evento
@@ -93,31 +91,24 @@ builder.Services.AddControllersWithViews(options =>
 // Configurações de autorização personalizadas
 builder.Services.AddAuthorization(options =>
 {
-    // Política para Administradores
     options.AddPolicy("AdminOnly", policy =>
         policy.RequireRole("Administrador"));
 
-    // Política para Tesoureiros (Geral e Local)
     options.AddPolicy("Tesoureiros", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal"));
 
-    // Política para acesso a relatórios
     options.AddPolicy("Relatorios", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal", "Pastor"));
 
-    // Política para operações financeiras
     options.AddPolicy("OperacoesFinanceiras", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal"));
 
-    // Política para aprovação de prestações de contas
     options.AddPolicy("AprovacaoPrestacoes", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral"));
 
-    // Política para gerenciamento de usuários
     options.AddPolicy("GerenciarUsuarios", policy =>
         policy.RequireRole("Administrador"));
 
-    // Política para auditoria
     options.AddPolicy("Auditoria", policy =>
         policy.RequireRole("Administrador"));
 });
@@ -156,11 +147,9 @@ using (var scope = app.Services.CreateScope())
         await context.Database.EnsureCreatedAsync();
         logger.LogInformation("Banco de dados inicializado com sucesso.");
 
-        // Inicializar roles e usuário administrador
         await SistemaTesourariaEclesiastica.Services.RoleInitializerService.InitializeAsync(app.Services);
         logger.LogInformation("Roles e usuário administrador inicializados com sucesso.");
 
-        // Remover roles antigas se necessário
         if (app.Environment.IsDevelopment())
         {
             await SistemaTesourariaEclesiastica.Services.RoleInitializerService.RemoverRolesAntigasAsync(app.Services);
@@ -170,11 +159,11 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         logger.LogError(ex, "Erro durante a inicialização do banco de dados ou roles.");
-        throw; // Re-throw para interromper a aplicação em caso de erro crítico
+        throw;
     }
 }
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -197,33 +186,9 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Middleware personalizado para controle de acesso
+// Middlewares personalizados
 app.UseAccessControl();
-
-// Middleware personalizado para controle de centro de custo
 app.UseCentroCustoAccess();
-
-// Middleware personalizado para redirecionamento de usuários não autenticados
-app.Use(async (context, next) =>
-{
-    // Se não está autenticado e não está tentando acessar uma página de autenticação
-    if (!context.User.Identity.IsAuthenticated &&
-        !context.Request.Path.StartsWithSegments("/Account") &&
-        !context.Request.Path.StartsWithSegments("/css") &&
-        !context.Request.Path.StartsWithSegments("/js") &&
-        !context.Request.Path.StartsWithSegments("/lib") &&
-        !context.Request.Path.StartsWithSegments("/favicon") &&
-        !context.Request.Path.StartsWithSegments("/images"))
-    {
-        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("Redirecionando usuário não autenticado para login: {Path}", context.Request.Path);
-
-        context.Response.Redirect("/Account/Login");
-        return;
-    }
-
-    await next();
-});
 
 // Configuração das rotas
 app.MapControllerRoute(

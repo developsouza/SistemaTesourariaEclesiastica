@@ -5,13 +5,21 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fas fa-user me-2"></i>Detalhes do Membro</h2>
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-person me-2"></i>
+            Detalhes do Membro
+        </h1>
+        <p class="text-muted mb-0">Informações cadastrais</p>
+    </div>
     <div>
         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary me-2">
-            <i class="fas fa-edit me-2"></i>Editar
+            <i class="bi bi-pencil me-2"></i>
+            Editar
         </a>
-        <a asp-action="Index" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Voltar
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>
+            Voltar
         </a>
     </div>
 </div>
@@ -20,21 +28,18 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Informações Pessoais</h5>
+                <h5 class="mb-0">Informações do Membro</h5>
             </div>
             <div class="card-body">
                 <dl class="row">
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Nome)</dt>
-                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Nome)</dd>
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.NomeCompleto)</dt>
+                    <dd class="col-sm-8">@Html.DisplayFor(model => model.NomeCompleto)</dd>
 
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataNascimento)</dt>
-                    <dd class="col-sm-9">
-                        @if (Model.DataNascimento.HasValue)
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Apelido)</dt>
+                    <dd class="col-sm-8">
+                        @if (!string.IsNullOrEmpty(Model.Apelido))
                         {
-                            @Model.DataNascimento.Value.ToString("dd/MM/yyyy")
-                            <small class="text-muted">
-                                (@((DateTime.Now.Year - Model.DataNascimento.Value.Year)) anos)
-                            </small>
+                            @Model.Apelido
                         }
                         else
                         {
@@ -42,38 +47,19 @@
                         }
                     </dd>
 
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.CPF)</dt>
-                    <dd class="col-sm-9">@Html.DisplayFor(model => model.CPF)</dd>
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.CPF)</dt>
+                    <dd class="col-sm-8"><span class="font-monospace">@Html.DisplayFor(model => model.CPF)</span></dd>
 
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.RG)</dt>
-                    <dd class="col-sm-9">@Html.DisplayFor(model => model.RG)</dd>
-
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Email)</dt>
-                    <dd class="col-sm-9">
-                        @if (!string.IsNullOrEmpty(Model.Email))
-                        {
-                            <a href="mailto:@Model.Email">@Model.Email</a>
-                        }
-                        else
-                        {
-                            <span class="text-muted">Não informado</span>
-                        }
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.CentroCusto)</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-info">@Model.CentroCusto.Nome</span>
                     </dd>
 
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Telefone)</dt>
-                    <dd class="col-sm-9">
-                        @if (!string.IsNullOrEmpty(Model.Telefone))
-                        {
-                            <a href="tel:@Model.Telefone">@Model.Telefone</a>
-                        }
-                        else
-                        {
-                            <span class="text-muted">Não informado</span>
-                        }
-                    </dd>
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.DataCadastro)</dt>
+                    <dd class="col-sm-8">@Model.DataCadastro.ToString("dd/MM/yyyy HH:mm")</dd>
 
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Ativo)</dt>
-                    <dd class="col-sm-9">
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Ativo)</dt>
+                    <dd class="col-sm-8">
                         @if (Model.Ativo)
                         {
                             <span class="badge bg-success">Ativo</span>
@@ -86,108 +72,22 @@
                 </dl>
             </div>
         </div>
-
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="mb-0">Endereço</h5>
-            </div>
-            <div class="card-body">
-                <dl class="row">
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.CEP)</dt>
-                    <dd class="col-sm-9">@Html.DisplayFor(model => model.CEP)</dd>
-
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Endereco)</dt>
-                    <dd class="col-sm-9">
-                        @Model.Endereco
-                        @if (!string.IsNullOrEmpty(Model.Numero))
-                        {
-                            <text>, @Model.Numero</text>
-                        }
-                        @if (!string.IsNullOrEmpty(Model.Complemento))
-                        {
-                            <text> - @Model.Complemento</text>
-                        }
-                    </dd>
-
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Bairro)</dt>
-                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Bairro)</dd>
-
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Cidade)</dt>
-                    <dd class="col-sm-9">@Model.Cidade - @Model.UF</dd>
-                </dl>
-            </div>
-        </div>
-
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="mb-0">Informações Eclesiásticas</h5>
-            </div>
-            <div class="card-body">
-                <dl class="row">
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataBatismo)</dt>
-                    <dd class="col-sm-9">
-                        @if (Model.DataBatismo.HasValue)
-                        {
-                            @Model.DataBatismo.Value.ToString("dd/MM/yyyy")
-                        }
-                        else
-                        {
-                            <span class="text-muted">Não informado</span>
-                        }
-                    </dd>
-
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataCadastro)</dt>
-                    <dd class="col-sm-9">@Model.DataCadastro.ToString("dd/MM/yyyy")</dd>
-                </dl>
-            </div>
-        </div>
     </div>
+
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Resumo Financeiro</h6>
+                <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Resumo Financeiro</h6>
             </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-12 mb-3">
-                        <h5 class="text-success mb-0">R$ 0,00</h5>
-                        <small class="text-muted">Total de Contribuições</small>
-                    </div>
-                </div>
+            <div class="card-body text-center">
+                <h5 class="text-success mb-0">
+                    @Model.Entradas.Sum(e => e.Valor).ToString("C")
+                </h5>
+                <small class="text-muted">Total de Contribuições</small>
                 <hr>
-                <div class="text-center">
-                    <h6 class="mb-0">Última Contribuição</h6>
-                    <p class="text-muted small">Nenhuma contribuição registrada</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-history me-2"></i>Últimas Contribuições</h6>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small">Nenhuma contribuição encontrada para este membro.</p>
-            </div>
-        </div>
-
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações</h6>
-            </div>
-            <div class="card-body">
-                <p class="small text-muted">
-                    <strong>ID do Membro:</strong> #@Model.Id
+                <p class="small mb-0">
+                    <strong>@Model.Entradas.Count</strong> contribuição(ões) registrada(s)
                 </p>
-                <p class="small text-muted">
-                    <strong>Membro desde:</strong> @Model.DataCadastro.ToString("dd/MM/yyyy")
-                </p>
-                @if (Model.DataBatismo.HasValue)
-                {
-                    <p class="small text-muted">
-                        <strong>Tempo de batismo:</strong> @((DateTime.Now.Year - Model.DataBatismo.Value.Year)) anos
-                    </p>
-                }
             </div>
         </div>
     </div>

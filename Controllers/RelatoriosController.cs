@@ -425,7 +425,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 worksheet.Cells[row, 1].Value = entrada.Data.ToString("dd/MM/yyyy");
                 worksheet.Cells[row, 2].Value = entrada.Valor;
                 worksheet.Cells[row, 3].Value = entrada.Descricao;
-                worksheet.Cells[row, 4].Value = entrada.Membro?.Nome ?? "";
+                worksheet.Cells[row, 4].Value = entrada.Membro?.NomeCompleto ?? "";
                 worksheet.Cells[row, 5].Value = entrada.CentroCusto?.Nome ?? "";
                 worksheet.Cells[row, 6].Value = entrada.PlanoDeContas?.Nome ?? "";
                 worksheet.Cells[row, 7].Value = entrada.MeioDePagamento?.Nome ?? "";

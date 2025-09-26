@@ -77,33 +77,46 @@ namespace SistemaTesourariaEclesiastica.Middleware
             return auditPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static void ApplySecurityHeaders(HttpContext context)
+        private void ApplySecurityHeaders(HttpContext context)
         {
             var headers = context.Response.Headers;
+            var isDevelopment = context.RequestServices
+                .GetRequiredService<IWebHostEnvironment>()
+                .IsDevelopment();
 
-            // Prevent clickjacking
-            headers["X-Frame-Options"] = "DENY";
-
-            // Prevent MIME type sniffing
             headers["X-Content-Type-Options"] = "nosniff";
-
-            // XSS Protection
             headers["X-XSS-Protection"] = "1; mode=block";
-
-            // Referrer Policy
             headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
 
-            // Content Security Policy (CSP) - Configuração mais permissiva para desenvolvimento
-            headers["Content-Security-Policy"] =
-                "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
-                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
-                "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
-                "img-src 'self' data: https: blob:; " +
-                "connect-src 'self'; " +
-                "frame-ancestors 'none'; " +
-                "base-uri 'self'; " +
-                "form-action 'self';";
+            // CSP com configuração diferente por ambiente
+            if (isDevelopment)
+            {
+                // CSP mais permissivo para desenvolvimento
+                headers["Content-Security-Policy"] =
+                    "default-src 'self'; " +
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
+                    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
+                    "img-src 'self' data: https: blob:; " +
+                    "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com ws://localhost:* http://localhost:*; " +
+                    "frame-ancestors 'none'; " +
+                    "base-uri 'self'; " +
+                    "form-action 'self';";
+            }
+            else
+            {
+                // CSP mais restritivo para produção
+                headers["Content-Security-Policy"] =
+                    "default-src 'self'; " +
+                    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
+                    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
+                    "img-src 'self' data: https:; " +
+                    "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                    "frame-ancestors 'none'; " +
+                    "base-uri 'self'; " +
+                    "form-action 'self';";
+            }
         }
     }
 

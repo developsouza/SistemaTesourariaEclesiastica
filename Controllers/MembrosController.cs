@@ -104,13 +104,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return View(membro);
                 }
 
+                // Define valores padrão
+                membro.DataCadastro = DateTime.Now;
+                membro.Ativo = true;
+
                 _context.Add(membro);
                 await _context.SaveChangesAsync();
+
                 var user = await _userManager.GetUserAsync(User);
                 if (user != null)
                 {
                     await _auditService.LogAuditAsync(user.Id, "Criar", "Membro", membro.Id.ToString(), $"Membro {membro.NomeCompleto} criado.");
                 }
+
                 TempData["SuccessMessage"] = "Membro cadastrado com sucesso!";
                 return RedirectToAction(nameof(Index));
             }
@@ -137,10 +143,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return View(membro);
         }
 
-        // POST: Membros/Edit/5
+        // POST: Membros/Edit
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,NomeCompleto,Apelido,CPF,CentroCustoId")] Membro membro)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,NomeCompleto,Apelido,CPF,CentroCustoId,Ativo")] Membro membro)
         {
             if (id != membro.Id)
             {
@@ -160,13 +166,22 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         return View(membro);
                     }
 
+                    // Preserva a data de cadastro original
+                    var membroOriginal = await _context.Membros.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
+                    if (membroOriginal != null)
+                    {
+                        membro.DataCadastro = membroOriginal.DataCadastro;
+                    }
+
                     _context.Update(membro);
                     await _context.SaveChangesAsync();
+
                     var user = await _userManager.GetUserAsync(User);
                     if (user != null)
                     {
                         await _auditService.LogAuditAsync(user.Id, "Editar", "Membro", membro.Id.ToString(), $"Membro {membro.NomeCompleto} atualizado.");
                     }
+
                     TempData["SuccessMessage"] = "Membro atualizado com sucesso!";
                 }
                 catch (DbUpdateConcurrencyException)

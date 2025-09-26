@@ -37,7 +37,7 @@
                         @if (Model.Membro != null)
                         {
                             <a asp-controller="Membros" asp-action="Details" asp-route-id="@Model.MembroId" class="text-decoration-none">
-                                @Model.Membro.Nome
+                                @Model.Membro.NomeCompleto
                             </a>
                         }
                         else
@@ -106,15 +106,7 @@
                     <h6 class="mb-0"><i class="fas fa-user me-2"></i>Informações do Membro</h6>
                 </div>
                 <div class="card-body">
-                    <p class="mb-1"><strong>Nome:</strong> @Model.Membro.Nome</p>
-                    @if (!string.IsNullOrEmpty(Model.Membro.Email))
-                    {
-                        <p class="mb-1"><strong>Email:</strong> @Model.Membro.Email</p>
-                    }
-                    @if (!string.IsNullOrEmpty(Model.Membro.Telefone))
-                    {
-                        <p class="mb-0"><strong>Telefone:</strong> @Model.Membro.Telefone</p>
-                    }
+                    <p class="mb-1"><strong>Nome:</strong> @Model.Membro.NomeCompleto</p>
                 </div>
             </div>
         }
