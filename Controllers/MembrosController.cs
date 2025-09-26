@@ -1,9 +1,9 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Models;
-using Microsoft.AspNetCore.Identity;
 using SistemaTesourariaEclesiastica.Services;
 
 namespace SistemaTesourariaEclesiastica.Controllers
@@ -31,7 +31,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                membros = membros.Where(m => m.NomeCompleto.Contains(searchString) || 
+                membros = membros.Where(m => m.NomeCompleto.Contains(searchString) ||
                                            m.CPF.Contains(searchString) ||
                                            (m.Apelido != null && m.Apelido.Contains(searchString)));
             }
@@ -256,7 +256,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> VerificarCPF(string cpf, int? id)
         {
             var query = _context.Membros.Where(m => m.CPF == cpf);
-            
+
             if (id.HasValue)
             {
                 query = query.Where(m => m.Id != id);

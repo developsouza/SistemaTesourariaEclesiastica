@@ -85,43 +85,43 @@ namespace SistemaTesourariaEclesiastica.ViewModels
         [EmailAddress(ErrorMessage = "Email inválido.")]
         [Display(Name = "Email")]
         public string Email { get; set; } = string.Empty;
-        
+
         [Required(ErrorMessage = "A senha é obrigatória.")]
         [DataType(DataType.Password)]
         [Display(Name = "Senha")]
         public string Password { get; set; } = string.Empty;
-        
+
         [Display(Name = "Lembrar de mim")]
         public bool RememberMe { get; set; }
     }
-    
+
     public class RegisterViewModel
     {
         [Required(ErrorMessage = "O nome completo é obrigatório.")]
         [StringLength(100, ErrorMessage = "O nome deve ter no máximo 100 caracteres.")]
         [Display(Name = "Nome Completo")]
         public string NomeCompleto { get; set; } = string.Empty;
-        
+
         [Required(ErrorMessage = "O email é obrigatório.")]
         [EmailAddress(ErrorMessage = "Email inválido.")]
         [Display(Name = "Email")]
         public string Email { get; set; } = string.Empty;
-        
+
         [Display(Name = "Centro de Custo")]
         public int? CentroCustoId { get; set; }
-        
+
         [Required(ErrorMessage = "A senha é obrigatória.")]
         [StringLength(100, ErrorMessage = "A senha deve ter entre {2} e {1} caracteres.", MinimumLength = 6)]
         [DataType(DataType.Password)]
         [Display(Name = "Senha")]
         public string Password { get; set; } = string.Empty;
-        
+
         [DataType(DataType.Password)]
         [Display(Name = "Confirmar Senha")]
         [Compare("Password", ErrorMessage = "A senha e a confirmação não coincidem.")]
         public string ConfirmPassword { get; set; } = string.Empty;
     }
-    
+
     public class ForgotPasswordViewModel
     {
         [Required(ErrorMessage = "O email é obrigatório.")]

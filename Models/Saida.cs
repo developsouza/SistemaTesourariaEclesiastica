@@ -1,7 +1,7 @@
+using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using SistemaTesourariaEclesiastica.Attributes;
 
 namespace SistemaTesourariaEclesiastica.Models
 {

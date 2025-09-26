@@ -18,7 +18,7 @@ namespace SistemaTesourariaEclesiastica.Extensions
                 return enumValue.ToString();
 
             var displayAttribute = memberInfo.GetCustomAttribute<DisplayAttribute>();
-            
+
             return displayAttribute?.GetName() ?? enumValue.ToString();
         }
     }

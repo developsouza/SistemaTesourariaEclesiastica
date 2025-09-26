@@ -1,10 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
-using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Middleware;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.Authorization;
+using SistemaTesourariaEclesiastica.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 

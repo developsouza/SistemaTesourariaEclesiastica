@@ -1,8 +1,8 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Models;
-using Microsoft.AspNetCore.Identity;
 using SistemaTesourariaEclesiastica.Services;
 
 namespace SistemaTesourariaEclesiastica.Controllers
@@ -228,7 +228,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> VerificarNome(string nome, int? id)
         {
             var query = _context.CentrosCusto.Where(c => c.Nome == nome);
-            
+
             if (id.HasValue)
             {
                 query = query.Where(c => c.Id != id);

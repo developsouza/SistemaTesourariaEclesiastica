@@ -32,7 +32,7 @@ namespace SistemaTesourariaEclesiastica.Data
             base.OnModelCreating(builder);
 
             // Configurações de relacionamentos
-            
+
             // ApplicationUser -> CentroCusto
             builder.Entity<ApplicationUser>()
                 .HasOne(u => u.CentroCusto)

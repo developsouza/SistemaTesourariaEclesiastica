@@ -1,8 +1,8 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Models;
-using Microsoft.AspNetCore.Identity;
 using SistemaTesourariaEclesiastica.Services;
 
 namespace SistemaTesourariaEclesiastica.Controllers
@@ -29,7 +29,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                fornecedores = fornecedores.Where(f => f.Nome.Contains(searchString) || 
+                fornecedores = fornecedores.Where(f => f.Nome.Contains(searchString) ||
                                                       (f.CNPJ != null && f.CNPJ.Contains(searchString)) ||
                                                       (f.CPF != null && f.CPF.Contains(searchString)) ||
                                                       (f.Email != null && f.Email.Contains(searchString)));
@@ -259,7 +259,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return Json(true);
 
             var query = _context.Fornecedores.Where(f => f.CNPJ == cnpj);
-            
+
             if (id.HasValue)
             {
                 query = query.Where(f => f.Id != id);
@@ -277,7 +277,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return Json(true);
 
             var query = _context.Fornecedores.Where(f => f.CPF == cpf);
-            
+
             if (id.HasValue)
             {
                 query = query.Where(f => f.Id != id);
@@ -325,7 +325,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 using var httpClient = new HttpClient();
                 var response = await httpClient.GetStringAsync($"https://viacep.com.br/ws/{cep}/json/");
-                
+
                 return Json(new { success = true, data = response });
             }
             catch

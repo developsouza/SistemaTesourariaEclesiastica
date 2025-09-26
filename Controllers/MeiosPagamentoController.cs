@@ -1,8 +1,8 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Models;
-using Microsoft.AspNetCore.Identity;
 using SistemaTesourariaEclesiastica.Services;
 
 namespace SistemaTesourariaEclesiastica.Controllers
@@ -236,7 +236,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 meioDePagamento.Ativo = !meioDePagamento.Ativo;
                 await _context.SaveChangesAsync();
-                
+
                 var status = meioDePagamento.Ativo ? "ativado" : "desativado";
                 TempData["SuccessMessage"] = $"Meio de pagamento {status} com sucesso!";
             }
@@ -249,7 +249,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> VerificarNome(string nome, int? id)
         {
             var query = _context.MeiosDePagamento.Where(m => m.Nome == nome);
-            
+
             if (id.HasValue)
             {
                 query = query.Where(m => m.Id != id);

@@ -1,5 +1,3 @@
-using System;
-
 namespace SistemaTesourariaEclesiastica.ViewModels
 {
     public class FluxoDeCaixaItem

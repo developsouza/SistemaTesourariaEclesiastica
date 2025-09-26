@@ -3,11 +3,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml.Style;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
@@ -220,7 +219,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             foreach (var log in logs)
             {
                 var user = await _userManager.FindByIdAsync(log.UsuarioId);
-                
+
                 worksheet.Cells[row, 1].Value = log.DataHora.ToString("dd/MM/yyyy HH:mm:ss");
                 worksheet.Cells[row, 2].Value = user?.Email ?? "Usuário não encontrado";
                 worksheet.Cells[row, 3].Value = log.Acao;
@@ -228,7 +227,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 worksheet.Cells[row, 5].Value = log.EntidadeId;
                 worksheet.Cells[row, 6].Value = log.EnderecoIP ?? "";
                 worksheet.Cells[row, 7].Value = log.Detalhes ?? "";
-                
+
                 row++;
             }
 

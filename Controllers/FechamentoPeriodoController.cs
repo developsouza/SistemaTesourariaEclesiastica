@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
+using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
-using SistemaTesourariaEclesiastica.Enums;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
@@ -79,7 +79,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> Create()
         {
             await PopulateDropdowns();
-            
+
             var model = new FechamentoPeriodo
             {
                 DataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1),
@@ -195,7 +195,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     // Limpar rateios e detalhes existentes
                     var itensRateio = await _context.ItensRateioFechamento.Where(i => i.FechamentoPeriodoId == id).ToListAsync();
                     var detalhes = await _context.DetalhesFechamento.Where(d => d.FechamentoPeriodoId == id).ToListAsync();
-                    
+
                     _context.ItensRateioFechamento.RemoveRange(itensRateio);
                     _context.DetalhesFechamento.RemoveRange(detalhes);
 
@@ -344,11 +344,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Remover detalhes e rateios relacionados
                 var itensRateio = await _context.ItensRateioFechamento.Where(i => i.FechamentoPeriodoId == id).ToListAsync();
                 var detalhes = await _context.DetalhesFechamento.Where(d => d.FechamentoPeriodoId == id).ToListAsync();
-                
+
                 _context.ItensRateioFechamento.RemoveRange(itensRateio);
                 _context.DetalhesFechamento.RemoveRange(detalhes);
                 _context.FechamentosPeriodo.Remove(fechamento);
-                
+
                 await _context.SaveChangesAsync();
 
                 await _auditService.LogAsync("Exclusão", "FechamentoPeriodo", $"Fechamento {fechamento.Mes:00}/{fechamento.Ano} excluído");
@@ -390,7 +390,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             foreach (var regra in regrasRateio)
             {
                 var valorRateio = fechamento.BalancoDigital * (regra.Percentual / 100);
-                
+
                 var itemRateio = new ItemRateioFechamento
                 {
                     FechamentoPeriodoId = fechamento.Id,

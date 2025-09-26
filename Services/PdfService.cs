@@ -1,8 +1,4 @@
 using iText.Html2pdf;
-using iText.Kernel.Pdf;
-using iText.Layout;
-using iText.Layout.Element;
-using iText.Layout.Properties;
 using SistemaTesourariaEclesiastica.Models;
 using System.Text;
 
@@ -13,19 +9,19 @@ namespace SistemaTesourariaEclesiastica.Services
         public byte[] GerarReciboFechamento(FechamentoPeriodo fechamento)
         {
             var html = GerarHtmlReciboFechamento(fechamento);
-            
+
             using var memoryStream = new MemoryStream();
             var properties = new ConverterProperties();
-            
+
             HtmlConverter.ConvertToPdf(html, memoryStream, properties);
-            
+
             return memoryStream.ToArray();
         }
 
         private string GerarHtmlReciboFechamento(FechamentoPeriodo fechamento)
         {
             var html = new StringBuilder();
-            
+
             html.AppendLine("<!DOCTYPE html>");
             html.AppendLine("<html>");
             html.AppendLine("<head>");
@@ -149,14 +145,14 @@ namespace SistemaTesourariaEclesiastica.Services
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
-            
+
             // Header
             html.AppendLine("<div class='header'>");
             html.AppendLine("<div class='title'>RECIBO DE FECHAMENTO DE PERÍODO</div>");
             html.AppendLine($"<div class='subtitle'>{fechamento.CentroCusto.Nome}</div>");
             html.AppendLine($"<div class='subtitle'>Período: {fechamento.Mes:00}/{fechamento.Ano}</div>");
             html.AppendLine("</div>");
-            
+
             // Informações Gerais
             html.AppendLine("<div class='info-section'>");
             html.AppendLine("<div class='info-title'>INFORMAÇÕES GERAIS</div>");
@@ -185,7 +181,7 @@ namespace SistemaTesourariaEclesiastica.Services
             html.AppendLine($"<span class='info-value'>{fechamento.UsuarioSubmissao.NomeCompleto}</span>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
-            
+
             // Detalhes de Entradas
             if (fechamento.DetalhesFechamento.Any(d => d.TipoMovimento == "Entrada"))
             {
@@ -202,7 +198,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 html.AppendLine("</tr>");
                 html.AppendLine("</thead>");
                 html.AppendLine("<tbody>");
-                
+
                 foreach (var entrada in fechamento.DetalhesFechamento.Where(d => d.TipoMovimento == "Entrada").OrderBy(d => d.Data))
                 {
                     html.AppendLine("<tr>");
@@ -213,12 +209,12 @@ namespace SistemaTesourariaEclesiastica.Services
                     html.AppendLine($"<td class='currency'>{entrada.Valor:C}</td>");
                     html.AppendLine("</tr>");
                 }
-                
+
                 html.AppendLine("</tbody>");
                 html.AppendLine("</table>");
                 html.AppendLine("</div>");
             }
-            
+
             // Detalhes de Saídas
             if (fechamento.DetalhesFechamento.Any(d => d.TipoMovimento == "Saida"))
             {
@@ -235,7 +231,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 html.AppendLine("</tr>");
                 html.AppendLine("</thead>");
                 html.AppendLine("<tbody>");
-                
+
                 foreach (var saida in fechamento.DetalhesFechamento.Where(d => d.TipoMovimento == "Saida").OrderBy(d => d.Data))
                 {
                     html.AppendLine("<tr>");
@@ -246,12 +242,12 @@ namespace SistemaTesourariaEclesiastica.Services
                     html.AppendLine($"<td class='currency'>{saida.Valor:C}</td>");
                     html.AppendLine("</tr>");
                 }
-                
+
                 html.AppendLine("</tbody>");
                 html.AppendLine("</table>");
                 html.AppendLine("</div>");
             }
-            
+
             // Rateios
             if (fechamento.ItensRateio.Any())
             {
@@ -268,7 +264,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 html.AppendLine("</tr>");
                 html.AppendLine("</thead>");
                 html.AppendLine("<tbody>");
-                
+
                 foreach (var rateio in fechamento.ItensRateio.OrderBy(r => r.RegraRateio.Nome))
                 {
                     html.AppendLine("<tr>");
@@ -279,12 +275,12 @@ namespace SistemaTesourariaEclesiastica.Services
                     html.AppendLine($"<td class='currency'>{rateio.ValorRateio:C}</td>");
                     html.AppendLine("</tr>");
                 }
-                
+
                 html.AppendLine("</tbody>");
                 html.AppendLine("</table>");
                 html.AppendLine("</div>");
             }
-            
+
             // Resumo Financeiro
             html.AppendLine("<div class='summary'>");
             html.AppendLine("<div class='summary-title'>RESUMO FINANCEIRO</div>");
@@ -318,7 +314,7 @@ namespace SistemaTesourariaEclesiastica.Services
             html.AppendLine($"<span class='summary-value'>{fechamento.SaldoFinal:C}</span>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
-            
+
             // Observações
             if (!string.IsNullOrEmpty(fechamento.Observacoes))
             {
@@ -327,7 +323,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 html.AppendLine($"<p>{fechamento.Observacoes}</p>");
                 html.AppendLine("</div>");
             }
-            
+
             // Assinaturas
             html.AppendLine("<div class='signatures'>");
             html.AppendLine("<div class='signature'>");
@@ -336,7 +332,7 @@ namespace SistemaTesourariaEclesiastica.Services
             html.AppendLine("<br>Tesoureiro Responsável");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
-            
+
             if (fechamento.UsuarioAprovacao != null)
             {
                 html.AppendLine("<div class='signature'>");
@@ -347,16 +343,16 @@ namespace SistemaTesourariaEclesiastica.Services
                 html.AppendLine("</div>");
             }
             html.AppendLine("</div>");
-            
+
             // Footer
             html.AppendLine("<div class='footer'>");
             html.AppendLine($"Documento gerado em {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
             html.AppendLine("<br>Sistema de Tesouraria Eclesiástica");
             html.AppendLine("</div>");
-            
+
             html.AppendLine("</body>");
             html.AppendLine("</html>");
-            
+
             return html.ToString();
         }
     }

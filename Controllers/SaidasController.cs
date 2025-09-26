@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
-using SistemaTesourariaEclesiastica.Attributes;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
@@ -26,7 +26,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
 
         // GET: Saidas
-        public async Task<IActionResult> Index(DateTime? dataInicio, DateTime? dataFim, int? centroCustoId, 
+        public async Task<IActionResult> Index(DateTime? dataInicio, DateTime? dataFim, int? centroCustoId,
             int? planoContasId, int? fornecedorId, TipoDespesa? tipoDespesa, int page = 1, int pageSize = 10)
         {
             ViewData["DataInicio"] = dataInicio?.ToString("yyyy-MM-dd");
@@ -88,7 +88,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             // Dropdowns para filtros
             ViewBag.CentrosCusto = new SelectList(await _context.CentrosCusto.ToListAsync(), "Id", "Nome", centroCustoId);
             ViewBag.PlanosContas = new SelectList(
-                await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Despesa).ToListAsync(), 
+                await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Despesa).ToListAsync(),
                 "Id", "Descricao", planoContasId);
             ViewBag.Fornecedores = new SelectList(await _context.Fornecedores.ToListAsync(), "Id", "Nome", fornecedorId);
 
@@ -130,7 +130,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> Create()
         {
             await PopulateDropdowns();
-            
+
             var saida = new Saida
             {
                 Data = DateTime.Today
@@ -279,9 +279,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return Json(new { success = false });
             }
 
-            return Json(new 
-            { 
-                success = true, 
+            return Json(new
+            {
+                success = true,
                 nome = fornecedor.Nome,
                 documento = fornecedor.CNPJ ?? fornecedor.CPF,
                 telefone = fornecedor.Telefone,
@@ -292,19 +292,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private async Task PopulateDropdowns(Saida? saida = null)
         {
             ViewData["MeioDePagamentoId"] = new SelectList(
-                await _context.MeiosDePagamento.ToListAsync(), 
+                await _context.MeiosDePagamento.ToListAsync(),
                 "Id", "Nome", saida?.MeioDePagamentoId);
 
             ViewData["CentroCustoId"] = new SelectList(
-                await _context.CentrosCusto.ToListAsync(), 
+                await _context.CentrosCusto.ToListAsync(),
                 "Id", "Nome", saida?.CentroCustoId);
 
             ViewData["PlanoDeContasId"] = new SelectList(
-                await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Despesa).ToListAsync(), 
+                await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Despesa).ToListAsync(),
                 "Id", "Descricao", saida?.PlanoDeContasId);
 
             ViewData["FornecedorId"] = new SelectList(
-                await _context.Fornecedores.ToListAsync(), 
+                await _context.Fornecedores.ToListAsync(),
                 "Id", "Nome", saida?.FornecedorId);
         }
 

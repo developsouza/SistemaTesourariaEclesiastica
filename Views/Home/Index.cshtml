@@ -16,7 +16,7 @@
 <!-- Cards de Estatísticas Modernos -->
 <div class="row g-4 mb-4">
     <div class="col-xl-3 col-md-6">
-        <div class="card border-0 shadow-sm hover-lift">
+        <div class="card stat-card border-0 fade-in-up">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
@@ -25,8 +25,8 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <small class="text-muted text-uppercase fw-semibold">Total de Entradas</small>
-                        <h3 class="mb-0 mt-1">@ViewBag.EntradasMes</h3>
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Total de Entradas</small>
+                        <h3 class="mb-0 fw-bold">@ViewBag.EntradasMes</h3>
                         <small class="text-muted">Este mês</small>
                     </div>
                 </div>
@@ -35,7 +35,7 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
-        <div class="card border-0 shadow-sm hover-lift">
+        <div class="card stat-card border-0 fade-in-up">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
@@ -44,8 +44,8 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <small class="text-muted text-uppercase fw-semibold">Total de Saídas</small>
-                        <h3 class="mb-0 mt-1">@ViewBag.SaidasMes</h3>
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Total de Saídas</small>
+                        <h3 class="mb-0 fw-bold">@ViewBag.SaidasMes</h3>
                         <small class="text-muted">Este mês</small>
                     </div>
                 </div>
@@ -54,7 +54,7 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
-        <div class="card border-0 shadow-sm hover-lift">
+        <div class="card stat-card border-0 fade-in-up">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
@@ -63,8 +63,8 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <small class="text-muted text-uppercase fw-semibold">Saldo Atual</small>
-                        <h3 class="mb-0 mt-1">@ViewBag.SaldoTotal</h3>
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Saldo Atual</small>
+                        <h3 class="mb-0 fw-bold">@ViewBag.SaldoTotal</h3>
                         <small class="text-muted">Todas as contas</small>
                     </div>
                 </div>
@@ -73,7 +73,7 @@
     </div>
 
     <div class="col-xl-3 col-md-6">
-        <div class="card border-0 shadow-sm hover-lift">
+        <div class="card stat-card border-0 fade-in-up">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
@@ -82,8 +82,8 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <small class="text-muted text-uppercase fw-semibold">Dízimos</small>
-                        <h3 class="mb-0 mt-1">@ViewBag.DizimosMes</h3>
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Dízimos</small>
+                        <h3 class="mb-0 fw-bold">@ViewBag.DizimosMes</h3>
                         <small class="text-muted">Este mês</small>
                     </div>
                 </div>
@@ -95,7 +95,7 @@
 <!-- Gráficos -->
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm">
+        <div class="card chart-card border-0">
             <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-4 pb-3">
                 <h5 class="card-title mb-0 fw-bold">
                     <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
@@ -116,7 +116,7 @@
     </div>
 
     <div class="col-lg-4">
-        <div class="card border-0 shadow-sm">
+        <div class="card chart-card border-0">
             <div class="card-header bg-transparent border-0 pt-4 pb-3">
                 <h5 class="card-title mb-0 fw-bold">
                     <i class="bi bi-pie-chart me-2 text-primary"></i>
@@ -134,8 +134,8 @@
 <div class="row g-4">
     <div class="col-lg-4">
         <!-- Ações Rápidas -->
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-transparent border-0 pt-4 pb-3 mb-4">
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-transparent border-0 pt-4 pb-3">
                 <h5 class="card-title mb-0 fw-bold">
                     <i class="bi bi-lightning-charge me-2 text-primary"></i>
                     Ações Rápidas
@@ -145,20 +145,20 @@
                 <div class="d-grid gap-2">
                     @if (ViewBag.CanManageOperations)
                     {
-                        <a asp-controller="Entradas" asp-action="Create" class="btn btn-success">
+                        <a asp-controller="Entradas" asp-action="Create" class="btn btn-success btn-action">
                             <i class="bi bi-plus-circle me-2"></i>
                             Nova Entrada
                         </a>
-                        <a asp-controller="Saidas" asp-action="Create" class="btn btn-danger">
+                        <a asp-controller="Saidas" asp-action="Create" class="btn btn-danger btn-action">
                             <i class="bi bi-dash-circle me-2"></i>
                             Nova Saída
                         </a>
-                        <a asp-controller="TransferenciasInternas" asp-action="Create" class="btn btn-info">
+                        <a asp-controller="TransferenciasInternas" asp-action="Create" class="btn btn-info btn-action">
                             <i class="bi bi-arrow-left-right me-2"></i>
                             Transferência Interna
                         </a>
                     }
-                    <a asp-controller="Relatorios" asp-action="Index" class="btn btn-warning">
+                    <a asp-controller="Relatorios" asp-action="Index" class="btn btn-warning btn-action">
                         <i class="bi bi-file-earmark-bar-graph me-2"></i>
                         Relatórios
                     </a>
@@ -167,7 +167,7 @@
         </div>
 
         <!-- Alertas -->
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0">
             <div class="card-header bg-transparent border-0 pt-4 pb-3">
                 <h5 class="card-title mb-0 fw-bold">
                     <i class="bi bi-bell me-2 text-primary"></i>
@@ -188,7 +188,7 @@
                 }
                 else
                 {
-                    <div class="alert alert-success border-0 shadow-sm" role="alert">
+                    <div class="alert alert-success border-0" role="alert">
                         <i class="bi bi-check-circle me-2"></i>
                         <strong>Tudo certo!</strong> Não há alertas no momento.
                     </div>
@@ -198,7 +198,7 @@
     </div>
 
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0">
             <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-4 pb-3">
                 <h5 class="card-title mb-0 fw-bold">
                     <i class="bi bi-clock-history me-2 text-primary"></i>
@@ -215,9 +215,9 @@
                             <div class="timeline-item">
                                 <div class="timeline-marker bg-@atividade.icone"></div>
                                 <div class="timeline-content">
-                                    <h6 class="timeline-title mb-1">@atividade.titulo</h6>
-                                    <p class="timeline-text text-muted mb-1">@atividade.descricao</p>
-                                    <small class="text-muted">
+                                    <h6 class="timeline-title mb-1 fw-semibold">@atividade.titulo</h6>
+                                    <p class="timeline-text text-muted mb-1 small">@atividade.descricao</p>
+                                    <small class="text-muted d-flex align-items-center">
                                         <i class="bi bi-clock me-1"></i>
                                         @{
                                             var diasDiferenca = (DateTime.Now.Date - ((DateTime)atividade.data).Date).Days;
@@ -270,41 +270,59 @@
                         datasets: [{
                             label: 'Entradas',
                             data: fluxoCaixaData.map(item => item.entradas),
-                            borderColor: 'rgb(8, 145, 178)',
-                            backgroundColor: 'rgba(8, 145, 178, 0.1)',
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
                             tension: 0.4,
                             fill: true,
-                            borderWidth: 2
+                            borderWidth: 3,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
                         }, {
                             label: 'Saídas',
                             data: fluxoCaixaData.map(item => item.saidas),
-                            borderColor: 'rgb(220, 38, 38)',
-                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
                             tension: 0.4,
                             fill: true,
-                            borderWidth: 2
+                            borderWidth: 3,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#ef4444',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
                         plugins: {
                             legend: {
                                 position: 'top',
+                                align: 'end',
                                 labels: {
                                     usePointStyle: true,
-                                    padding: 15,
+                                    padding: 20,
                                     font: {
-                                        size: 12,
-                                        weight: '500'
+                                        size: 13,
+                                        weight: '600'
                                     }
                                 }
                             },
                             tooltip: {
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                padding: 12,
-                                titleFont: { size: 14, weight: 'bold' },
-                                bodyFont: { size: 13 },
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                padding: 16,
+                                titleFont: { size: 15, weight: 'bold' },
+                                bodyFont: { size: 14 },
+                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                                borderWidth: 1,
+                                cornerRadius: 8,
                                 callbacks: {
                                     label: function(context) {
                                         return context.dataset.label + ': R$ ' +
@@ -319,15 +337,20 @@
                                 ticks: {
                                     callback: function(value) {
                                         return 'R$ ' + value.toLocaleString('pt-BR');
-                                    }
+                                    },
+                                    font: { size: 12 }
                                 },
                                 grid: {
-                                    color: 'rgba(0, 0, 0, 0.05)'
+                                    color: 'rgba(148, 163, 184, 0.1)',
+                                    drawBorder: false
                                 }
                             },
                             x: {
                                 grid: {
                                     display: false
+                                },
+                                ticks: {
+                                    font: { size: 12 }
                                 }
                             }
                         }
@@ -345,36 +368,41 @@
                         datasets: [{
                             data: despesasData.map(item => item.valor),
                             backgroundColor: [
-                                'rgba(30, 64, 175, 0.8)',
-                                'rgba(8, 145, 178, 0.8)',
-                                'rgba(5, 150, 105, 0.8)',
-                                'rgba(217, 119, 6, 0.8)',
-                                'rgba(107, 114, 128, 0.8)'
+                                'rgba(37, 99, 235, 0.85)',
+                                'rgba(14, 165, 233, 0.85)',
+                                'rgba(16, 185, 129, 0.85)',
+                                'rgba(245, 158, 11, 0.85)',
+                                'rgba(107, 114, 128, 0.85)'
                             ],
                             borderWidth: 0,
-                            hoverOffset: 8
+                            hoverOffset: 12,
+                            spacing: 2
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        cutout: '65%',
                         plugins: {
                             legend: {
                                 position: 'bottom',
                                 labels: {
                                     usePointStyle: true,
-                                    padding: 15,
+                                    padding: 20,
                                     font: {
                                         size: 12,
-                                        weight: '500'
+                                        weight: '600'
                                     }
                                 }
                             },
                             tooltip: {
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                padding: 12,
-                                titleFont: { size: 14, weight: 'bold' },
-                                bodyFont: { size: 13 },
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                padding: 16,
+                                titleFont: { size: 15, weight: 'bold' },
+                                bodyFont: { size: 14 },
+                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                                borderWidth: 1,
+                                cornerRadius: 8,
                                 callbacks: {
                                     label: function(context) {
                                         return context.label + ': R$ ' +
@@ -395,82 +423,4 @@
             }
         });
     </script>
-
-    <style>
-        /* Hover effect nos cards */
-        .hover-lift {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-            .hover-lift:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-            }
-
-        /* Ícones modernos */
-        .stat-icon-modern {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        /* Timeline moderna */
-        .timeline {
-            position: relative;
-            padding-left: 30px;
-        }
-
-            .timeline::before {
-                content: '';
-                position: absolute;
-                left: 15px;
-                top: 0;
-                bottom: 0;
-                width: 2px;
-                background: var(--border-color);
-            }
-
-        .timeline-item {
-            position: relative;
-            margin-bottom: 30px;
-        }
-
-        .timeline-marker {
-            position: absolute;
-            left: -22px;
-            top: 5px;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 3px solid var(--bg-primary);
-            box-shadow: 0 0 0 2px var(--bg-secondary);
-        }
-
-        .timeline-content {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 16px;
-            transition: all 0.3s;
-        }
-
-            .timeline-content:hover {
-                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-                transform: translateX(4px);
-            }
-
-        .timeline-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .timeline-text {
-            font-size: 0.875rem;
-        }
-    </style>
 }

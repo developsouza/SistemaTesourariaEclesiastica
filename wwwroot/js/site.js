@@ -76,7 +76,6 @@ class ThemeManager {
             });
         });
 
-        // Listener para mudanças do sistema
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'auto') {
@@ -147,7 +146,6 @@ class SidebarManager {
             button.addEventListener('click', () => this.toggle());
         });
 
-        // Mobile: fechar sidebar ao clicar em um link
         if (window.innerWidth <= 991) {
             const navLinks = document.querySelectorAll('.sidebar .nav-link');
             navLinks.forEach(link => {
@@ -236,7 +234,6 @@ class SubmenuManager {
 
                 const isOpen = submenu.classList.contains('show');
 
-                // Fecha todos os outros submenus
                 document.querySelectorAll('.submenu.show').forEach(sub => {
                     if (sub !== submenu) {
                         sub.classList.remove('show');
@@ -247,14 +244,12 @@ class SubmenuManager {
                     }
                 });
 
-                // Toggle do submenu atual com delay para animação suave
                 if (isOpen) {
                     submenu.classList.remove('show');
                     if (arrow) {
                         arrow.style.transform = 'rotate(0deg)';
                     }
                 } else {
-                    // Pequeno delay para permitir o fechamento suave de outros menus
                     setTimeout(() => {
                         submenu.classList.add('show');
                         if (arrow) {
@@ -286,7 +281,7 @@ class AlertManager {
     }
 }
 
-// ===== VALIDAÇÕES EM TEMPO REAL =====
+// ===== VALIDAÇÕES EM TEMPO REAL (CONSOLIDADO) =====
 class ValidationManager {
     constructor() {
         this.init();

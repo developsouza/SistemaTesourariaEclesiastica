@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Models;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace SistemaTesourariaEclesiastica.Services
 {
@@ -37,7 +36,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 EnderecoIP = ipAddress,
                 UserAgent = userAgent
             };
-            
+
             _context.LogsAuditoria.Add(log);
             await _context.SaveChangesAsync();
         }
@@ -63,12 +62,12 @@ namespace SistemaTesourariaEclesiastica.Services
         public async Task LogCreateAsync<T>(string userId, T entity, string entityId) where T : class
         {
             var entityName = typeof(T).Name;
-            var details = JsonSerializer.Serialize(entity, new JsonSerializerOptions 
-            { 
+            var details = JsonSerializer.Serialize(entity, new JsonSerializerOptions
+            {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
-            
+
             await LogAuditAsync(userId, "CREATE", entityName, entityId, details);
         }
 
@@ -76,24 +75,24 @@ namespace SistemaTesourariaEclesiastica.Services
         {
             var entityName = typeof(T).Name;
             var changes = GetChanges(oldEntity, newEntity);
-            var details = JsonSerializer.Serialize(changes, new JsonSerializerOptions 
-            { 
+            var details = JsonSerializer.Serialize(changes, new JsonSerializerOptions
+            {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
-            
+
             await LogAuditAsync(userId, "UPDATE", entityName, entityId, details);
         }
 
         public async Task LogDeleteAsync<T>(string userId, T entity, string entityId) where T : class
         {
             var entityName = typeof(T).Name;
-            var details = JsonSerializer.Serialize(entity, new JsonSerializerOptions 
-            { 
+            var details = JsonSerializer.Serialize(entity, new JsonSerializerOptions
+            {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
-            
+
             await LogAuditAsync(userId, "DELETE", entityName, entityId, details);
         }
 

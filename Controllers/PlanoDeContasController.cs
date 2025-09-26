@@ -1,9 +1,9 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
-using Microsoft.AspNetCore.Identity;
 using SistemaTesourariaEclesiastica.Services;
 
 namespace SistemaTesourariaEclesiastica.Controllers
@@ -31,7 +31,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                planosContas = planosContas.Where(p => p.Descricao.Contains(searchString) || 
+                planosContas = planosContas.Where(p => p.Descricao.Contains(searchString) ||
                                                       p.Codigo.Contains(searchString));
             }
 
@@ -245,7 +245,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> VerificarCodigo(string codigo, int? id)
         {
             var query = _context.PlanosDeContas.Where(p => p.Codigo == codigo);
-            
+
             if (id.HasValue)
             {
                 query = query.Where(p => p.Id != id);

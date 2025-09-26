@@ -1,19 +1,14 @@
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SistemaTesourariaEclesiastica.Data;
 using Microsoft.AspNetCore.Authorization;
-using SistemaTesourariaEclesiastica.Models;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Identity;
-using SistemaTesourariaEclesiastica.Services;
-using SistemaTesourariaEclesiastica.ViewModels;
-using System.Text;
-using System.IO;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using SistemaTesourariaEclesiastica.Data;
+using SistemaTesourariaEclesiastica.Models;
+using SistemaTesourariaEclesiastica.Services;
+using SistemaTesourariaEclesiastica.ViewModels;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
@@ -55,7 +50,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
             // Dados para gráficos - Entradas por Centro de Custo (CORRIGIDO)
             var entradasPorCentroCusto = await _context.Entradas
                 .GroupBy(e => new { e.CentroCustoId, e.CentroCusto.Nome })
-                .Select(g => new {
+                .Select(g => new
+                {
                     CentroCusto = g.Key.Nome ?? "Sem Centro de Custo",
                     Total = g.Sum(e => e.Valor)
                 })

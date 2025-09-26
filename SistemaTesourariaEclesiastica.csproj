@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="wwwroot\js\validations.js" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="EPPlus" Version="7.0.0" />
     <PackageReference Include="itext7.pdfhtml" Version="5.0.5" />
 	  <PackageReference Include="itext7.bouncy-castle-adapter" Version="8.0.5" />
