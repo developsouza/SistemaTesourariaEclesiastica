@@ -1,25 +1,128 @@
 ﻿@model ErrorViewModel
 @{
-    ViewData["Title"] = "Error";
+    ViewData["Title"] = "Erro";
 }
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg">
+                <div class="card-body text-center p-5">
+                    <!-- Ícone de erro -->
+                    <div class="mb-4">
+                        <div class="error-icon mx-auto">
+                            <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+                        </div>
+                    </div>
 
-@if (Model.ShowRequestId)
-{
-    <p>
-        <strong>Request ID:</strong> <code>@Model.RequestId</code>
-    </p>
-}
+                    <!-- Título -->
+                    <h1 class="display-4 fw-bold text-danger mb-3">Ops! Algo deu errado</h1>
+                    <p class="lead text-muted mb-4">
+                        Ocorreu um erro ao processar sua solicitação. Não se preocupe, nossa equipe já foi notificada.
+                    </p>
 
-<h3>Development Mode</h3>
-<p>
-    Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
-</p>
-<p>
-    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
-    It can result in displaying sensitive information from exceptions to end users.
-    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-    and restarting the app.
-</p>
+                    @if (Model.ShowRequestId)
+                    {
+                        <div class="alert alert-light border mb-4">
+                            <small class="text-muted">
+                                <strong>ID da Requisição:</strong> <code class="text-primary">@Model.RequestId</code>
+                            </small>
+                        </div>
+                    }
+
+                    <!-- Botões de ação -->
+                    <div class="d-flex gap-3 justify-content-center flex-wrap">
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-primary px-4">
+                            <i class="bi bi-house me-2"></i>
+                            Voltar para o Dashboard
+                        </a>
+                        <button onclick="history.back()" class="btn btn-outline-secondary px-4">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Página Anterior
+                        </button>
+                    </div>
+
+                    <!-- Informações adicionais -->
+                    <div class="mt-5 pt-4 border-top">
+                        <h5 class="fw-semibold mb-3">O que você pode fazer:</h5>
+                        <div class="row g-3 text-start">
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-start">
+                                    <i class="bi bi-arrow-clockwise text-primary me-3 fs-4"></i>
+                                    <div>
+                                        <h6 class="mb-1">Tente novamente</h6>
+                                        <small class="text-muted">Atualize a página ou refaça a operação</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-start">
+                                    <i class="bi bi-clock-history text-primary me-3 fs-4"></i>
+                                    <div>
+                                        <h6 class="mb-1">Aguarde um momento</h6>
+                                        <small class="text-muted">Pode ser um problema temporário</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-start">
+                                    <i class="bi bi-headset text-primary me-3 fs-4"></i>
+                                    <div>
+                                        <h6 class="mb-1">Contate o suporte</h6>
+                                        <small class="text-muted">Se o erro persistir, fale conosco</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-icon {
+        width: 120px;
+        height: 120px;
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3.5rem;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @@keyframes pulse {
+        0%, 100%
+
+    {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    }
+
+    .card {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    @@keyframes fadeInUp {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+</style>

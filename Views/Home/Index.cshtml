@@ -4,69 +4,101 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 mb-0">Dashboard</h1>
+        <h1 class="h2 mb-1 fw-bold">Dashboard</h1>
         <p class="text-muted mb-0">Visão geral do sistema de tesouraria</p>
     </div>
     <div class="text-muted">
-        <i class="bi bi-calendar3"></i>
+        <i class="bi bi-calendar-event me-2"></i>
         <span id="currentDate"></span>
     </div>
 </div>
 
-<!-- Cards de Estatísticas -->
+<!-- Cards de Estatísticas Modernos -->
 <div class="row g-4 mb-4">
     <div class="col-xl-3 col-md-6">
-        <div class="stat-card">
-            <div class="stat-icon primary">
-                <i class="bi bi-arrow-down-circle"></i>
+        <div class="card border-0 shadow-sm hover-lift">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-arrow-down-circle"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold">Total de Entradas</small>
+                        <h3 class="mb-0 mt-1">@ViewBag.EntradasMes</h3>
+                        <small class="text-muted">Este mês</small>
+                    </div>
+                </div>
             </div>
-            <div class="stat-value">@ViewBag.EntradasMes</div>
-            <div class="stat-label">Total de Entradas</div>
-            <small class="text-muted">Este mês</small>
         </div>
     </div>
 
     <div class="col-xl-3 col-md-6">
-        <div class="stat-card">
-            <div class="stat-icon danger">
-                <i class="bi bi-arrow-up-circle"></i>
+        <div class="card border-0 shadow-sm hover-lift">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-danger bg-opacity-10 text-danger">
+                            <i class="bi bi-arrow-up-circle"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold">Total de Saídas</small>
+                        <h3 class="mb-0 mt-1">@ViewBag.SaidasMes</h3>
+                        <small class="text-muted">Este mês</small>
+                    </div>
+                </div>
             </div>
-            <div class="stat-value">@ViewBag.SaidasMes</div>
-            <div class="stat-label">Total de Saídas</div>
-            <small class="text-muted">Este mês</small>
         </div>
     </div>
 
     <div class="col-xl-3 col-md-6">
-        <div class="stat-card">
-            <div class="stat-icon success">
-                <i class="bi bi-cash-stack"></i>
+        <div class="card border-0 shadow-sm hover-lift">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold">Saldo Atual</small>
+                        <h3 class="mb-0 mt-1">@ViewBag.SaldoTotal</h3>
+                        <small class="text-muted">Todas as contas</small>
+                    </div>
+                </div>
             </div>
-            <div class="stat-value">@ViewBag.SaldoTotal</div>
-            <div class="stat-label">Saldo Atual</div>
-            <small class="text-muted">Todas as contas</small>
         </div>
     </div>
 
     <div class="col-xl-3 col-md-6">
-        <div class="stat-card">
-            <div class="stat-icon warning">
-                <i class="bi bi-heart"></i>
+        <div class="card border-0 shadow-sm hover-lift">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-heart-fill"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold">Dízimos</small>
+                        <h3 class="mb-0 mt-1">@ViewBag.DizimosMes</h3>
+                        <small class="text-muted">Este mês</small>
+                    </div>
+                </div>
             </div>
-            <div class="stat-value">@ViewBag.DizimosMes</div>
-            <div class="stat-label">Dízimos</div>
-            <small class="text-muted">Este mês</small>
         </div>
     </div>
 </div>
 
-<!-- Gráficos e Informações -->
+<!-- Gráficos -->
 <div class="row g-4 mb-4">
     <div class="col-lg-8">
-        <div class="card dashboard-card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-graph-up me-2"></i>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-4 pb-3">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
                     Fluxo de Caixa - Últimos 6 Meses
                 </h5>
                 <div class="btn-group btn-group-sm" role="group">
@@ -77,21 +109,21 @@
                     <label class="btn btn-outline-primary" for="chart1y">1A</label>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="card-body pt-0">
                 <canvas id="fluxoCaixaChart" height="300"></canvas>
             </div>
         </div>
     </div>
 
     <div class="col-lg-4">
-        <div class="card dashboard-card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-pie-chart me-2"></i>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-4 pb-3">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-pie-chart me-2 text-primary"></i>
                     Distribuição de Despesas
                 </h5>
             </div>
-            <div class="card-body">
+            <div class="card-body pt-0">
                 <canvas id="despesasChart" height="300"></canvas>
             </div>
         </div>
@@ -101,18 +133,19 @@
 <!-- Ações Rápidas e Atividades Recentes -->
 <div class="row g-4">
     <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-lightning me-2"></i>
+        <!-- Ações Rápidas -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-transparent border-0 pt-4 pb-3 mb-4">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-lightning-charge me-2 text-primary"></i>
                     Ações Rápidas
                 </h5>
             </div>
-            <div class="card-body">
+            <div class="card-body pt-0">
                 <div class="d-grid gap-2">
                     @if (ViewBag.CanManageOperations)
                     {
-                        <a asp-controller="Entradas" asp-action="Create" class="btn btn-primary">
+                        <a asp-controller="Entradas" asp-action="Create" class="btn btn-success">
                             <i class="bi bi-plus-circle me-2"></i>
                             Nova Entrada
                         </a>
@@ -121,31 +154,32 @@
                             Nova Saída
                         </a>
                         <a asp-controller="TransferenciasInternas" asp-action="Create" class="btn btn-info">
-                            <i class="bi bi-arrow-repeat me-2"></i>
+                            <i class="bi bi-arrow-left-right me-2"></i>
                             Transferência Interna
                         </a>
                     }
                     <a asp-controller="Relatorios" asp-action="Index" class="btn btn-warning">
-                        <i class="bi bi-graph-up me-2"></i>
+                        <i class="bi bi-file-earmark-bar-graph me-2"></i>
                         Relatórios
                     </a>
                 </div>
             </div>
         </div>
 
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
+        <!-- Alertas -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-4 pb-3">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-bell me-2 text-primary"></i>
                     Alertas Importantes
                 </h5>
             </div>
-            <div class="card-body">
+            <div class="card-body pt-0">
                 @if (ViewBag.Alertas != null && ((List<object>)ViewBag.Alertas).Count > 0)
                 {
                     @foreach (dynamic alerta in ViewBag.Alertas)
                     {
-                        <div class="alert alert-@alerta.tipo alert-dismissible fade show" role="alert">
+                        <div class="alert alert-@alerta.tipo alert-dismissible fade show mb-2" role="alert">
                             <i class="bi bi-@(alerta.tipo == "warning" ? "exclamation-triangle" : "exclamation-circle") me-2"></i>
                             <strong>@alerta.titulo:</strong> @alerta.descricao
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -154,9 +188,9 @@
                 }
                 else
                 {
-                    <div class="alert alert-success" role="alert">
+                    <div class="alert alert-success border-0 shadow-sm" role="alert">
                         <i class="bi bi-check-circle me-2"></i>
-                        <strong>Tudo certo!</strong> Não há alertas importantes no momento.
+                        <strong>Tudo certo!</strong> Não há alertas no momento.
                     </div>
                 }
             </div>
@@ -164,15 +198,15 @@
     </div>
 
     <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bi bi-clock-history me-2"></i>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-4 pb-3">
+                <h5 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-clock-history me-2 text-primary"></i>
                     Atividades Recentes
                 </h5>
                 <a href="#" class="btn btn-sm btn-outline-primary">Ver Todas</a>
             </div>
-            <div class="card-body">
+            <div class="card-body pt-0">
                 <div class="timeline">
                     @if (ViewBag.AtividadesRecentes != null && ((List<object>)ViewBag.AtividadesRecentes).Count > 0)
                     {
@@ -181,7 +215,7 @@
                             <div class="timeline-item">
                                 <div class="timeline-marker bg-@atividade.icone"></div>
                                 <div class="timeline-content">
-                                    <h6 class="timeline-title">@atividade.titulo</h6>
+                                    <h6 class="timeline-title mb-1">@atividade.titulo</h6>
                                     <p class="timeline-text text-muted mb-1">@atividade.descricao</p>
                                     <small class="text-muted">
                                         <i class="bi bi-clock me-1"></i>
@@ -199,9 +233,9 @@
                     }
                     else
                     {
-                        <div class="text-center text-muted py-4">
-                            <i class="bi bi-inbox display-4"></i>
-                            <p class="mt-2">Nenhuma atividade recente encontrada.</p>
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-inbox display-4 opacity-25"></i>
+                            <p class="mt-3 mb-0">Nenhuma atividade recente encontrada.</p>
                         </div>
                     }
                 </div>
@@ -220,9 +254,9 @@
                 month: 'long',
                 day: 'numeric'
             });
-            document.getElementById('currentDate').textContent = currentDate;
+            document.getElementById('currentDate').textContent = currentDate.charAt(0).toUpperCase() + currentDate.slice(1);
 
-            // Dados do fluxo de caixa vindos do controller
+            // Dados dos gráficos
             const fluxoCaixaData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.FluxoCaixaData ?? new List<object>()));
             const despesasData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.DespesasData ?? new List<object>()));
 
@@ -236,17 +270,19 @@
                         datasets: [{
                             label: 'Entradas',
                             data: fluxoCaixaData.map(item => item.entradas),
-                            borderColor: 'rgb(25, 135, 84)',
-                            backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                            borderColor: 'rgb(8, 145, 178)',
+                            backgroundColor: 'rgba(8, 145, 178, 0.1)',
                             tension: 0.4,
-                            fill: true
+                            fill: true,
+                            borderWidth: 2
                         }, {
                             label: 'Saídas',
                             data: fluxoCaixaData.map(item => item.saidas),
-                            borderColor: 'rgb(220, 53, 69)',
-                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            borderColor: 'rgb(220, 38, 38)',
+                            backgroundColor: 'rgba(220, 38, 38, 0.1)',
                             tension: 0.4,
-                            fill: true
+                            fill: true,
+                            borderWidth: 2
                         }]
                     },
                     options: {
@@ -255,11 +291,24 @@
                         plugins: {
                             legend: {
                                 position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: {
+                                        size: 12,
+                                        weight: '500'
+                                    }
+                                }
                             },
                             tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 13 },
                                 callbacks: {
                                     label: function(context) {
-                                        return context.dataset.label + ': R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                                        return context.dataset.label + ': R$ ' +
+                                            context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2});
                                     }
                                 }
                             }
@@ -271,6 +320,14 @@
                                     callback: function(value) {
                                         return 'R$ ' + value.toLocaleString('pt-BR');
                                     }
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
                                 }
                             }
                         }
@@ -278,7 +335,7 @@
                 });
             }
 
-            // Configuração do gráfico de despesas por categoria
+            // Configuração do gráfico de despesas
             const despesasCtx = document.getElementById('despesasChart');
             if (despesasCtx && despesasData.length > 0) {
                 new Chart(despesasCtx.getContext('2d'), {
@@ -288,14 +345,14 @@
                         datasets: [{
                             data: despesasData.map(item => item.valor),
                             backgroundColor: [
-                                'rgb(13, 110, 253)',
-                                'rgb(255, 193, 7)',
-                                'rgb(25, 135, 84)',
-                                'rgb(220, 53, 69)',
-                                'rgb(108, 117, 125)'
+                                'rgba(30, 64, 175, 0.8)',
+                                'rgba(8, 145, 178, 0.8)',
+                                'rgba(5, 150, 105, 0.8)',
+                                'rgba(217, 119, 6, 0.8)',
+                                'rgba(107, 114, 128, 0.8)'
                             ],
-                            borderWidth: 2,
-                            borderColor: '#fff'
+                            borderWidth: 0,
+                            hoverOffset: 8
                         }]
                     },
                     options: {
@@ -304,11 +361,24 @@
                         plugins: {
                             legend: {
                                 position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: {
+                                        size: 12,
+                                        weight: '500'
+                                    }
+                                }
                             },
                             tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 13 },
                                 callbacks: {
                                     label: function(context) {
-                                        return context.label + ': R$ ' + context.parsed.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                                        return context.label + ': R$ ' +
+                                            context.parsed.toLocaleString('pt-BR', {minimumFractionDigits: 2});
                                     }
                                 }
                             }
@@ -316,13 +386,39 @@
                     }
                 });
             } else if (despesasCtx) {
-                // Se não há dados, mostrar mensagem
-                despesasCtx.parentElement.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-pie-chart display-4"></i><p class="mt-2">Sem dados de despesas no período</p></div>';
+                despesasCtx.parentElement.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-pie-chart display-4 opacity-25"></i>
+                        <p class="mt-3 mb-0">Sem dados de despesas no período</p>
+                    </div>
+                `;
             }
         });
     </script>
 
     <style>
+        /* Hover effect nos cards */
+        .hover-lift {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+            .hover-lift:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+            }
+
+        /* Ícones modernos */
+        .stat-icon-modern {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        /* Timeline moderna */
         .timeline {
             position: relative;
             padding-left: 30px;
@@ -345,49 +441,36 @@
 
         .timeline-marker {
             position: absolute;
-            left: -23px;
+            left: -22px;
             top: 5px;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
             border: 3px solid var(--bg-primary);
+            box-shadow: 0 0 0 2px var(--bg-secondary);
         }
 
         .timeline-content {
-            background: var(--bg-primary);
+            background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s;
         }
 
+            .timeline-content:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                transform: translateX(4px);
+            }
+
         .timeline-title {
-            margin-bottom: 5px;
             font-size: 0.95rem;
             font-weight: 600;
+            color: var(--text-primary);
         }
 
         .timeline-text {
-            font-size: 0.9rem;
-            margin-bottom: 5px;
+            font-size: 0.875rem;
         }
-
-        /* Stat Cards melhorados */
-        .stat-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-            .stat-card:hover {
-                transform: translateY(-5px);
-            }
-
-        /* Dashboard Cards */
-        .dashboard-card {
-            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-        }
-
-            .dashboard-card .card-header {
-                background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
-                border-bottom: 2px solid var(--primary-color);
-            }
     </style>
 }
