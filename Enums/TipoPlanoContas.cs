@@ -20,15 +20,6 @@ namespace SistemaTesourariaEclesiastica.Enums
         Variavel = 2
     }
 
-    public enum TipoCentroCusto
-    {
-        [Display(Name = "Sede")]
-        Sede = 1,
-
-        [Display(Name = "Congregação")]
-        Congregacao = 2
-    }
-
     public enum StatusFechamento
     {
         [Display(Name = "Pendente")]

@@ -1,67 +1,238 @@
-@model SistemaTesourariaEclesiastica.Models.CentroCusto
+@model SistemaTesourariaEclesiastica.ViewModels.UsuarioViewModel
 
 @{
-    ViewData["Title"] = "Excluir Centro de Custo";
+    ViewData["Title"] = "Excluir Usuário";
+    var possuiLogsAuditoria = (bool)(ViewBag.PossuiLogsAuditoria ?? false);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fas fa-trash me-2 text-danger"></i>Excluir Centro de Custo</h2>
-    <a asp-action="Index" class="btn btn-secondary">
-        <i class="fas fa-arrow-left me-2"></i>Voltar
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-trash me-2 text-danger"></i>
+            Excluir Usuário
+        </h1>
+        <p class="text-muted mb-0">Confirmar exclusão do registro</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Voltar
     </a>
 </div>
 
-<div class="alert alert-warning" role="alert">
-    <i class="fas fa-exclamation-triangle me-2"></i>
-    <strong>Atenção!</strong> Você está prestes a excluir este centro de custo. Esta ação não pode ser desfeita.
-</div>
+@if (possuiLogsAuditoria)
+{
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+        <i class="bi bi-exclamation-octagon me-3 fs-3"></i>
+        <div>
+            <h5 class="alert-heading mb-2">Não é possível excluir este usuário!</h5>
+            <p class="mb-0">Este usuário possui logs de auditoria associados. Para preservar a integridade do histórico do sistema, não é permitido excluir usuários com registros de auditoria. <strong>Recomendamos desativar o usuário ao invés de excluí-lo.</strong></p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="bi bi-exclamation-triangle me-3 fs-3"></i>
+        <div>
+            <h5 class="alert-heading mb-2">Atenção!</h5>
+            <p class="mb-0">Você está prestes a excluir este usuário. Esta ação não pode ser desfeita e o usuário perderá permanentemente o acesso ao sistema.</p>
+        </div>
+    </div>
+}
 
-<div class="card">
-    <div class="card-body">
-        <h5 class="card-title">Confirmar Exclusão</h5>
-        <p class="card-text">Tem certeza de que deseja excluir este centro de custo?</p>
-        
-        <dl class="row">
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Nome)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(model => model.Nome)</dd>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Detalhes do Usuário
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Nome Completo:</dt>
+                    <dd class="col-sm-8 fw-semibold">@Model.NomeCompleto</dd>
 
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Tipo)</dt>
-            <dd class="col-sm-9">
-                <span class="badge bg-info">
-                    @Model.Tipo.GetDisplayName()
-                </span>
-            </dd>
+                    <dt class="col-sm-4">E-mail:</dt>
+                    <dd class="col-sm-8">
+                        <i class="bi bi-envelope me-1 text-muted"></i>
+                        @Model.Email
+                    </dd>
 
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
+                    <dt class="col-sm-4">Centro de Custo:</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-info">@Model.CentroCustoNome</span>
+                    </dd>
 
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Ativo)</dt>
-            <dd class="col-sm-9">
-                @if (Model.Ativo)
+                    <dt class="col-sm-4">Perfil de Acesso:</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Roles.Any())
+                        {
+                            @foreach (var role in Model.Roles)
+                            {
+                                var badgeClass = role switch
+                                {
+                                    "Administrador" => "bg-danger",
+                                    "TesoureiroGeral" => "bg-primary",
+                                    "TesoureiroLocal" => "bg-info",
+                                    "Pastor" => "bg-secondary",
+                                    _ => "bg-dark"
+                                };
+                                <span class="badge @badgeClass me-1">@role</span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Sem perfil</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Status:</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Ativo)
+                        {
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Ativo
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">
+                                <i class="bi bi-x-circle me-1"></i>Inativo
+                            </span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Data de Criação:</dt>
+                    <dd class="col-sm-8">
+                        <small class="text-muted">
+                            <i class="bi bi-calendar me-1"></i>
+                            @Model.DataCriacao.ToString("dd/MM/yyyy 'às' HH:mm")
+                        </small>
+                    </dd>
+                </dl>
+
+                <hr class="my-4">
+
+                @if (!possuiLogsAuditoria)
                 {
-                    <span class="badge bg-success">Ativo</span>
+                    <form asp-action="Delete" method="post">
+                        <input type="hidden" asp-for="Id" />
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash me-2"></i>Confirmar Exclusão
+                            </button>
+                        </div>
+                    </form>
                 }
                 else
                 {
-                    <span class="badge bg-secondary">Inativo</span>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Voltar para Lista
+                        </a>
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                            <i class="bi bi-pencil me-2"></i>Editar e Desativar
+                        </a>
+                    </div>
                 }
-            </dd>
-        </dl>
-
-        <form asp-action="Delete" class="d-inline">
-            <input type="hidden" asp-for="Id" />
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <a asp-action="Index" class="btn btn-secondary me-md-2">Cancelar</a>
-                <button type="submit" class="btn btn-danger">
-                    <i class="fas fa-trash me-2"></i>Confirmar Exclusão
-                </button>
             </div>
-        </form>
+        </div>
     </div>
-</div>
 
-<div class="alert alert-info mt-3" role="alert">
-    <i class="fas fa-info-circle me-2"></i>
-    <strong>Nota:</strong> Se este centro de custo possuir movimentações financeiras associadas, 
-    a exclusão pode não ser permitida para manter a integridade dos dados.
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-info border-opacity-25 mb-3">
+            <div class="card-header bg-info bg-opacity-10">
+                <h6 class="mb-0 text-info">
+                    <i class="bi bi-link-45deg me-2"></i>Registros Associados
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-arrow-down-circle text-success me-2"></i>
+                        <span class="small">Entradas</span>
+                    </div>
+                    <span class="badge bg-success">@ViewBag.TotalEntradas</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-arrow-up-circle text-danger me-2"></i>
+                        <span class="small">Saídas</span>
+                    </div>
+                    <span class="badge bg-danger">@ViewBag.TotalSaidas</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-arrow-left-right text-primary me-2"></i>
+                        <span class="small">Transferências</span>
+                    </div>
+                    <span class="badge bg-primary">@ViewBag.TotalTransferencias</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-folder text-warning me-2"></i>
+                        <span class="small">Fechamentos</span>
+                    </div>
+                    <span class="badge bg-warning">@ViewBag.TotalFechamentos</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-journal-text text-secondary me-2"></i>
+                        <span class="small">Logs de Auditoria</span>
+                    </div>
+                    <span class="badge @(possuiLogsAuditoria ? "bg-danger" : "bg-secondary")">
+                        @ViewBag.TotalLogsAuditoria
+                    </span>
+                </div>
+
+                @if (possuiLogsAuditoria)
+                {
+                    <div class="alert alert-danger small mt-3 mb-0">
+                        <i class="bi bi-shield-exclamation me-1"></i>
+                        <strong>Bloqueio:</strong> Logs de auditoria impedem a exclusão
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info small mt-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Os registros acima terão o usuário desvinculado (UsuarioId = null)
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-warning border-opacity-25">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h6 class="mb-0 text-warning">
+                    <i class="bi bi-lightbulb me-2"></i>Alternativa Recomendada
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    Se você deseja apenas impedir o acesso, considere <strong>desativar</strong> o usuário ao invés de excluí-lo. Isso preserva todo o histórico e permite reativação futura.
+                </p>
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-warning btn-sm w-100">
+                    <i class="bi bi-pencil me-1"></i>
+                    Editar e Desativar
+                </a>
+            </div>
+        </div>
+
+        @if (Model.Roles.Contains("Administrador"))
+        {
+            <div class="alert alert-danger mt-3 mb-0">
+                <i class="bi bi-shield-exclamation me-2"></i>
+                <strong>Atenção Especial:</strong> Este usuário é um Administrador do sistema!
+            </div>
+        }
+    </div>
 </div>

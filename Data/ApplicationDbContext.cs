@@ -89,12 +89,12 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(e => e.ModeloRateioEntradaId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Entrada -> ApplicationUser
+            // ⚠️ CORRIGIDO: Entrada -> ApplicationUser (SetNull ao invés de Restrict)
             builder.Entity<Entrada>()
                 .HasOne(e => e.Usuario)
                 .WithMany()
                 .HasForeignKey(e => e.UsuarioId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
 
             // Saida -> MeioDePagamento
             builder.Entity<Saida>()
@@ -124,12 +124,12 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(s => s.FornecedorId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Saida -> ApplicationUser
+            // ⚠️ CORRIGIDO: Saida -> ApplicationUser (SetNull ao invés de Restrict)
             builder.Entity<Saida>()
                 .HasOne(s => s.Usuario)
                 .WithMany()
                 .HasForeignKey(s => s.UsuarioId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
 
             // TransferenciaInterna -> MeioDePagamento (Origem)
             builder.Entity<TransferenciaInterna>()
@@ -159,12 +159,12 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(ti => ti.CentroCustoDestinoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // TransferenciaInterna -> ApplicationUser
+            // ⚠️ CORRIGIDO: TransferenciaInterna -> ApplicationUser (SetNull ao invés de Restrict)
             builder.Entity<TransferenciaInterna>()
                 .HasOne(ti => ti.Usuario)
                 .WithMany()
                 .HasForeignKey(ti => ti.UsuarioId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
 
             // FechamentoPeriodo -> CentroCusto
             builder.Entity<FechamentoPeriodo>()
@@ -173,12 +173,12 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(fp => fp.CentroCustoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // FechamentoPeriodo -> ApplicationUser (Submissão)
+            // ⚠️ CORRIGIDO: FechamentoPeriodo -> ApplicationUser (Submissão) (SetNull ao invés de Restrict)
             builder.Entity<FechamentoPeriodo>()
                 .HasOne(fp => fp.UsuarioSubmissao)
                 .WithMany()
                 .HasForeignKey(fp => fp.UsuarioSubmissaoId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
 
             // FechamentoPeriodo -> ApplicationUser (Aprovação)
             builder.Entity<FechamentoPeriodo>()
@@ -187,7 +187,9 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(fp => fp.UsuarioAprovacaoId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // LogAuditoria -> ApplicationUser
+            // ⚠️ MANTIDO: LogAuditoria -> ApplicationUser (Restrict para preservar auditoria)
+            // Nota: Logs de auditoria devem ser preservados mesmo após exclusão do usuário
+            // Considere adicionar verificação no Controller para impedir exclusão se houver logs
             builder.Entity<LogAuditoria>()
                 .HasOne(la => la.Usuario)
                 .WithMany()
@@ -256,4 +258,3 @@ namespace SistemaTesourariaEclesiastica.Data
         }
     }
 }
-

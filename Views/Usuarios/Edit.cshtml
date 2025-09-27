@@ -1,16 +1,16 @@
-@model SistemaTesourariaEclesiastica.ViewModels.CriarUsuarioViewModel
+﻿@model SistemaTesourariaEclesiastica.ViewModels.EditarUsuarioViewModel
 
 @{
-    ViewData["Title"] = "Novo Usuário";
+    ViewData["Title"] = "Editar Usuário";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">
-            <i class="bi bi-person-plus me-2"></i>
-            Novo Usuário
+            <i class="bi bi-pencil-square me-2"></i>
+            Editar Usuário
         </h1>
-        <p class="text-muted mb-0">Cadastrar novo usuário no sistema</p>
+        <p class="text-muted mb-0">Atualizar informações do usuário</p>
     </div>
     <a asp-action="Index" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-2"></i>Voltar
@@ -27,8 +27,9 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form asp-action="Create" method="post">
+                <form asp-action="Edit" method="post">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    <input type="hidden" asp-for="Id" />
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -37,7 +38,7 @@
                                 <span class="input-group-text">
                                     <i class="bi bi-person"></i>
                                 </span>
-                                <input asp-for="NomeCompleto" class="form-control" placeholder="Nome completo do usuário" />
+                                <input asp-for="NomeCompleto" class="form-control" />
                             </div>
                             <span asp-validation-for="NomeCompleto" class="text-danger"></span>
                         </div>
@@ -48,40 +49,47 @@
                                 <span class="input-group-text">
                                     <i class="bi bi-envelope"></i>
                                 </span>
-                                <input asp-for="Email" class="form-control" type="email" placeholder="email@exemplo.com" />
+                                <input asp-for="Email" class="form-control" type="email" readonly />
                             </div>
-                            <span asp-validation-for="Email" class="text-danger"></span>
+                            <div class="form-text">O e-mail não pode ser alterado</div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info d-flex align-items-center mb-3">
+                        <i class="bi bi-info-circle me-2 fs-5"></i>
+                        <div>
+                            <strong>Alterar Senha:</strong> Preencha os campos abaixo apenas se desejar alterar a senha do usuário. Deixe em branco para manter a senha atual.
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label asp-for="Senha" class="form-label">Senha <span class="text-danger">*</span></label>
+                            <label asp-for="NovaSenha" class="form-label">Nova Senha (opcional)</label>
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="bi bi-lock"></i>
                                 </span>
-                                <input asp-for="Senha" class="form-control" type="password" placeholder="••••••••" />
-                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('Senha')">
-                                    <i class="bi bi-eye" id="toggleIconSenha"></i>
+                                <input asp-for="NovaSenha" class="form-control" type="password" placeholder="••••••••" />
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('NovaSenha')">
+                                    <i class="bi bi-eye" id="toggleIconNovaSenha"></i>
                                 </button>
                             </div>
-                            <span asp-validation-for="Senha" class="text-danger"></span>
-                            <div class="form-text">Mínimo de 6 caracteres</div>
+                            <span asp-validation-for="NovaSenha" class="text-danger"></span>
+                            <div class="form-text">Deixe em branco para não alterar</div>
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label asp-for="ConfirmarSenha" class="form-label">Confirmar Senha <span class="text-danger">*</span></label>
+                            <label asp-for="ConfirmarNovaSenha" class="form-label">Confirmar Nova Senha</label>
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="bi bi-lock-fill"></i>
                                 </span>
-                                <input asp-for="ConfirmarSenha" class="form-control" type="password" placeholder="••••••••" />
-                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('ConfirmarSenha')">
-                                    <i class="bi bi-eye" id="toggleIconConfirmarSenha"></i>
+                                <input asp-for="ConfirmarNovaSenha" class="form-control" type="password" placeholder="••••••••" />
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('ConfirmarNovaSenha')">
+                                    <i class="bi bi-eye" id="toggleIconConfirmarNovaSenha"></i>
                                 </button>
                             </div>
-                            <span asp-validation-for="ConfirmarSenha" class="text-danger"></span>
+                            <span asp-validation-for="ConfirmarNovaSenha" class="text-danger"></span>
                         </div>
                     </div>
 
@@ -113,6 +121,14 @@
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="Ativo" class="form-check-input" type="checkbox" />
+                            <label asp-for="Ativo" class="form-check-label">Usuário ativo no sistema</label>
+                        </div>
+                        <div class="form-text">Desative se o usuário não deve mais ter acesso ao sistema</div>
+                    </div>
+
                     <hr class="my-4">
 
                     <div class="d-flex gap-2 justify-content-end">
@@ -120,7 +136,7 @@
                             <i class="bi bi-x-circle me-2"></i>Cancelar
                         </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle me-2"></i>Cadastrar Usuário
+                            <i class="bi bi-check-circle me-2"></i>Salvar Alterações
                         </button>
                     </div>
                 </form>
@@ -129,7 +145,22 @@
     </div>
 
     <div class="col-lg-4">
-        <div class="card shadow-sm border-primary border-opacity-25 mb-3">
+        <div class="card shadow-sm border-warning border-opacity-25 mb-3">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h6 class="mb-0 text-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Atenção
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="small text-muted mb-0 ps-3">
+                    <li class="mb-2">Ao alterar o perfil de acesso, as permissões do usuário serão atualizadas imediatamente</li>
+                    <li class="mb-2">Desativar um usuário impedirá seu acesso ao sistema</li>
+                    <li>A alteração de senha forçará o usuário a usar a nova senha no próximo login</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-primary border-opacity-25">
             <div class="card-header bg-primary bg-opacity-10">
                 <h6 class="mb-0 text-primary">
                     <i class="bi bi-shield-check me-2"></i>Perfis de Acesso
@@ -140,8 +171,8 @@
                     <div class="d-flex align-items-start">
                         <i class="bi bi-person-fill-gear text-danger me-2 mt-1"></i>
                         <div>
-                            <strong>Administrador</strong>
-                            <p class="small text-muted mb-0">Acesso total ao sistema</p>
+                            <strong class="small">Administrador</strong>
+                            <p class="small text-muted mb-0">Acesso total</p>
                         </div>
                     </div>
                 </div>
@@ -150,8 +181,8 @@
                     <div class="d-flex align-items-start">
                         <i class="bi bi-briefcase text-primary me-2 mt-1"></i>
                         <div>
-                            <strong>Tesoureiro Geral</strong>
-                            <p class="small text-muted mb-0">Gerencia a Sede e aprova prestações de contas</p>
+                            <strong class="small">Tesoureiro Geral</strong>
+                            <p class="small text-muted mb-0">Gerencia a Sede</p>
                         </div>
                     </div>
                 </div>
@@ -160,8 +191,8 @@
                     <div class="d-flex align-items-start">
                         <i class="bi bi-person-workspace text-info me-2 mt-1"></i>
                         <div>
-                            <strong>Tesoureiro Local</strong>
-                            <p class="small text-muted mb-0">Gerencia sua congregação local</p>
+                            <strong class="small">Tesoureiro Local</strong>
+                            <p class="small text-muted mb-0">Gerencia congregação</p>
                         </div>
                     </div>
                 </div>
@@ -170,28 +201,11 @@
                     <div class="d-flex align-items-start">
                         <i class="bi bi-book text-secondary me-2 mt-1"></i>
                         <div>
-                            <strong>Pastor/Liderança</strong>
-                            <p class="small text-muted mb-0">Acesso de consulta aos relatórios</p>
+                            <strong class="small">Pastor/Liderança</strong>
+                            <p class="small text-muted mb-0">Consulta relatórios</p>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="card shadow-sm border-info border-opacity-25">
-            <div class="card-header bg-info bg-opacity-10">
-                <h6 class="mb-0 text-info">
-                    <i class="bi bi-info-circle me-2"></i>Requisitos da Senha
-                </h6>
-            </div>
-            <div class="card-body">
-                <ul class="small text-muted mb-0 ps-3">
-                    <li class="mb-1">Mínimo de 6 caracteres</li>
-                    <li class="mb-1">Pelo menos uma letra maiúscula</li>
-                    <li class="mb-1">Pelo menos uma letra minúscula</li>
-                    <li class="mb-1">Pelo menos um número</li>
-                    <li>Recomendado: caractere especial</li>
-                </ul>
             </div>
         </div>
     </div>
@@ -217,10 +231,5 @@
                 icon.classList.add('bi-eye');
             }
         }
-
-        // Foco no primeiro campo
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('NomeCompleto').focus();
-        });
     </script>
 }

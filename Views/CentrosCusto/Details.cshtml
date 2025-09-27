@@ -1,86 +1,225 @@
 @model SistemaTesourariaEclesiastica.Models.CentroCusto
+@using SistemaTesourariaEclesiastica.Enums
 
 @{
     ViewData["Title"] = "Detalhes do Centro de Custo";
+    var totalEntradas = (decimal)ViewBag.TotalEntradas;
+    var totalSaidas = (decimal)ViewBag.TotalSaidas;
+    var saldoAtual = (decimal)ViewBag.SaldoAtual;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fas fa-building me-2"></i>Detalhes do Centro de Custo</h2>
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-building me-2"></i>
+            Detalhes do Centro de Custo
+        </h1>
+        <p class="text-muted mb-0">Visualizar informações detalhadas</p>
+    </div>
     <div>
         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary me-2">
-            <i class="fas fa-edit me-2"></i>Editar
+            <i class="bi bi-pencil me-2"></i>Editar
         </a>
-        <a asp-action="Index" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Voltar
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
         </a>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
+<!-- Cards de Estatísticas -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 stat-card fade-in-up">
             <div class="card-body">
-                <dl class="row">
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Nome)</dt>
-                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Nome)</dd>
-
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Tipo)</dt>
-                    <dd class="col-sm-9">
-                        <span class="badge bg-info">
-                            @Model.Tipo.GetDisplayName()
-                        </span>
-                    </dd>
-
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
-                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
-
-                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Ativo)</dt>
-                    <dd class="col-sm-9">
-                        @if (Model.Ativo)
-                        {
-                            <span class="badge bg-success">Ativo</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary">Inativo</span>
-                        }
-                    </dd>
-                </dl>
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-arrow-down-circle"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Total de Entradas</small>
+                        <h3 class="mb-0 fw-bold text-success">@totalEntradas.ToString("C")</h3>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estatísticas</h6>
-            </div>
+        <div class="card shadow-sm border-0 stat-card fade-in-up">
             <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="border-end">
-                            <h5 class="text-success mb-0">R$ 0,00</h5>
-                            <small class="text-muted">Total Entradas</small>
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-danger bg-opacity-10 text-danger">
+                            <i class="bi bi-arrow-up-circle"></i>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <h5 class="text-danger mb-0">R$ 0,00</h5>
-                        <small class="text-muted">Total Saídas</small>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Total de Saídas</small>
+                        <h3 class="mb-0 fw-bold text-danger">@totalSaidas.ToString("C")</h3>
                     </div>
                 </div>
-                <hr>
-                <div class="text-center">
-                    <h6 class="mb-0">Saldo Atual</h6>
-                    <h4 class="text-primary">R$ 0,00</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 stat-card fade-in-up">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Saldo Atual</small>
+                        <h3 class="mb-0 fw-bold @(saldoAtual >= 0 ? "text-primary" : "text-danger")">
+                            @saldoAtual.ToString("C")
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informações Gerais
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Nome:</dt>
+                    <dd class="col-sm-8 fw-semibold">@Model.Nome</dd>
+
+                    <dt class="col-sm-4">Tipo:</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-info">
+                            @Model.Tipo.ToString()
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-4">Descrição:</dt>
+                    <dd class="col-sm-8">
+                        @if (!string.IsNullOrEmpty(Model.Descricao))
+                        {
+                            <span>@Model.Descricao</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">Sem descrição</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Status:</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Ativo)
+                        {
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Ativo
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">
+                                <i class="bi bi-x-circle me-1"></i>Inativo
+                            </span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Data de Criação:</dt>
+                    <dd class="col-sm-8">@Model.DataCriacao.ToString("dd/MM/yyyy 'às' HH:mm")</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Card de Gráfico (placeholder para implementação futura) -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>
+                    Evolução Financeira
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center py-5">
+                    <i class="bi bi-graph-up display-4 text-muted"></i>
+                    <p class="text-muted mt-3 mb-0">Gráfico de evolução será implementado em breve</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-primary border-opacity-25 mb-3">
+            <div class="card-header bg-primary bg-opacity-10">
+                <h6 class="mb-0 text-primary">
+                    <i class="bi bi-link-45deg me-2"></i>Registros Vinculados
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-people text-primary me-2"></i>
+                        <span class="small">Membros</span>
+                    </div>
+                    <span class="badge bg-primary">@Model.Membros?.Count ?? 0</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-person-badge text-secondary me-2"></i>
+                        <span class="small">Usuários</span>
+                    </div>
+                    <span class="badge bg-secondary">@Model.Usuarios?.Count ?? 0</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-bank text-info me-2"></i>
+                        <span class="small">Contas Bancárias</span>
+                    </div>
+                    <span class="badge bg-info">@Model.ContasBancarias?.Count ?? 0</span>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-folder text-warning me-2"></i>
+                        <span class="small">Fechamentos</span>
+                    </div>
+                    <span class="badge bg-warning">@Model.FechamentosPeriodo?.Count ?? 0</span>
                 </div>
             </div>
         </div>
 
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-history me-2"></i>Últimas Movimentações</h6>
+        <div class="card shadow-sm border-info border-opacity-25">
+            <div class="card-header bg-info bg-opacity-10">
+                <h6 class="mb-0 text-info">
+                    <i class="bi bi-clock-history me-2"></i>Ações Rápidas
+                </h6>
             </div>
             <div class="card-body">
-                <p class="text-muted small">Nenhuma movimentação encontrada para este centro de custo.</p>
+                <div class="d-grid gap-2">
+                    <a href="#" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-file-earmark-text me-2"></i>Ver Relatórios
+                    </a>
+                    <a href="#" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-arrow-down-circle me-2"></i>Ver Entradas
+                    </a>
+                    <a href="#" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-arrow-up-circle me-2"></i>Ver Saídas
+                    </a>
+                    <a href="#" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-people me-2"></i>Ver Membros
+                    </a>
+                </div>
             </div>
         </div>
     </div>

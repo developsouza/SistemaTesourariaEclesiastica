@@ -95,11 +95,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> Create()
         {
             ViewData["CentroCustoId"] = new SelectList(
-                await _context.CentrosCusto.Where(c => c.Ativo).ToListAsync(),
+                await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
                 "Id", "Nome");
 
             ViewData["Roles"] = new SelectList(
-                await _roleManager.Roles.ToListAsync(),
+                await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
                 "Name", "Name");
 
             return View();
@@ -112,6 +112,20 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             if (ModelState.IsValid)
             {
+                // Verifica se o email já existe
+                var usuarioExistente = await _userManager.FindByEmailAsync(model.Email);
+                if (usuarioExistente != null)
+                {
+                    ModelState.AddModelError("Email", "Este e-mail já está cadastrado no sistema.");
+                    ViewData["CentroCustoId"] = new SelectList(
+                        await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
+                        "Id", "Nome", model.CentroCustoId);
+                    ViewData["Roles"] = new SelectList(
+                        await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
+                        "Name", "Name", model.Role);
+                    return View(model);
+                }
+
                 var usuario = new ApplicationUser
                 {
                     UserName = model.Email,
@@ -119,7 +133,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     NomeCompleto = model.NomeCompleto,
                     CentroCustoId = model.CentroCustoId,
                     Ativo = true,
-                    DataCriacao = DateTime.Now
+                    DataCriacao = DateTime.Now,
+                    EmailConfirmed = true // Confirmação automática
                 };
 
                 var result = await _userManager.CreateAsync(usuario, model.Senha);
@@ -131,7 +146,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         await _userManager.AddToRoleAsync(usuario, model.Role);
                     }
 
-                    await _auditService.LogAsync("Criação", "Usuario", $"Usuário {usuario.Email} criado");
+                    await _auditService.LogAsync("Criação", "Usuario", $"Usuário {usuario.Email} criado com sucesso");
                     TempData["SuccessMessage"] = "Usuário criado com sucesso!";
                     return RedirectToAction(nameof(Index));
                 }
@@ -143,11 +158,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
 
             ViewData["CentroCustoId"] = new SelectList(
-                await _context.CentrosCusto.Where(c => c.Ativo).ToListAsync(),
+                await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
                 "Id", "Nome", model.CentroCustoId);
 
             ViewData["Roles"] = new SelectList(
-                await _roleManager.Roles.ToListAsync(),
+                await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
                 "Name", "Name", model.Role);
 
             return View(model);
@@ -179,11 +194,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
             };
 
             ViewData["CentroCustoId"] = new SelectList(
-                await _context.CentrosCusto.Where(c => c.Ativo).ToListAsync(),
+                await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
                 "Id", "Nome", model.CentroCustoId);
 
             ViewData["Roles"] = new SelectList(
-                await _roleManager.Roles.ToListAsync(),
+                await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
                 "Name", "Name", model.Role);
 
             return View(model);
@@ -207,6 +222,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return NotFound();
                 }
 
+                // Atualiza informações básicas
                 usuario.NomeCompleto = model.NomeCompleto;
                 usuario.CentroCustoId = model.CentroCustoId;
                 usuario.Ativo = model.Ativo;
@@ -228,10 +244,26 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     if (!string.IsNullOrEmpty(model.NovaSenha))
                     {
                         var token = await _userManager.GeneratePasswordResetTokenAsync(usuario);
-                        await _userManager.ResetPasswordAsync(usuario, token, model.NovaSenha);
+                        var passwordResult = await _userManager.ResetPasswordAsync(usuario, token, model.NovaSenha);
+
+                        if (!passwordResult.Succeeded)
+                        {
+                            foreach (var error in passwordResult.Errors)
+                            {
+                                ModelState.AddModelError(string.Empty, error.Description);
+                            }
+
+                            ViewData["CentroCustoId"] = new SelectList(
+                                await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
+                                "Id", "Nome", model.CentroCustoId);
+                            ViewData["Roles"] = new SelectList(
+                                await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
+                                "Name", "Name", model.Role);
+                            return View(model);
+                        }
                     }
 
-                    await _auditService.LogAsync("Edição", "Usuario", $"Usuário {usuario.Email} editado");
+                    await _auditService.LogAsync("Edição", "Usuario", $"Usuário {usuario.Email} editado com sucesso");
                     TempData["SuccessMessage"] = "Usuário atualizado com sucesso!";
                     return RedirectToAction(nameof(Index));
                 }
@@ -243,15 +275,17 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
 
             ViewData["CentroCustoId"] = new SelectList(
-                await _context.CentrosCusto.Where(c => c.Ativo).ToListAsync(),
+                await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
                 "Id", "Nome", model.CentroCustoId);
 
             ViewData["Roles"] = new SelectList(
-                await _roleManager.Roles.ToListAsync(),
+                await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
                 "Name", "Name", model.Role);
 
             return View(model);
         }
+
+        // Adicione este método ao seu UsuariosController.cs
 
         // GET: Usuarios/Delete/5
         public async Task<IActionResult> Delete(string? id)
@@ -270,6 +304,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // Verificar se há logs de auditoria associados
+            var possuiLogsAuditoria = await _context.LogsAuditoria
+                .AnyAsync(la => la.UsuarioId == id);
+
             var roles = await _userManager.GetRolesAsync(usuario);
             var viewModel = new UsuarioViewModel
             {
@@ -282,6 +320,16 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 Roles = roles.ToList()
             };
 
+            // Passar informação para a view se há logs de auditoria
+            ViewBag.PossuiLogsAuditoria = possuiLogsAuditoria;
+
+            // Contar registros relacionados
+            ViewBag.TotalEntradas = await _context.Entradas.CountAsync(e => e.UsuarioId == id);
+            ViewBag.TotalSaidas = await _context.Saidas.CountAsync(s => s.UsuarioId == id);
+            ViewBag.TotalTransferencias = await _context.TransferenciasInternas.CountAsync(t => t.UsuarioId == id);
+            ViewBag.TotalFechamentos = await _context.FechamentosPeriodo.CountAsync(f => f.UsuarioSubmissaoId == id);
+            ViewBag.TotalLogsAuditoria = await _context.LogsAuditoria.CountAsync(la => la.UsuarioId == id);
+
             return View(viewModel);
         }
 
@@ -293,16 +341,36 @@ namespace SistemaTesourariaEclesiastica.Controllers
             var usuario = await _userManager.FindByIdAsync(id);
             if (usuario != null)
             {
+                // Verifica se não é o próprio usuário logado
+                var currentUser = await _userManager.GetUserAsync(User);
+                if (currentUser?.Id == id)
+                {
+                    TempData["ErrorMessage"] = "Você não pode excluir sua própria conta enquanto está logado.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                // Verificar se há logs de auditoria (impede exclusão para preservar histórico)
+                var possuiLogsAuditoria = await _context.LogsAuditoria.AnyAsync(la => la.UsuarioId == id);
+                if (possuiLogsAuditoria)
+                {
+                    TempData["ErrorMessage"] = "Não é possível excluir este usuário pois existem logs de auditoria associados. Para preservar o histórico, desative o usuário ao invés de excluí-lo.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 var result = await _userManager.DeleteAsync(usuario);
                 if (result.Succeeded)
                 {
-                    await _auditService.LogAsync("Exclusão", "Usuario", $"Usuário {usuario.Email} excluído");
+                    await _auditService.LogAsync("Exclusão", "Usuario", $"Usuário {usuario.Email} excluído com sucesso");
                     TempData["SuccessMessage"] = "Usuário excluído com sucesso!";
                 }
                 else
                 {
-                    TempData["ErrorMessage"] = "Erro ao excluir usuário.";
+                    TempData["ErrorMessage"] = "Erro ao excluir usuário: " + string.Join(", ", result.Errors.Select(e => e.Description));
                 }
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Usuário não encontrado.";
             }
 
             return RedirectToAction(nameof(Index));

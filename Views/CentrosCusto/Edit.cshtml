@@ -1,32 +1,47 @@
 @model SistemaTesourariaEclesiastica.Models.CentroCusto
+@using SistemaTesourariaEclesiastica.Enums
 
 @{
     ViewData["Title"] = "Editar Centro de Custo";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fas fa-edit me-2"></i>Editar Centro de Custo</h2>
-    <a asp-action="Index" class="btn btn-secondary">
-        <i class="fas fa-arrow-left me-2"></i>Voltar
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-pencil-square me-2"></i>
+            Editar Centro de Custo
+        </h1>
+        <p class="text-muted mb-0">Atualizar informações do centro de custo</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Voltar
     </a>
 </div>
 
 <div class="row">
-    <div class="col-md-8">
-        <div class="card">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informações do Centro de Custo
+                </h5>
+            </div>
             <div class="card-body">
                 <form asp-action="Edit">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
                     <input type="hidden" asp-for="Id" />
-                    
+                    <input type="hidden" asp-for="DataCriacao" />
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label asp-for="Nome" class="form-label"></label>
+                            <label asp-for="Nome" class="form-label">Nome <span class="text-danger">*</span></label>
                             <input asp-for="Nome" class="form-control" />
                             <span asp-validation-for="Nome" class="text-danger"></span>
                         </div>
+
                         <div class="col-md-6 mb-3">
-                            <label asp-for="Tipo" class="form-label"></label>
+                            <label asp-for="Tipo" class="form-label">Tipo <span class="text-danger">*</span></label>
                             <select asp-for="Tipo" class="form-select" asp-items="Html.GetEnumSelectList<TipoCentroCusto>()">
                                 <option value="">Selecione o tipo</option>
                             </select>
@@ -35,42 +50,68 @@
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="Descricao" class="form-label"></label>
-                        <textarea asp-for="Descricao" class="form-control" rows="3"></textarea>
+                        <label asp-for="Descricao" class="form-label">Descrição</label>
+                        <textarea asp-for="Descricao" class="form-control" rows="3"
+                                  placeholder="Descreva o propósito deste centro de custo..."></textarea>
                         <span asp-validation-for="Descricao" class="text-danger"></span>
+                        <div class="form-text">Máximo de 250 caracteres</div>
                     </div>
 
-                    <div class="mb-3">
-                        <div class="form-check">
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
                             <input asp-for="Ativo" class="form-check-input" type="checkbox" />
-                            <label asp-for="Ativo" class="form-check-label"></label>
+                            <label asp-for="Ativo" class="form-check-label">Centro de custo ativo</label>
+                        </div>
+                        <div class="form-text">Ao desativar, este centro de custo não aparecerá em novos lançamentos</div>
+                    </div>
+
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="bi bi-info-circle me-2 fs-5"></i>
+                        <div>
+                            <strong>Data de Criação:</strong> @Model.DataCriacao.ToString("dd/MM/yyyy 'às' HH:mm")
                         </div>
                     </div>
 
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a asp-action="Index" class="btn btn-secondary me-md-2">Cancelar</a>
+                    <hr class="my-4">
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>Salvar Alterações
+                            <i class="bi bi-check-circle me-2"></i>Salvar Alterações
                         </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações</h6>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-warning border-opacity-25 mb-3">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h6 class="mb-0 text-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Atenção
+                </h6>
             </div>
             <div class="card-body">
-                <p class="small text-muted">
-                    Ao editar um centro de custo, certifique-se de que as alterações não afetem 
+                <p class="small text-muted mb-0">
+                    Ao editar um centro de custo, certifique-se de que as alterações não afetem
                     negativamente os registros financeiros já existentes.
                 </p>
-                <hr>
-                <p class="small text-muted">
-                    <strong>Dica:</strong> Se você desativar este centro de custo, ele não aparecerá 
-                    mais nas opções de novos lançamentos, mas os registros históricos serão mantidos.
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-primary border-opacity-25">
+            <div class="card-header bg-primary bg-opacity-10">
+                <h6 class="mb-0 text-primary">
+                    <i class="bi bi-lightbulb me-2"></i>Dica
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-0">
+                    Se você desativar este centro de custo, ele não aparecerá mais nas opções de
+                    novos lançamentos, mas os registros históricos serão mantidos.
                 </p>
             </div>
         </div>
@@ -78,5 +119,7 @@
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

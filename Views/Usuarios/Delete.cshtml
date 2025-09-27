@@ -1,0 +1,160 @@
+﻿@model SistemaTesourariaEclesiastica.ViewModels.UsuarioViewModel
+
+@{
+    ViewData["Title"] = "Excluir Usuário";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-trash me-2 text-danger"></i>
+            Excluir Usuário
+        </h1>
+        <p class="text-muted mb-0">Confirmar exclusão do registro</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="alert alert-danger d-flex align-items-center" role="alert">
+    <i class="bi bi-exclamation-octagon me-3 fs-3"></i>
+    <div>
+        <h5 class="alert-heading mb-2">Atenção!</h5>
+        <p class="mb-0">Você está prestes a excluir este usuário. Esta ação não pode ser desfeita e o usuário perderá permanentemente o acesso ao sistema.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Detalhes do Usuário
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Nome Completo:</dt>
+                    <dd class="col-sm-8 fw-semibold">@Model.NomeCompleto</dd>
+
+                    <dt class="col-sm-4">E-mail:</dt>
+                    <dd class="col-sm-8">
+                        <i class="bi bi-envelope me-1 text-muted"></i>
+                        @Model.Email
+                    </dd>
+
+                    <dt class="col-sm-4">Centro de Custo:</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-info">@Model.CentroCustoNome</span>
+                    </dd>
+
+                    <dt class="col-sm-4">Perfil de Acesso:</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Roles.Any())
+                        {
+                            @foreach (var role in Model.Roles)
+                            {
+                                var badgeClass = role switch
+                                {
+                                    "Administrador" => "bg-danger",
+                                    "TesoureiroGeral" => "bg-primary",
+                                    "TesoureiroLocal" => "bg-info",
+                                    "Pastor" => "bg-secondary",
+                                    _ => "bg-dark"
+                                };
+                                <span class="badge @badgeClass me-1">@role</span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Sem perfil</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Status:</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Ativo)
+                        {
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Ativo
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">
+                                <i class="bi bi-x-circle me-1"></i>Inativo
+                            </span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Data de Criação:</dt>
+                    <dd class="col-sm-8">
+                        <small class="text-muted">
+                            <i class="bi bi-calendar me-1"></i>
+                            @Model.DataCriacao.ToString("dd/MM/yyyy 'às' HH:mm")
+                        </small>
+                    </dd>
+                </dl>
+
+                <hr class="my-4">
+
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-2"></i>Confirmar Exclusão
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-warning border-opacity-25 mb-3">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h6 class="mb-0 text-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Consequências da Exclusão
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="small text-muted mb-0 ps-3">
+                    <li class="mb-2">O usuário perderá imediatamente o acesso ao sistema</li>
+                    <li class="mb-2">Todas as credenciais de login serão removidas</li>
+                    <li class="mb-2">Os registros de auditoria serão mantidos para histórico</li>
+                    <li>Esta ação não pode ser desfeita</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-info border-opacity-25">
+            <div class="card-header bg-info bg-opacity-10">
+                <h6 class="mb-0 text-info">
+                    <i class="bi bi-lightbulb me-2"></i>Alternativa
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    Se você deseja apenas impedir o acesso temporariamente, considere <strong>desativar</strong> o usuário ao invés de excluí-lo.
+                </p>
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="bi bi-pencil me-1"></i>
+                    Editar e Desativar
+                </a>
+            </div>
+        </div>
+
+        @if (Model.Roles.Contains("Administrador"))
+        {
+            <div class="alert alert-danger mt-3">
+                <i class="bi bi-shield-exclamation me-2"></i>
+                <strong>Atenção Especial:</strong> Este usuário é um Administrador do sistema. Tenha certeza antes de excluí-lo!
+            </div>
+        }
+    </div>
+</div>

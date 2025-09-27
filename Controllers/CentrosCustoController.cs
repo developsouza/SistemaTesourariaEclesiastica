@@ -21,7 +21,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
 
         // GET: CentrosCusto
-        public async Task<IActionResult> Index(string searchString, int page = 1, int pageSize = 10)
+        public async Task<IActionResult> Index(string searchString, int page = 1, int pageSize = 25)
         {
             ViewData["CurrentFilter"] = searchString;
 
@@ -29,15 +29,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                centrosCusto = centrosCusto.Where(c => c.Nome.Contains(searchString));
+                centrosCusto = centrosCusto.Where(c =>
+                    c.Nome.Contains(searchString) ||
+                    c.Descricao.Contains(searchString));
             }
 
             var totalItems = await centrosCusto.CountAsync();
-            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
-
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = totalPages;
-            ViewBag.PageSize = pageSize;
             ViewBag.TotalItems = totalItems;
 
             var paginatedCentrosCusto = await centrosCusto
@@ -68,6 +65,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // Calcular estatísticas
+            var totalEntradas = await _context.Entradas
+                .Where(e => e.CentroCustoId == id)
+                .SumAsync(e => e.Valor);
+
+            var totalSaidas = await _context.Saidas
+                .Where(s => s.CentroCustoId == id)
+                .SumAsync(s => s.Valor);
+
+            ViewBag.TotalEntradas = totalEntradas;
+            ViewBag.TotalSaidas = totalSaidas;
+            ViewBag.SaldoAtual = totalEntradas - totalSaidas;
+
             return View(centroCusto);
         }
 
@@ -80,7 +90,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: CentrosCusto/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Nome,Tipo")] CentroCusto centroCusto)
+        public async Task<IActionResult> Create([Bind("Nome,Tipo,Descricao,Ativo")] CentroCusto centroCusto)
         {
             if (ModelState.IsValid)
             {
@@ -92,13 +102,16 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return View(centroCusto);
                 }
 
+                centroCusto.DataCriacao = DateTime.Now;
                 _context.Add(centroCusto);
                 await _context.SaveChangesAsync();
+
                 var user = await _userManager.GetUserAsync(User);
                 if (user != null)
                 {
                     await _auditService.LogAuditAsync(user.Id, "Criar", "CentroCusto", centroCusto.Id.ToString(), $"Centro de Custo {centroCusto.Nome} criado.");
                 }
+
                 TempData["SuccessMessage"] = "Centro de custo cadastrado com sucesso!";
                 return RedirectToAction(nameof(Index));
             }
@@ -126,7 +139,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: CentrosCusto/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Nome,Tipo")] CentroCusto centroCusto)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Nome,Tipo,Descricao,Ativo,DataCriacao")] CentroCusto centroCusto)
         {
             if (id != centroCusto.Id)
             {
@@ -147,11 +160,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                     _context.Update(centroCusto);
                     await _context.SaveChangesAsync();
+
                     var user = await _userManager.GetUserAsync(User);
                     if (user != null)
                     {
                         await _auditService.LogAuditAsync(user.Id, "Editar", "CentroCusto", centroCusto.Id.ToString(), $"Centro de Custo {centroCusto.Nome} atualizado.");
                     }
+
                     TempData["SuccessMessage"] = "Centro de custo atualizado com sucesso!";
                 }
                 catch (DbUpdateConcurrencyException)
@@ -187,6 +202,18 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // Verifica dependências
+            var possuiMembros = await _context.Membros.AnyAsync(m => m.CentroCustoId == id);
+            var possuiUsuarios = await _context.Users.AnyAsync(u => u.CentroCustoId == id);
+            var possuiEntradas = await _context.Entradas.AnyAsync(e => e.CentroCustoId == id);
+            var possuiSaidas = await _context.Saidas.AnyAsync(s => s.CentroCustoId == id);
+
+            ViewBag.PossuiDependencias = possuiMembros || possuiUsuarios || possuiEntradas || possuiSaidas;
+            ViewBag.TotalMembros = await _context.Membros.CountAsync(m => m.CentroCustoId == id);
+            ViewBag.TotalUsuarios = await _context.Users.CountAsync(u => u.CentroCustoId == id);
+            ViewBag.TotalEntradas = await _context.Entradas.CountAsync(e => e.CentroCustoId == id);
+            ViewBag.TotalSaidas = await _context.Saidas.CountAsync(s => s.CentroCustoId == id);
+
             return View(centroCusto);
         }
 
@@ -212,30 +239,17 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 _context.CentrosCusto.Remove(centroCusto);
                 await _context.SaveChangesAsync();
+
                 var user = await _userManager.GetUserAsync(User);
                 if (user != null)
                 {
                     await _auditService.LogAuditAsync(user.Id, "Excluir", "CentroCusto", centroCusto.Id.ToString(), $"Centro de Custo {centroCusto.Nome} excluído.");
                 }
+
                 TempData["SuccessMessage"] = "Centro de custo excluído com sucesso!";
             }
 
             return RedirectToAction(nameof(Index));
-        }
-
-        // AJAX: Verificar Nome
-        [HttpGet]
-        public async Task<IActionResult> VerificarNome(string nome, int? id)
-        {
-            var query = _context.CentrosCusto.Where(c => c.Nome == nome);
-
-            if (id.HasValue)
-            {
-                query = query.Where(c => c.Id != id);
-            }
-
-            var existe = await query.AnyAsync();
-            return Json(!existe);
         }
 
         private bool CentroCustoExists(int id)
@@ -244,4 +258,3 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
     }
 }
-

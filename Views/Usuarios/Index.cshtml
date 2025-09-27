@@ -5,15 +5,23 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-person-gear me-2"></i>Usuários</h2>
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-people me-2"></i>
+            Usuários do Sistema
+        </h1>
+        <p class="text-muted mb-0">Gerenciar usuários e permissões de acesso</p>
+    </div>
     <a asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-1"></i>Novo Usuário
+        <i class="bi bi-person-plus me-2"></i>
+        Novo Usuário
     </a>
 </div>
 
 @if (TempData["SuccessMessage"] != null)
 {
     <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i>
         @TempData["SuccessMessage"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
@@ -22,82 +30,227 @@
 @if (TempData["ErrorMessage"] != null)
 {
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
         @TempData["ErrorMessage"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Nome Completo</th>
-                        <th>Email</th>
-                        <th>Centro de Custo</th>
-                        <th>Perfil</th>
-                        <th>Status</th>
-                        <th>Data de Criação</th>
-                        <th width="200">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model)
-                    {
-                        <tr>
-                            <td>@Html.DisplayFor(modelItem => item.NomeCompleto)</td>
-                            <td>@Html.DisplayFor(modelItem => item.Email)</td>
-                            <td>@Html.DisplayFor(modelItem => item.CentroCustoNome)</td>
-                            <td>
-                                @if (item.Roles.Any())
-                                {
-                                    <span class="badge bg-info">@string.Join(", ", item.Roles)</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Sem perfil</span>
-                                }
-                            </td>
-                            <td>
-                                @if (item.Ativo)
-                                {
-                                    <span class="badge bg-success">Ativo</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-danger">Inativo</span>
-                                }
-                            </td>
-                            <td>@item.DataCriacao.ToString("dd/MM/yyyy")</td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info btn-sm" title="Detalhes">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning btn-sm" title="Editar">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger btn-sm" title="Excluir">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+<!-- Estatísticas -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 stat-card fade-in-up">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-people"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Total de Usuários</small>
+                        <h3 class="mb-0 fw-bold">@Model.Count()</h3>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
 
-        @if (!Model.Any())
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 stat-card fade-in-up">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Usuários Ativos</small>
+                        <h3 class="mb-0 fw-bold">@Model.Count(u => u.Ativo)</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 stat-card fade-in-up">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-danger bg-opacity-10 text-danger">
+                            <i class="bi bi-x-circle"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Usuários Inativos</small>
+                        <h3 class="mb-0 fw-bold">@Model.Count(u => !u.Ativo)</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 stat-card fade-in-up">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="stat-icon-modern bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-shield"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <small class="text-muted text-uppercase fw-semibold d-block mb-1">Administradores</small>
+                        <h3 class="mb-0 fw-bold">@Model.Count(u => u.Roles.Contains("Administrador"))</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Usuários -->
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-list-ul me-2"></i>
+            Lista de Usuários
+        </h5>
+        <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-secondary">
+                <i class="bi bi-download me-1"></i>
+                Exportar
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Any())
         {
-            <div class="text-center py-4">
-                <i class="bi bi-person-x display-1 text-muted"></i>
-                <p class="text-muted mt-2">Nenhum usuário cadastrado.</p>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="usuariosTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nome Completo</th>
+                            <th>Email</th>
+                            <th>Centro de Custo</th>
+                            <th>Perfil</th>
+                            <th>Status</th>
+                            <th>Data de Criação</th>
+                            <th class="text-center" width="150">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@item.NomeCompleto</td>
+                                <td>
+                                    <i class="bi bi-envelope me-1 text-muted"></i>
+                                    @item.Email
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@item.CentroCustoNome</span>
+                                </td>
+                                <td>
+                                    @if (item.Roles.Any())
+                                    {
+                                        @foreach (var role in item.Roles)
+                                        {
+                                            var badgeClass = role switch
+                                            {
+                                                "Administrador" => "bg-danger",
+                                                "TesoureiroGeral" => "bg-primary",
+                                                "TesoureiroLocal" => "bg-info",
+                                                "Pastor" => "bg-secondary",
+                                                _ => "bg-dark"
+                                            };
+                                            <span class="badge @badgeClass me-1">@role</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Sem perfil</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.Ativo)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Ativo
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle me-1"></i>Inativo
+                                        </span>
+                                    }
+                                </td>
+                                <td>@item.DataCriacao.ToString("dd/MM/yyyy")</td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-action="Details" asp-route-id="@item.Id"
+                                           class="btn btn-outline-info"
+                                           data-bs-toggle="tooltip"
+                                           title="Visualizar detalhes">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id"
+                                           class="btn btn-outline-primary"
+                                           data-bs-toggle="tooltip"
+                                           title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id"
+                                           class="btn btn-outline-danger"
+                                           data-bs-toggle="tooltip"
+                                           title="Excluir">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-person-x display-4 text-muted"></i>
+                <p class="text-muted mt-3">Nenhum usuário cadastrado</p>
                 <a asp-action="Create" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-1"></i>Cadastrar Primeiro Usuário
+                    <i class="bi bi-person-plus me-2"></i>Cadastrar Primeiro Usuário
                 </a>
             </div>
         }
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Inicializa DataTables
+            $('#usuariosTable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+                },
+                responsive: true,
+                order: [[0, 'asc']],
+                pageLength: 25,
+                columnDefs: [
+                    { orderable: false, targets: -1 }
+                ]
+            });
+
+            // Inicializa tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+}
