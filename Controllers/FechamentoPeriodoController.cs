@@ -148,11 +148,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return View(fechamento);
         }
 
-
-        // ===============================================
-        // ADICIONE ESTES MÉTODOS NO SEU FechamentoPeriodoController.cs
-        // ===============================================
-
         // GET: FechamentoPeriodo/Edit/5
         [HttpGet]
         public async Task<IActionResult> Edit(int? id)

@@ -206,7 +206,7 @@ namespace SistemaTesourariaEclesiastica.Data
 
             var meiosPagamento = new[]
             {
-                new MeioDePagamento { Nome = "Dinheiro", Descricao = "Pagamento em espécie" },
+                new MeioDePagamento { Nome = "Dinheiro", Descricao = "Pagamento em espécie", TipoCaixa = TipoCaixa.Fisico },
                 new MeioDePagamento { Nome = "PIX", Descricao = "Transferência via PIX" },
                 new MeioDePagamento { Nome = "Transferência Bancária", Descricao = "TED/DOC" },
                 new MeioDePagamento { Nome = "Cartão de Débito", Descricao = "Pagamento com cartão de débito" },
@@ -215,6 +215,7 @@ namespace SistemaTesourariaEclesiastica.Data
             };
 
             context.MeiosDePagamento.AddRange(meiosPagamento);
+            await context.SaveChangesAsync();
         }
     }
 }
