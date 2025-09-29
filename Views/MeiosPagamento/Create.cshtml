@@ -30,7 +30,7 @@
             <div class="card-body">
                 <form asp-action="Create" method="post" id="meioPagamentoForm">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-                    
+
                     <!-- Nome -->
                     <div class="mb-3">
                         <label asp-for="Nome" class="form-label required"></label>
@@ -50,6 +50,31 @@
                         <div class="form-text">
                             <i class="bi bi-info-circle me-1"></i>
                             Informações adicionais que ajudem a identificar ou usar este meio de pagamento
+                        </div>
+                    </div>
+
+                    <!-- NOVO: Tipo de Caixa -->
+                    <div class="mb-3">
+                        <label asp-for="TipoCaixa" class="form-label required"></label>
+                        <select asp-for="TipoCaixa" class="form-select" asp-items="Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.TipoCaixa>()">
+                            <option value="">Selecione o tipo de caixa...</option>
+                        </select>
+                        <span asp-validation-for="TipoCaixa" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Caixa Físico:</strong> Para dinheiro em espécie |
+                            <strong>Caixa Digital:</strong> Para PIX, transferências, cartões
+                        </div>
+                    </div>
+
+                    <!-- Preview do Tipo de Caixa -->
+                    <div class="alert alert-info" id="tipoCaixaPreview" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-cash-coin fs-3 me-3" id="iconTipoCaixa"></i>
+                            <div>
+                                <strong id="tituloTipoCaixa"></strong>
+                                <p class="mb-0 small" id="descricaoTipoCaixa"></p>
+                            </div>
                         </div>
                     </div>
 
@@ -98,9 +123,10 @@
                         <i class="bi bi-cash-coin me-1"></i>
                         Dinheiro em Espécie
                     </h6>
-                    <p class="small text-muted mb-0">
+                    <p class="small text-muted mb-1">
                         Para recebimentos e pagamentos em dinheiro físico.
                     </p>
+                    <span class="badge bg-warning text-dark">Caixa Físico</span>
                 </div>
 
                 <div class="mb-3">
@@ -108,9 +134,10 @@
                         <i class="bi bi-qr-code me-1"></i>
                         PIX
                     </h6>
-                    <p class="small text-muted mb-0">
+                    <p class="small text-muted mb-1">
                         Transferências instantâneas via PIX.
                     </p>
+                    <span class="badge bg-info">Caixa Digital</span>
                 </div>
 
                 <div class="mb-3">
@@ -118,9 +145,10 @@
                         <i class="bi bi-credit-card me-1"></i>
                         Cartão de Débito/Crédito
                     </h6>
-                    <p class="small text-muted mb-0">
+                    <p class="small text-muted mb-1">
                         Pagamentos com cartão através de maquininha.
                     </p>
+                    <span class="badge bg-info">Caixa Digital</span>
                 </div>
 
                 <div class="mb-3">
@@ -128,52 +156,15 @@
                         <i class="bi bi-bank me-1"></i>
                         Transferência Bancária
                     </h6>
-                    <p class="small text-muted mb-0">
+                    <p class="small text-muted mb-1">
                         TED, DOC ou transferências entre bancos.
                     </p>
+                    <span class="badge bg-info">Caixa Digital</span>
                 </div>
 
-                <div class="mb-3">
-                    <h6 class="text-primary">
-                        <i class="bi bi-receipt me-1"></i>
-                        Cheque
-                    </h6>
-                    <p class="small text-muted mb-0">
-                        Pagamentos através de cheques.
-                    </p>
-                </div>
-
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Dica:</strong> Você pode desativar temporariamente um meio de pagamento sem excluí-lo do sistema.
-                </div>
-            </div>
-        </div>
-
-        <!-- Card de Estatísticas -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="bi bi-graph-up me-2"></i>
-                    Estatísticas Atuais
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="border rounded p-2">
-                            <i class="bi bi-credit-card text-primary"></i>
-                            <div class="fw-bold small">@ViewBag.TotalMeios</div>
-                            <small class="text-muted">Total</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="border rounded p-2">
-                            <i class="bi bi-check-circle text-success"></i>
-                            <div class="fw-bold small">@ViewBag.MeiosAtivos</div>
-                            <small class="text-muted">Ativos</small>
-                        </div>
-                    </div>
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Importante:</strong> O tipo de caixa (Físico ou Digital) afeta o cálculo dos balanços no fechamento de período!
                 </div>
             </div>
         </div>
@@ -181,21 +172,32 @@
 </div>
 
 @section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
     <script>
         $(document).ready(function() {
-            // Validação do nome único
-            $('#Nome').blur(function() {
-                var nome = $(this).val();
-                if (nome) {
-                    $.post('@Url.Action("ValidarNomeUnico", "MeiosPagamento")', { nome: nome }, function(data) {
-                        if (!data.valido) {
-                            $('#Nome').addClass('is-invalid');
-                            $('#Nome').next('.text-danger').text('Já existe um meio de pagamento com este nome');
-                        } else {
-                            $('#Nome').removeClass('is-invalid');
-                            $('#Nome').next('.text-danger').text('');
-                        }
-                    });
+            // Preview do Tipo de Caixa
+            $('#TipoCaixa').change(function() {
+                var valor = $(this).val();
+                var preview = $('#tipoCaixaPreview');
+                var icon = $('#iconTipoCaixa');
+                var titulo = $('#tituloTipoCaixa');
+                var descricao = $('#descricaoTipoCaixa');
+
+                if (valor == '1') { // Físico
+                    preview.removeClass('alert-info').addClass('alert-warning').fadeIn();
+                    icon.removeClass().addClass('bi bi-cash-coin fs-3 me-3 text-warning');
+                    titulo.text('Caixa Físico - Dinheiro em Espécie');
+                    descricao.text('Este meio de pagamento será contabilizado no BALANÇO FÍSICO do fechamento. Usado para dinheiro que precisa ser fisicamente repassado para a Sede.');
+                } else if (valor == '2') { // Digital
+                    preview.removeClass('alert-warning').addClass('alert-info').fadeIn();
+                    icon.removeClass().addClass('bi bi-bank2 fs-3 me-3 text-info');
+                    titulo.text('Caixa Digital/Bancário');
+                    descricao.text('Este meio de pagamento será contabilizado no BALANÇO DIGITAL do fechamento. Usado para PIX, transferências, cartões e outros meios eletrônicos.');
+                } else {
+                    preview.fadeOut();
                 }
             });
 
@@ -211,21 +213,25 @@
                 }
             });
 
-            // Sugestões de nomes baseadas no que foi digitado
+            // Ícone dinâmico no campo Nome
             $('#Nome').on('input', function() {
                 var valor = $(this).val().toLowerCase();
-                var sugestoes = [];
-                
+
                 if (valor.includes('dinheiro') || valor.includes('especie')) {
                     $(this).prev('label').html('<i class="bi bi-cash-coin me-1"></i>Nome');
+                    $('#TipoCaixa').val('1').trigger('change'); // Auto-selecionar Físico
                 } else if (valor.includes('pix')) {
                     $(this).prev('label').html('<i class="bi bi-qr-code me-1"></i>Nome');
+                    $('#TipoCaixa').val('2').trigger('change'); // Auto-selecionar Digital
                 } else if (valor.includes('cartao') || valor.includes('card')) {
                     $(this).prev('label').html('<i class="bi bi-credit-card me-1"></i>Nome');
+                    $('#TipoCaixa').val('2').trigger('change');
                 } else if (valor.includes('transferencia') || valor.includes('ted') || valor.includes('doc')) {
                     $(this).prev('label').html('<i class="bi bi-arrow-left-right me-1"></i>Nome');
+                    $('#TipoCaixa').val('2').trigger('change');
                 } else if (valor.includes('cheque')) {
                     $(this).prev('label').html('<i class="bi bi-receipt me-1"></i>Nome');
+                    $('#TipoCaixa').val('2').trigger('change');
                 } else {
                     $(this).prev('label').html('<i class="bi bi-wallet2 me-1"></i>Nome');
                 }
@@ -233,4 +239,3 @@
         });
     </script>
 }
-

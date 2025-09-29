@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Models;
+using SistemaTesourariaEclesiastica.Enums;
 
 namespace SistemaTesourariaEclesiastica.Data
 {
@@ -27,10 +28,6 @@ namespace SistemaTesourariaEclesiastica.Data
         public DbSet<RegraRateio> RegrasRateio { get; set; }
         public DbSet<ItemRateioFechamento> ItensRateioFechamento { get; set; }
         public DbSet<DetalheFechamento> DetalhesFechamento { get; set; }
-
-        // ========================================
-        // 💰 NOVOS DbSets - MÓDULO DE EMPRÉSTIMOS
-        // ========================================
         public DbSet<Emprestimo> Emprestimos { get; set; }
         public DbSet<DevolucaoEmprestimo> DevolucaoEmprestimos { get; set; }
 
@@ -39,7 +36,7 @@ namespace SistemaTesourariaEclesiastica.Data
             base.OnModelCreating(builder);
 
             // ========================================
-            // CONFIGURAÇÃO MANUAL EXPLÍCITA PARA FORÇAR RESTRICT
+            // CONFIGURAÇÕES GERAIS
             // ========================================
 
             // ApplicationUser -> CentroCusto
@@ -62,6 +59,29 @@ namespace SistemaTesourariaEclesiastica.Data
                 .WithMany(c => c.ContasBancarias)
                 .HasForeignKey(cb => cb.CentroCustoId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // ========================================
+            // 💰 CONFIGURAÇÃO CRÍTICA - MEIO DE PAGAMENTO
+            // ========================================
+            builder.Entity<MeioDePagamento>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Nome)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Descricao)
+                    .HasMaxLength(250);
+
+                entity.Property(e => e.TipoCaixa)
+                    .HasConversion<int>()
+                    .IsRequired();
+
+                entity.Property(e => e.Ativo)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+            });
 
             // Entrada -> MeioDePagamento
             builder.Entity<Entrada>()
@@ -98,7 +118,7 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(e => e.ModeloRateioEntradaId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Entrada -> ApplicationUser - RESTRICT porque é obrigatório
+            // Entrada -> ApplicationUser
             builder.Entity<Entrada>()
                 .HasOne(e => e.Usuario)
                 .WithMany()
@@ -133,7 +153,7 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(s => s.FornecedorId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Saida -> ApplicationUser - RESTRICT porque é obrigatório
+            // Saida -> ApplicationUser
             builder.Entity<Saida>()
                 .HasOne(s => s.Usuario)
                 .WithMany()
@@ -168,12 +188,87 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(ti => ti.CentroCustoDestinoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // TransferenciaInterna -> ApplicationUser - RESTRICT porque é obrigatório
+            // TransferenciaInterna -> ApplicationUser
             builder.Entity<TransferenciaInterna>()
                 .HasOne(ti => ti.Usuario)
                 .WithMany()
                 .HasForeignKey(ti => ti.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // ========================================
+            // 🎯 CONFIGURAÇÃO CRÍTICA - FECHAMENTO PERÍODO
+            // ========================================
+            builder.Entity<FechamentoPeriodo>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.TipoFechamento)
+                    .HasConversion<int>()
+                    .IsRequired();
+
+                entity.Property(e => e.Ano)
+                    .IsRequired(false);
+
+                entity.Property(e => e.Mes)
+                    .IsRequired(false);
+
+                entity.Property(e => e.DataInicio)
+                    .IsRequired();
+
+                entity.Property(e => e.DataFim)
+                    .IsRequired();
+
+                // Novos campos para cálculos detalhados
+                entity.Property(e => e.TotalEntradas)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.TotalSaidas)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.TotalEntradasFisicas)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.TotalSaidasFisicas)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.TotalEntradasDigitais)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.TotalSaidasDigitais)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.BalancoDigital)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.BalancoFisico)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.TotalRateios)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.SaldoFinal)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.Status)
+                    .HasConversion<int>()
+                    .IsRequired();
+
+                entity.Property(e => e.UsuarioSubmissaoId)
+                    .IsRequired();
+
+                entity.Property(e => e.UsuarioAprovacaoId)
+                    .IsRequired(false);
+            });
 
             // FechamentoPeriodo -> CentroCusto
             builder.Entity<FechamentoPeriodo>()
@@ -182,40 +277,23 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(fp => fp.CentroCustoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ========================================
-            // 🎯 CONFIGURAÇÃO CRÍTICA - FECHAMENTO PERÍODO
-            // ========================================
-
-            // PRIMEIRA CONFIGURAÇÃO: Submissão - RESTRICT
+            // FechamentoPeriodo -> UsuarioSubmissao
             builder.Entity<FechamentoPeriodo>()
                 .HasOne(fp => fp.UsuarioSubmissao)
                 .WithMany()
                 .HasForeignKey(fp => fp.UsuarioSubmissaoId)
                 .OnDelete(DeleteBehavior.Restrict)
-                .IsRequired(true); // FORÇAR COMO OBRIGATÓRIO
+                .IsRequired(true);
 
-            // SEGUNDA CONFIGURAÇÃO: Aprovação - SetNull  
+            // FechamentoPeriodo -> UsuarioAprovacao
             builder.Entity<FechamentoPeriodo>()
                 .HasOne(fp => fp.UsuarioAprovacao)
                 .WithMany()
                 .HasForeignKey(fp => fp.UsuarioAprovacaoId)
                 .OnDelete(DeleteBehavior.SetNull)
-                .IsRequired(false); // FORÇAR COMO OPCIONAL
+                .IsRequired(false);
 
-            // ========================================
-            // CONFIGURAÇÃO DE PROPRIEDADES EXPLÍCITAS
-            // ========================================
-
-            // Forçar as propriedades das foreign keys
-            builder.Entity<FechamentoPeriodo>()
-                .Property(fp => fp.UsuarioSubmissaoId)
-                .IsRequired(true); // OBRIGATÓRIO
-
-            builder.Entity<FechamentoPeriodo>()
-                .Property(fp => fp.UsuarioAprovacaoId)
-                .IsRequired(false); // OPCIONAL
-
-            // LogAuditoria -> ApplicationUser - RESTRICT para preservar auditoria
+            // LogAuditoria -> ApplicationUser
             builder.Entity<LogAuditoria>()
                 .HasOne(la => la.Usuario)
                 .WithMany()
@@ -260,8 +338,6 @@ namespace SistemaTesourariaEclesiastica.Data
             // ========================================
             // 💰 CONFIGURAÇÕES - MÓDULO DE EMPRÉSTIMOS
             // ========================================
-
-            // Emprestimo - Configuração da Entidade Principal
             builder.Entity<Emprestimo>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -285,14 +361,12 @@ namespace SistemaTesourariaEclesiastica.Data
                 entity.Property(e => e.DataQuitacao)
                     .IsRequired(false);
 
-                // Relacionamento com Devoluções (Cascade para excluir devoluções ao excluir empréstimo)
                 entity.HasMany(e => e.Devolucoes)
                     .WithOne(d => d.Emprestimo)
                     .HasForeignKey(d => d.EmprestimoId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // DevolucaoEmprestimo - Configuração da Entidade de Devolução
             builder.Entity<DevolucaoEmprestimo>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -311,14 +385,11 @@ namespace SistemaTesourariaEclesiastica.Data
                 entity.Property(e => e.Observacoes)
                     .HasMaxLength(300)
                     .IsRequired(false);
-
-                // Relacionamento com Emprestimo (já configurado acima via HasMany)
             });
 
             // ========================================
-            // ÍNDICES ÚNICOS (EXISTENTES)
+            // ÍNDICES ÚNICOS
             // ========================================
-
             builder.Entity<Membro>()
                 .HasIndex(m => m.CPF)
                 .IsUnique();
@@ -343,27 +414,20 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasIndex(f => f.Nome)
                 .IsUnique();
 
-            // ========================================
-            // 💰 ÍNDICES - MÓDULO DE EMPRÉSTIMOS
-            // ========================================
-
-            // Índice para buscar devoluções por empréstimo (melhora performance)
+            // Índices para Empréstimos
             builder.Entity<DevolucaoEmprestimo>()
                 .HasIndex(d => d.EmprestimoId)
                 .HasDatabaseName("IX_DevolucaoEmprestimos_EmprestimoId");
 
-            // Índice para filtrar empréstimos por status (usado frequentemente)
             builder.Entity<Emprestimo>()
                 .HasIndex(e => e.Status)
                 .HasDatabaseName("IX_Emprestimos_Status");
 
-            // Índice para ordenar empréstimos por data (descendente)
             builder.Entity<Emprestimo>()
                 .HasIndex(e => e.DataEmprestimo)
                 .IsDescending()
                 .HasDatabaseName("IX_Emprestimos_DataEmprestimo");
 
-            // Índice composto para consultas de empréstimos ativos por data
             builder.Entity<Emprestimo>()
                 .HasIndex(e => new { e.Status, e.DataEmprestimo })
                 .HasDatabaseName("IX_Emprestimos_Status_DataEmprestimo");

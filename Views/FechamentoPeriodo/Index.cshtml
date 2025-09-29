@@ -40,7 +40,7 @@
                     @foreach (var item in Model)
                     {
                         <tr>
-                            <td>@item.Mes.ToString("00")/@item.Ano</td>
+                            <td>@item.Mes.ToString().PadLeft(2, '0')/@item.Ano</td>
                             <td>@Html.DisplayFor(modelItem => item.CentroCusto.Nome)</td>
                             <td class="text-end">@item.BalancoDigital.ToString("C")</td>
                             <td class="text-end">@item.BalancoFisico.ToString("C")</td>

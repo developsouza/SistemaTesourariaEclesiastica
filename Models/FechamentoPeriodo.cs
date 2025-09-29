@@ -12,15 +12,16 @@ namespace SistemaTesourariaEclesiastica.Models
         [Display(Name = "Centro de Custo")]
         public int CentroCustoId { get; set; }
 
-        [Required(ErrorMessage = "O ano é obrigatório.")]
+        [Display(Name = "Tipo de Fechamento")]
+        public TipoFechamento TipoFechamento { get; set; } = TipoFechamento.Mensal;
+
         [Range(2000, 2100, ErrorMessage = "Ano deve estar entre 2000 e 2100.")]
         [Display(Name = "Ano")]
-        public int Ano { get; set; }
+        public int? Ano { get; set; }
 
-        [Required(ErrorMessage = "O mês é obrigatório.")]
         [Range(1, 12, ErrorMessage = "Mês deve estar entre 1 e 12.")]
         [Display(Name = "Mês")]
-        public int Mes { get; set; }
+        public int? Mes { get; set; }
 
         [Required(ErrorMessage = "A data de início é obrigatória.")]
         [Display(Name = "Data de Início")]
@@ -32,16 +33,6 @@ namespace SistemaTesourariaEclesiastica.Models
         [DataType(DataType.Date)]
         public DateTime DataFim { get; set; }
 
-        [Display(Name = "Balanço Digital")]
-        [Column(TypeName = "decimal(18,2)")]
-        [DataType(DataType.Currency)]
-        public decimal BalancoDigital { get; set; }
-
-        [Display(Name = "Balanço Físico")]
-        [Column(TypeName = "decimal(18,2)")]
-        [DataType(DataType.Currency)]
-        public decimal BalancoFisico { get; set; }
-
         [Display(Name = "Total de Entradas")]
         [Column(TypeName = "decimal(18,2)")]
         [DataType(DataType.Currency)]
@@ -51,6 +42,36 @@ namespace SistemaTesourariaEclesiastica.Models
         [Column(TypeName = "decimal(18,2)")]
         [DataType(DataType.Currency)]
         public decimal TotalSaidas { get; set; }
+
+        [Display(Name = "Total Entradas Físicas")]
+        [Column(TypeName = "decimal(18,2)")]
+        [DataType(DataType.Currency)]
+        public decimal TotalEntradasFisicas { get; set; }
+
+        [Display(Name = "Total Saídas Físicas")]
+        [Column(TypeName = "decimal(18,2)")]
+        [DataType(DataType.Currency)]
+        public decimal TotalSaidasFisicas { get; set; }
+
+        [Display(Name = "Total Entradas Digitais")]
+        [Column(TypeName = "decimal(18,2)")]
+        [DataType(DataType.Currency)]
+        public decimal TotalEntradasDigitais { get; set; }
+
+        [Display(Name = "Total Saídas Digitais")]
+        [Column(TypeName = "decimal(18,2)")]
+        [DataType(DataType.Currency)]
+        public decimal TotalSaidasDigitais { get; set; }
+
+        [Display(Name = "Balanço Digital")]
+        [Column(TypeName = "decimal(18,2)")]
+        [DataType(DataType.Currency)]
+        public decimal BalancoDigital { get; set; }
+
+        [Display(Name = "Balanço Físico")]
+        [Column(TypeName = "decimal(18,2)")]
+        [DataType(DataType.Currency)]
+        public decimal BalancoFisico { get; set; }
 
         [Display(Name = "Total de Rateios")]
         [Column(TypeName = "decimal(18,2)")]
@@ -84,8 +105,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public virtual CentroCusto CentroCusto { get; set; } = null!;
         public virtual ApplicationUser UsuarioSubmissao { get; set; } = null!;
         public virtual ApplicationUser? UsuarioAprovacao { get; set; }
-        public virtual ICollection<DetalheFechamento> DetalhesFechamento { get; set; } = new List<DetalheFechamento>();
         public virtual ICollection<ItemRateioFechamento> ItensRateio { get; set; } = new List<ItemRateioFechamento>();
+        public virtual ICollection<DetalheFechamento> DetalhesFechamento { get; set; } = new List<DetalheFechamento>();
     }
 }
-

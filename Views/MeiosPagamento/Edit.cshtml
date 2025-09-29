@@ -7,7 +7,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">
-            <i class="bi bi-credit-card-2-front me-2"></i>
+            <i class="bi bi-pencil me-2"></i>
             Editar Meio de Pagamento
         </h1>
         <p class="text-muted mb-0">Atualizar informações da forma de recebimento ou pagamento</p>
@@ -31,7 +31,7 @@
                 <form asp-action="Edit" method="post" id="meioPagamentoForm">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
                     <input type="hidden" asp-for="Id" />
-                    
+
                     <!-- Nome -->
                     <div class="mb-3">
                         <label asp-for="Nome" class="form-label required"></label>
@@ -51,6 +51,29 @@
                         <div class="form-text">
                             <i class="bi bi-info-circle me-1"></i>
                             Informações adicionais que ajudem a identificar ou usar este meio de pagamento
+                        </div>
+                    </div>
+
+                    <!-- Tipo de Caixa -->
+                    <div class="mb-3">
+                        <label asp-for="TipoCaixa" class="form-label required"></label>
+                        <select asp-for="TipoCaixa" class="form-select" asp-items="Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.TipoCaixa>()">
+                        </select>
+                        <span asp-validation-for="TipoCaixa" class="text-danger"></span>
+                        <div class="form-text">
+                            <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                            <strong>ATENÇÃO:</strong> Alterar o tipo de caixa pode afetar os cálculos de fechamentos futuros!
+                        </div>
+                    </div>
+
+                    <!-- Preview do Tipo de Caixa -->
+                    <div class="alert" id="tipoCaixaPreview">
+                        <div class="d-flex align-items-center">
+                            <i class="fs-3 me-3" id="iconTipoCaixa"></i>
+                            <div>
+                                <strong id="tituloTipoCaixa"></strong>
+                                <p class="mb-0 small" id="descricaoTipoCaixa"></p>
+                            </div>
                         </div>
                     </div>
 
@@ -90,71 +113,33 @@
             <div class="card-header">
                 <h6 class="card-title mb-0">
                     <i class="bi bi-lightbulb me-2"></i>
-                    Dicas de Preenchimento
+                    Sobre Tipos de Caixa
                 </h6>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <h6 class="text-primary">
-                        <i class="bi bi-cash-coin me-1"></i>
-                        Dinheiro em Espécie
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-cash-coin me-2"></i>
+                        Caixa Físico
                     </h6>
-                    <p class="small text-muted mb-0">
-                        Para recebimentos e pagamentos em dinheiro físico.
-                    </p>
-                </div>
-
-                <div class="mb-3">
-                    <h6 class="text-primary">
-                        <i class="bi bi-qr-code me-1"></i>
-                        PIX
-                    </h6>
-                    <p class="small text-muted mb-0">
-                        Transferências instantâneas via PIX.
-                    </p>
-                </div>
-
-                <div class="mb-3">
-                    <h6 class="text-primary">
-                        <i class="bi bi-credit-card me-1"></i>
-                        Cartão de Débito/Crédito
-                    </h6>
-                    <p class="small text-muted mb-0">
-                        Pagamentos com cartão através de maquininha.
+                    <p class="small mb-0">
+                        Usado para <strong>dinheiro em espécie</strong>. No fechamento de período, estes valores serão somados no <strong>Balanço Físico</strong>, que representa o dinheiro que precisa ser fisicamente repassado para a Sede.
                     </p>
                 </div>
 
                 <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Dica:</strong> Você pode desativar temporariamente um meio de pagamento sem excluí-lo do sistema.
+                    <h6 class="alert-heading">
+                        <i class="bi bi-bank2 me-2"></i>
+                        Caixa Digital/Bancário
+                    </h6>
+                    <p class="small mb-0">
+                        Usado para <strong>PIX, transferências, cartões</strong> e outros meios eletrônicos. No fechamento de período, estes valores serão somados no <strong>Balanço Digital</strong>, que é apenas informativo (valores já depositados).
+                    </p>
                 </div>
-            </div>
-        </div>
 
-        <!-- Card de Estatísticas -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="bi bi-graph-up me-2"></i>
-                    Estatísticas Atuais
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="border rounded p-2">
-                            <i class="bi bi-credit-card text-primary"></i>
-                            <div class="fw-bold small">@ViewBag.TotalMeios</div>
-                            <small class="text-muted">Total</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="border rounded p-2">
-                            <i class="bi bi-check-circle text-success"></i>
-                            <div class="fw-bold small">@ViewBag.MeiosAtivos</div>
-                            <small class="text-muted">Ativos</small>
-                        </div>
-                    </div>
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-octagon me-2"></i>
+                    <strong>Importante:</strong> Alterar o tipo de caixa de um meio já utilizado pode comprometer a precisão dos relatórios históricos.
                 </div>
             </div>
         </div>
@@ -162,37 +147,50 @@
 </div>
 
 @section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
     <script>
         $(document).ready(function() {
-            // Validação de nome único (AJAX)
-            $("#Nome").blur(function() {
-                var nome = $(this).val();
-                var id = $("#Id").val(); // Pega o ID para ignorar o próprio meio de pagamento na validação
-                if (nome) {
-                    $.post("@Url.Action("ValidarNomeUnico", "MeiosPagamento")", { nome: nome, id: id }, function(data) {
-                        if (!data.valido) {
-                            $("#Nome").addClass("is-invalid");
-                            $("#Nome").next(".text-danger").text("Já existe um meio de pagamento com este nome.");
-                        } else {
-                            $("#Nome").removeClass("is-invalid");
-                            $("#Nome").next(".text-danger").text("");
-                        }
-                    });
+            // Função para atualizar preview
+            function atualizarPreview() {
+                var valor = $('#TipoCaixa').val();
+                var preview = $('#tipoCaixaPreview');
+                var icon = $('#iconTipoCaixa');
+                var titulo = $('#tituloTipoCaixa');
+                var descricao = $('#descricaoTipoCaixa');
+
+                if (valor == '1') { // Físico
+                    preview.removeClass('alert-info').addClass('alert-warning');
+                    icon.removeClass().addClass('bi bi-cash-coin fs-3 me-3 text-warning');
+                    titulo.text('Caixa Físico - Dinheiro em Espécie');
+                    descricao.text('Este meio de pagamento será contabilizado no BALANÇO FÍSICO do fechamento.');
+                } else if (valor == '2') { // Digital
+                    preview.removeClass('alert-warning').addClass('alert-info');
+                    icon.removeClass().addClass('bi bi-bank2 fs-3 me-3 text-info');
+                    titulo.text('Caixa Digital/Bancário');
+                    descricao.text('Este meio de pagamento será contabilizado no BALANÇO DIGITAL do fechamento.');
                 }
-            });
+            }
+
+            // Executar ao carregar
+            atualizarPreview();
+
+            // Executar ao alterar
+            $('#TipoCaixa').change(atualizarPreview);
 
             // Preview do status
-            $("#Ativo").change(function() {
-                var label = $(this).next("label");
-                if ($(this).is(":checked")) {
-                    label.removeClass("text-muted").addClass("text-success");
-                    label.html("<i class=\"bi bi-check-circle me-1\"></i>Meio de pagamento ativo");
+            $('#Ativo').change(function() {
+                var label = $(this).next('label');
+                if ($(this).is(':checked')) {
+                    label.removeClass('text-muted').addClass('text-success');
+                    label.html('<i class="bi bi-check-circle me-1"></i>Meio de pagamento ativo');
                 } else {
-                    label.removeClass("text-success").addClass("text-muted");
-                    label.html("<i class=\"bi bi-pause-circle me-1\"></i>Meio de pagamento inativo");
+                    label.removeClass('text-success').addClass('text-muted');
+                    label.html('<i class="bi bi-pause-circle me-1"></i>Meio de pagamento inativo');
                 }
             });
         });
     </script>
 }
-

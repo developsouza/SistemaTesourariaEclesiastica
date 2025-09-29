@@ -170,81 +170,160 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // Método auxiliar para calcular o saldo do fundo
         private async Task<decimal> CalcularSaldoFundo()
         {
-            // OPÇÃO 1: Buscar o Centro de Custo "Fundo de Empréstimo" ou "Repasse Central"
-            // Se você tem um centro de custo específico para o fundo de empréstimos
+            // ==================================================
+            // PASSO 1: Buscar o Centro de Custo do Fundo
+            // ==================================================
             var centroCustoFundo = await _context.CentrosCusto
                 .FirstOrDefaultAsync(c => c.Nome.ToUpper().Contains("FUNDO") ||
-                                         c.Nome.ToUpper().Contains("REPASSE CENTRAL") ||
-                                         c.Nome.ToUpper().Contains("DÍZIMO DOS DÍZIMOS"));
+                                         c.Nome.ToUpper().Contains("REPASSE") ||
+                                         c.Nome.ToUpper().Contains("DÍZIMO DOS DÍZIMOS") ||
+                                         c.Nome.ToUpper().Contains("DIZIMO DOS DIZIMOS"));
 
             decimal totalEntradasFundo = 0;
 
+            // ==================================================
+            // PASSO 2: Calcular Total de Entradas no Fundo
+            // ==================================================
             if (centroCustoFundo != null)
             {
-                // MÉTODO 1: Buscar pelos rateios destinados ao fundo de empréstimos
-                // Soma todos os rateios de fechamentos APROVADOS destinados ao fundo
+                // MÉTODO CORRETO: Somar APENAS os rateios aprovados destinados ao fundo
                 totalEntradasFundo = await _context.ItensRateioFechamento
                     .Include(i => i.FechamentoPeriodo)
                     .Include(i => i.RegraRateio)
                     .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
                                i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id)
-                    .SumAsync(i => i.ValorRateio);
+                    .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
+
+                
             }
             else
             {
-                // MÉTODO 2 (ALTERNATIVO): Se não houver centro de custo específico,
-                // busca por uma regra de rateio específica pelo nome
-                var regraFundo = await _context.RegrasRateio
-                    .FirstOrDefaultAsync(r => r.Nome.ToUpper().Contains("FUNDO") ||
-                                             r.Nome.ToUpper().Contains("REPASSE CENTRAL") ||
-                                             r.Nome.ToUpper().Contains("DÍZIMO") ||
-                                             r.Percentual == 20); // Assumindo 20% como padrão
 
-                if (regraFundo != null)
+                var regrasFundo = await _context.RegrasRateio
+                    .Where(r => r.Ativo &&
+                               (r.Nome.ToUpper().Contains("FUNDO") ||
+                                r.Nome.ToUpper().Contains("REPASSE") ||
+                                r.Nome.ToUpper().Contains("DÍZIMO") ||
+                                r.Nome.ToUpper().Contains("DIZIMO")))
+                    .ToListAsync();
+
+                if (regrasFundo.Any())
                 {
+                    var idsRegras = regrasFundo.Select(r => r.Id).ToList();
+
                     totalEntradasFundo = await _context.ItensRateioFechamento
                         .Include(i => i.FechamentoPeriodo)
                         .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
-                                   i.RegraRateioId == regraFundo.Id)
-                        .SumAsync(i => i.ValorRateio);
+                                   idsRegras.Contains(i.RegraRateioId))
+                        .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
+
                 }
                 else
                 {
-                    // MÉTODO 3 (FALLBACK): Se nada foi encontrado, calcula 20% de todos os fechamentos aprovados da Sede
-                    var centroCustoSede = await _context.CentrosCusto
-                        .FirstOrDefaultAsync(c => c.Nome.ToUpper().Contains("SEDE") ||
-                                                 c.Nome.ToUpper().Contains("GERAL"));
-
-                    if (centroCustoSede != null)
-                    {
-                        var fechamentosAprovados = await _context.FechamentosPeriodo
-                            .Where(f => f.CentroCustoId == centroCustoSede.Id &&
-                                       f.Status == StatusFechamentoPeriodo.Aprovado)
-                            .SumAsync(f => f.BalancoDigital);
-
-                        totalEntradasFundo = fechamentosAprovados * 0.20m; // 20% do balanço
-                    }
+                                        // Retornar 0 para evitar empréstimos indevidos
+                    return 0;
                 }
             }
 
-            // Total de empréstimos ativos (valor total emprestado e ainda não quitado)
+            // ==================================================
+            // PASSO 3: Calcular Total Emprestado (Ativo)
+            // ==================================================
             var totalEmprestimosAtivos = await _context.Emprestimos
                 .Where(e => e.Status == StatusEmprestimo.Ativo)
                 .SumAsync(e => (decimal?)e.ValorTotal) ?? 0;
 
-            // Total de devoluções de empréstimos ativos (para calcular o saldo devedor real)
+            // ==================================================
+            // PASSO 4: Calcular Total Devolvido (dos Ativos)
+            // ==================================================
             var devolucoesEmprestimosAtivos = await _context.DevolucaoEmprestimos
+                .Include(d => d.Emprestimo)
                 .Where(d => d.Emprestimo.Status == StatusEmprestimo.Ativo)
                 .SumAsync(d => (decimal?)d.ValorDevolvido) ?? 0;
 
-            // Saldo devedor real dos empréstimos ativos
+            // ==================================================
+            // PASSO 5: Calcular Saldo Devedor Atual
+            // ==================================================
             var saldoDevedorAtivos = totalEmprestimosAtivos - devolucoesEmprestimosAtivos;
 
-            // Saldo = (Entradas do Fundo) - (Empréstimos Ativos - Devoluções já feitas)
-            // Ou seja: Entradas do Fundo - Saldo Devedor Real
+            // ==================================================
+            // PASSO 6: Calcular Saldo Disponível no Fundo
+            // ==================================================
+            // Fórmula: Entradas do Fundo - Saldo Devedor Atual
             var saldoFundo = totalEntradasFundo - saldoDevedorAtivos;
 
             return saldoFundo;
+        }
+
+        // ==================================================
+        // MÉTODO AUXILIAR: Obter Detalhamento do Saldo (Para Dashboard)
+        // ==================================================
+        public async Task<object> ObterDetalhamentoSaldoFundo()
+        {
+            var centroCustoFundo = await _context.CentrosCusto
+                .FirstOrDefaultAsync(c => c.Nome.ToUpper().Contains("FUNDO") ||
+                                         c.Nome.ToUpper().Contains("REPASSE") ||
+                                         c.Nome.ToUpper().Contains("DÍZIMO DOS DÍZIMOS"));
+
+            decimal totalEntradasFundo = 0;
+            int quantidadeFechamentosAprovados = 0;
+
+            if (centroCustoFundo != null)
+            {
+                var rateiosFundo = await _context.ItensRateioFechamento
+                    .Include(i => i.FechamentoPeriodo)
+                    .Include(i => i.RegraRateio)
+                    .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
+                               i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id)
+                    .ToListAsync();
+
+                totalEntradasFundo = rateiosFundo.Sum(i => i.ValorRateio);
+                quantidadeFechamentosAprovados = rateiosFundo.Select(i => i.FechamentoPeriodoId).Distinct().Count();
+            }
+
+            var totalEmprestimosAtivos = await _context.Emprestimos
+                .Where(e => e.Status == StatusEmprestimo.Ativo)
+                .SumAsync(e => (decimal?)e.ValorTotal) ?? 0;
+
+            var devolucoesEmprestimosAtivos = await _context.DevolucaoEmprestimos
+                .Include(d => d.Emprestimo)
+                .Where(d => d.Emprestimo.Status == StatusEmprestimo.Ativo)
+                .SumAsync(d => (decimal?)d.ValorDevolvido) ?? 0;
+
+            var saldoDevedorAtivos = totalEmprestimosAtivos - devolucoesEmprestimosAtivos;
+            var saldoFundo = totalEntradasFundo - saldoDevedorAtivos;
+
+            var quantidadeEmprestimosAtivos = await _context.Emprestimos
+                .CountAsync(e => e.Status == StatusEmprestimo.Ativo);
+
+            var quantidadeEmprestimosQuitados = await _context.Emprestimos
+                .CountAsync(e => e.Status == StatusEmprestimo.Quitado);
+
+            var totalQuitado = await _context.Emprestimos
+                .Where(e => e.Status == StatusEmprestimo.Quitado)
+                .SumAsync(e => (decimal?)e.ValorTotal) ?? 0;
+
+            return new
+            {
+                // Entradas no Fundo
+                totalEntradasFundo = totalEntradasFundo,
+                quantidadeFechamentosAprovados = quantidadeFechamentosAprovados,
+
+                // Empréstimos Ativos
+                quantidadeEmprestimosAtivos = quantidadeEmprestimosAtivos,
+                totalEmprestimosAtivos = totalEmprestimosAtivos,
+                devolucoesEmprestimosAtivos = devolucoesEmprestimosAtivos,
+                saldoDevedorAtivos = saldoDevedorAtivos,
+
+                // Empréstimos Quitados
+                quantidadeEmprestimosQuitados = quantidadeEmprestimosQuitados,
+                totalQuitado = totalQuitado,
+
+                // Saldo Final
+                saldoDisponivel = saldoFundo,
+                percentualComprometido = totalEntradasFundo > 0
+                    ? Math.Round((saldoDevedorAtivos / totalEntradasFundo) * 100, 2)
+                    : 0
+            };
         }
 
         // GET: Emprestimos/ObterSaldoFundo (para AJAX)

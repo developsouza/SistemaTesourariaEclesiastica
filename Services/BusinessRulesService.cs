@@ -135,7 +135,10 @@ namespace SistemaTesourariaEclesiastica.Services
                 return (false, "Mês inválido para fechamento.");
 
             // Verifica se não está tentando fechar período muito futuro
-            var dataFechamento = new DateTime(fechamento.Ano, fechamento.Mes, 1);
+            if (fechamento.Ano == null || fechamento.Mes == null)
+                return (false, "Ano e mês são obrigatórios para o fechamento.");
+
+            var dataFechamento = new DateTime(fechamento.Ano.Value, fechamento.Mes.Value, 1);
             if (dataFechamento > DateTime.Now.AddMonths(1))
                 return (false, "Não é possível fechar períodos muito futuros.");
 

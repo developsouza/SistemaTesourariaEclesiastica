@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using SistemaTesourariaEclesiastica.Enums;
 
 namespace SistemaTesourariaEclesiastica.Models
 {
@@ -6,14 +7,18 @@ namespace SistemaTesourariaEclesiastica.Models
     {
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "O nome do meio de pagamento é obrigatório.")]
+        [Required(ErrorMessage = "O nome é obrigatório.")]
         [StringLength(100, ErrorMessage = "O nome deve ter no máximo 100 caracteres.")]
         [Display(Name = "Nome")]
         public string Nome { get; set; } = string.Empty;
 
-        [StringLength(500, ErrorMessage = "A descrição deve ter no máximo 500 caracteres.")]
+        [StringLength(250, ErrorMessage = "A descrição deve ter no máximo 250 caracteres.")]
         [Display(Name = "Descrição")]
         public string? Descricao { get; set; }
+
+        [Required(ErrorMessage = "O tipo de caixa é obrigatório.")]
+        [Display(Name = "Tipo de Caixa")]
+        public TipoCaixa TipoCaixa { get; set; } = TipoCaixa.Digital;
 
         [Display(Name = "Ativo")]
         public bool Ativo { get; set; } = true;
@@ -25,4 +30,3 @@ namespace SistemaTesourariaEclesiastica.Models
         public virtual ICollection<TransferenciaInterna> TransferenciasDestino { get; set; } = new List<TransferenciaInterna>();
     }
 }
-
