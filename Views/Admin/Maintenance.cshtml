@@ -1,0 +1,268 @@
+﻿@{
+    ViewData["Title"] = "Manutenção do Sistema";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1 fw-bold text-success">
+                <i class="bi bi-tools me-2"></i>Manutenção do Sistema
+            </h1>
+            <p class="text-muted mb-0">Ferramentas de manutenção e otimização</p>
+        </div>
+        <a asp-controller="Home" asp-action="SystemManagement" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Voltar
+        </a>
+    </div>
+
+    <!-- Status de Saúde -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-database @(ViewBag.HealthChecks.DatabaseConnection ? "text-success" : "text-danger") fs-4"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Banco de Dados</h5>
+                    <span class="badge @(ViewBag.HealthChecks.DatabaseConnection ? "bg-success" : "bg-danger")">
+                        @(ViewBag.HealthChecks.DatabaseConnection ? "Conectado" : "Erro")
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-table @(ViewBag.HealthChecks.TablesIntegrity ? "text-success" : "text-danger") fs-4"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Integridade</h5>
+                    <span class="badge @(ViewBag.HealthChecks.TablesIntegrity ? "bg-success" : "bg-danger")">
+                        @(ViewBag.HealthChecks.TablesIntegrity ? "OK" : "Problemas")
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-exclamation-diamond text-warning fs-4"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Registros Órfãos</h5>
+                    <span class="badge @(ViewBag.HealthChecks.OrphanRecords == 0 ? "bg-success" : "bg-warning")">
+                        @ViewBag.HealthChecks.OrphanRecords
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-journal-text text-info fs-4"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Logs</h5>
+                    <span class="badge bg-info">@ViewBag.HealthChecks.LogsSize</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ferramentas de Manutenção -->
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-database-gear me-2"></i>Banco de Dados
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item border-0 px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Otimizar Banco</strong>
+                                    <br><small class="text-muted">Reorganiza índices e limpa cache</small>
+                                </div>
+                                <button class="btn btn-outline-primary btn-sm" onclick="showOptimizeModal()">
+                                    Executar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="list-group-item border-0 px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Verificar Integridade</strong>
+                                    <br><small class="text-muted">Verifica consistência dos dados</small>
+                                </div>
+                                <button class="btn btn-outline-info btn-sm" onclick="checkIntegrity()">
+                                    Verificar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="list-group-item border-0 px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Corrigir Órfãos</strong>
+                                    <br><small class="text-muted">Remove registros sem referência</small>
+                                </div>
+                                <button class="btn btn-outline-warning btn-sm" onclick="fixOrphans()"
+                                        @(ViewBag.HealthChecks.OrphanRecords == 0 ? "disabled" : "")>
+                                    Corrigir
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear-wide me-2"></i>Sistema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item border-0 px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Limpar Cache</strong>
+                                    <br><small class="text-muted">Remove cache temporário</small>
+                                </div>
+                                <button class="btn btn-outline-warning btn-sm" onclick="clearCache()">
+                                    Limpar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="list-group-item border-0 px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Logs de Aplicação</strong>
+                                    <br><small class="text-muted">Ver logs detalhados do sistema</small>
+                                </div>
+                                <button class="btn btn-outline-info btn-sm" onclick="viewLogs()">
+                                    Ver Logs
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="list-group-item border-0 px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Reiniciar Aplicação</strong>
+                                    <br><small class="text-muted text-danger">⚠️ Desconecta todos os usuários</small>
+                                </div>
+                                <button class="btn btn-outline-danger btn-sm" onclick="showRestartModal()">
+                                    Reiniciar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cronograma de Manutenção -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-calendar-check me-2"></i>Cronograma de Manutenção
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Próximas Manutenções Recomendadas:</strong>
+            </div>
+            <ul class="list-unstyled">
+                <li class="mb-2">
+                    <i class="bi bi-clock text-primary me-2"></i>
+                    <strong>Limpeza de Logs:</strong> Executar semanalmente (próxima em 3 dias)
+                </li>
+                <li class="mb-2">
+                    <i class="bi bi-database text-success me-2"></i>
+                    <strong>Otimização do Banco:</strong> Executar mensalmente (próxima em 15 dias)
+                </li>
+                <li class="mb-2">
+                    <i class="bi bi-shield-check text-warning me-2"></i>
+                    <strong>Backup Completo:</strong> Configurar automático
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Modais -->
+<div class="modal fade" id="optimizeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Otimização do Banco de Dados</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    A otimização pode demorar alguns minutos e impactar a performance durante a execução.
+                </div>
+                <p>Esta operação irá:</p>
+                <ul>
+                    <li>Reorganizar índices do banco</li>
+                    <li>Atualizar estatísticas</li>
+                    <li>Limpar cache de consultas</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="executeOptimize()">Executar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showOptimizeModal() {
+        new bootstrap.Modal(document.getElementById('optimizeModal')).show();
+    }
+
+    function executeOptimize() {
+        alert('Funcionalidade de otimização em desenvolvimento.');
+        bootstrap.Modal.getInstance(document.getElementById('optimizeModal')).hide();
+    }
+
+    function checkIntegrity() {
+        alert('Verificação de integridade em desenvolvimento.');
+    }
+
+    function fixOrphans() {
+        if (confirm('Confirma a correção de registros órfãos?')) {
+            alert('Funcionalidade de correção em desenvolvimento.');
+        }
+    }
+
+    function clearCache() {
+        alert('Limpeza de cache em desenvolvimento.');
+    }
+
+    function viewLogs() {
+        alert('Visualização de logs em desenvolvimento.');
+    }
+
+    function showRestartModal() {
+        if (confirm('⚠️ ATENÇÃO: Esta ação desconectará todos os usuários!\n\nTem certeza que deseja reiniciar a aplicação?')) {
+            alert('Funcionalidade de reinicialização em desenvolvimento.');
+        }
+    }
+</script>

@@ -75,6 +75,77 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return View(logs);
         }
 
+        // GET: Auditoria/Dashboard
+        public async Task<IActionResult> Dashboard()
+        {
+            await _auditService.LogAsync("AUDIT_DASHBOARD_ACCESS", "Auditoria", "Acesso ao dashboard de auditoria");
+
+            try
+            {
+                var hoje = DateTime.Now.Date;
+                var inicioSemana = hoje.AddDays(-(int)hoje.DayOfWeek);
+                var inicioMes = new DateTime(hoje.Year, hoje.Month, 1);
+
+                var stats = new
+                {
+                    LogsHoje = await _context.LogsAuditoria
+                        .Where(l => l.DataHora.Date == hoje)
+                        .CountAsync(),
+                    LogsSemana = await _context.LogsAuditoria
+                        .Where(l => l.DataHora >= inicioSemana)
+                        .CountAsync(),
+                    LogsMes = await _context.LogsAuditoria
+                        .Where(l => l.DataHora >= inicioMes)
+                        .CountAsync(),
+                    UsuariosAtivosMes = await _context.LogsAuditoria
+                        .Where(l => l.DataHora >= inicioMes)
+                        .Select(l => l.UsuarioId)
+                        .Distinct()
+                        .CountAsync()
+                };
+
+                // Atividade por hora (últimas 24h)
+                var ultimasHoras = DateTime.Now.AddHours(-24);
+                var atividadePorHora = await _context.LogsAuditoria
+                    .Where(l => l.DataHora >= ultimasHoras)
+                    .GroupBy(l => l.DataHora.Hour)
+                    .Select(g => new { Hora = g.Key, Quantidade = g.Count() })
+                    .OrderBy(x => x.Hora)
+                    .ToListAsync();
+
+                // Preparar dados para todas as 24 horas (incluir horas sem atividade)
+                var todasHoras = new List<object>();
+                for (int hora = 0; hora < 24; hora++)
+                {
+                    var atividade = atividadePorHora.FirstOrDefault(a => a.Hora == hora);
+                    todasHoras.Add(new
+                    {
+                        Hora = hora,
+                        Quantidade = atividade?.Quantidade ?? 0
+                    });
+                }
+
+                ViewBag.Stats = stats;
+                ViewBag.AtividadePorHora = todasHoras;
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Erro ao carregar estatísticas";
+
+                // Valores padrão em caso de erro
+                ViewBag.Stats = new
+                {
+                    LogsHoje = 0,
+                    LogsSemana = 0,
+                    LogsMes = 0,
+                    UsuariosAtivosMes = 0
+                };
+                ViewBag.AtividadePorHora = new List<object>();
+            }
+
+            return View();
+        }
+
         // GET: Auditoria/Details/5
         public async Task<IActionResult> Details(int? id)
         {

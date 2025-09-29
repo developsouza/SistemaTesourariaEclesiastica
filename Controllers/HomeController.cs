@@ -271,7 +271,27 @@ namespace SistemaTesourariaEclesiastica.Controllers
             var canViewAllData = User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral);
 
             ViewBag.CanViewAllData = canViewAllData;
-            ViewBag.UserCentroCustoId = user.CentroCustoId;
+            ViewBag.UserCentroCustoId = user?.CentroCustoId;
+
+            // Carregar opções de centros de custo se o usuário pode ver todos os dados
+            if (canViewAllData)
+            {
+                try
+                {
+                    var centrosCusto = await _context.CentrosCusto
+                        .Where(c => c.Ativo)
+                        .OrderBy(c => c.Nome)
+                        .Select(c => new { c.Id, c.Nome })
+                        .ToListAsync();
+
+                    ViewBag.CentrosCusto = centrosCusto;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erro ao carregar centros de custo");
+                    ViewBag.CentrosCusto = new List<object>();
+                }
+            }
 
             return View();
         }
@@ -283,13 +303,39 @@ namespace SistemaTesourariaEclesiastica.Controllers
             await _auditService.LogAsync("SYSTEM_MANAGEMENT_ACCESS", "Home",
                 "Acesso ao painel de administração do sistema");
 
-            var totalUsuarios = await _userManager.Users.CountAsync();
-            var usuariosAtivos = await _userManager.Users.Where(u => u.Ativo).CountAsync();
-            var totalCentrosCusto = await _context.CentrosCusto.CountAsync();
+            try
+            {
+                var totalUsuarios = await _userManager.Users.CountAsync();
+                var usuariosAtivos = await _userManager.Users.Where(u => u.Ativo).CountAsync();
+                var totalCentrosCusto = await _context.CentrosCusto.CountAsync();
 
-            ViewBag.TotalUsuarios = totalUsuarios;
-            ViewBag.UsuariosAtivos = usuariosAtivos;
-            ViewBag.TotalCentrosCusto = totalCentrosCusto;
+                // Estatísticas adicionais
+                var totalEntradas = await _context.Entradas.CountAsync();
+                var totalSaidas = await _context.Saidas.CountAsync();
+                var totalFechamentos = await _context.FechamentosPeriodo.CountAsync();
+                var ultimoBackup = "Nunca realizado"; // Implementar quando tiver backup
+                var versaoSistema = "1.0.0";
+
+                ViewBag.TotalUsuarios = totalUsuarios;
+                ViewBag.UsuariosAtivos = usuariosAtivos;
+                ViewBag.TotalCentrosCusto = totalCentrosCusto;
+                ViewBag.TotalEntradas = totalEntradas;
+                ViewBag.TotalSaidas = totalSaidas;
+                ViewBag.TotalFechamentos = totalFechamentos;
+                ViewBag.UltimoBackup = ultimoBackup;
+                ViewBag.VersaoSistema = versaoSistema;
+                ViewBag.ServidorNome = Environment.MachineName;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao carregar dados de administração");
+                TempData["ErrorMessage"] = "Erro ao carregar estatísticas do sistema";
+
+                // Valores padrão em caso de erro
+                ViewBag.TotalUsuarios = 0;
+                ViewBag.UsuariosAtivos = 0;
+                ViewBag.TotalCentrosCusto = 0;
+            }
 
             return View();
         }

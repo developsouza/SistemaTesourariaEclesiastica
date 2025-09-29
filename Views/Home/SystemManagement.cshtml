@@ -1,0 +1,483 @@
+﻿@{
+    ViewData["Title"] = "Administração do Sistema";
+}
+
+<div class="container-fluid">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1 fw-bold text-primary">
+                <i class="bi bi-gear-fill me-2"></i>Administração do Sistema
+            </h1>
+            <p class="text-muted mb-0">Painel completo de gerenciamento e configuração</p>
+        </div>
+        <div class="text-muted">
+            <i class="bi bi-shield-check me-2"></i>
+            <span>Acesso Administrador</span>
+        </div>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-people-fill text-primary fs-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">@ViewBag.TotalUsuarios</h3>
+                    <p class="text-muted mb-0">Total de Usuários</p>
+                    <small class="text-success">@ViewBag.UsuariosAtivos ativos</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-building text-success fs-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">@ViewBag.TotalCentrosCusto</h3>
+                    <p class="text-muted mb-0">Centros de Custo</p>
+                    <small class="text-muted">Congregações</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-server text-info fs-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-success">Online</h3>
+                    <p class="text-muted mb-0">Status do Sistema</p>
+                    <small class="text-success">Funcionando</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                        <i class="bi bi-database text-warning fs-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">v1.0</h3>
+                    <p class="text-muted mb-0">Versão do Sistema</p>
+                    <small class="text-muted">Atualizada</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seções de Administração -->
+    <div class="row g-4">
+        <!-- Gerenciamento de Usuários -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people me-2"></i>Gerenciamento de Usuários
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a asp-controller="Usuarios" asp-action="Index" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-person-lines-fill me-2 text-primary"></i>
+                                    <strong>Usuários do Sistema</strong>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">@ViewBag.TotalUsuarios</span>
+                            </div>
+                            <small class="text-muted">Visualizar, criar e gerenciar usuários</small>
+                        </a>
+
+                        <a asp-controller="Usuarios" asp-action="Create" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-person-plus me-2 text-success"></i>
+                                    <strong>Novo Usuário</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Criar nova conta de usuário</small>
+                        </a>
+
+                        <a href="#" onclick="showRolesModal()" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-shield-check me-2 text-warning"></i>
+                                    <strong>Perfis e Permissões</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Gerenciar roles e permissões</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auditoria e Logs -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-journal-check me-2"></i>Auditoria e Logs
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a asp-controller="Auditoria" asp-action="Index" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-search me-2 text-info"></i>
+                                    <strong>Logs de Auditoria</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Ver todas as atividades do sistema</small>
+                        </a>
+
+                        <a asp-controller="Auditoria" asp-action="Estatisticas" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-graph-up me-2 text-success"></i>
+                                    <strong>Estatísticas de Uso</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Relatórios de atividade do sistema</small>
+                        </a>
+
+                        <a href="#" onclick="showCleanupModal()" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-trash me-2 text-danger"></i>
+                                    <strong>Limpeza de Logs</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Remover logs antigos</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configurações do Sistema -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear-wide-connected me-2"></i>Configurações
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a asp-controller="CentrosCusto" asp-action="Index" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-building me-2 text-warning"></i>
+                                    <strong>Centros de Custo</strong>
+                                </div>
+                                <span class="badge bg-warning text-dark rounded-pill">@ViewBag.TotalCentrosCusto</span>
+                            </div>
+                            <small class="text-muted">Gerenciar congregações e sede</small>
+                        </a>
+
+                        <a asp-controller="MeiosPagamento" asp-action="Index" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-credit-card me-2 text-primary"></i>
+                                    <strong>Meios de Pagamento</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Configurar formas de recebimento</small>
+                        </a>
+
+                        <a asp-controller="PlanoContas" asp-action="Index" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-journal-text me-2 text-success"></i>
+                                    <strong>Plano de Contas</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Fontes de renda e categorias</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup e Manutenção -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-database-gear me-2"></i>Backup & Manutenção
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="#" onclick="showBackupModal()" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-download me-2 text-danger"></i>
+                                    <strong>Backup do Sistema</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Criar backup completo dos dados</small>
+                        </a>
+
+                        <a href="#" onclick="showRestoreModal()" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-upload me-2 text-warning"></i>
+                                    <strong>Restaurar Backup</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Restaurar dados de backup</small>
+                        </a>
+
+                        <a href="#" onclick="showMaintenanceModal()" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-tools me-2 text-info"></i>
+                                    <strong>Manutenção</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Otimizar banco de dados</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações do Sistema -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-info-circle me-2"></i>Informações do Sistema
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="fw-bold">Versão do Sistema:</td>
+                            <td>1.0.0</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Data de Deploy:</td>
+                            <td>@DateTime.Now.ToString("dd/MM/yyyy")</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Servidor:</td>
+                            <td>@Environment.MachineName</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td class="fw-bold">Framework:</td>
+                            <td>ASP.NET Core MVC</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Banco de Dados:</td>
+                            <td>SQL Server</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Último Backup:</td>
+                            <td class="text-muted">Nunca realizado</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modais -->
+<!-- Modal de Perfis -->
+<div class="modal fade" id="rolesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-shield-check me-2"></i>Perfis do Sistema
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-danger">👑 Administrador</h6>
+                                <p class="small text-muted">Acesso total ao sistema</p>
+                                <ul class="small">
+                                    <li>Gerenciar usuários</li>
+                                    <li>Configurar sistema</li>
+                                    <li>Ver auditoria</li>
+                                    <li>Backup/Restore</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-primary">💼 Tesoureiro Geral</h6>
+                                <p class="small text-muted">Gerencia a Sede</p>
+                                <ul class="small">
+                                    <li>Aprovar prestações</li>
+                                    <li>Ver consolidado</li>
+                                    <li>Relatórios gerais</li>
+                                    <li>Gerenciar rateios</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-success">🏢 Tesoureiro Local</h6>
+                                <p class="small text-muted">Gerencia congregação</p>
+                                <ul class="small">
+                                    <li>Lançar entradas/saídas</li>
+                                    <li>Submeter fechamentos</li>
+                                    <li>Ver relatórios locais</li>
+                                    <li>Gerenciar dízimos</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-info">⛪ Pastor</h6>
+                                <p class="small text-muted">Consulta relatórios</p>
+                                <ul class="small">
+                                    <li>Ver relatórios</li>
+                                    <li>Consultar dízimos</li>
+                                    <li>Dashboard básico</li>
+                                    <li>Não edita dados</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Backup -->
+<div class="modal fade" id="backupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-download me-2"></i>Backup do Sistema
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Atenção:</strong> Esta funcionalidade está em desenvolvimento.
+                </div>
+                <p>O backup incluirá:</p>
+                <ul>
+                    <li>Todos os dados financeiros</li>
+                    <li>Usuários e permissões</li>
+                    <li>Configurações do sistema</li>
+                    <li>Logs de auditoria</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" disabled>
+                    <i class="bi bi-download me-2"></i>Criar Backup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Limpeza -->
+<div class="modal fade" id="cleanupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-trash me-2"></i>Limpeza de Logs
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Remove logs de auditoria antigos para liberar espaço.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Manter logs dos últimos:</label>
+                    <select class="form-select" id="cleanupPeriod">
+                        <option value="30">30 dias</option>
+                        <option value="60" selected>60 dias</option>
+                        <option value="90">90 dias</option>
+                        <option value="180">6 meses</option>
+                        <option value="365">1 ano</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" onclick="confirmCleanup()">
+                    <i class="bi bi-trash me-2"></i>Limpar Logs
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showRolesModal() {
+        new bootstrap.Modal(document.getElementById('rolesModal')).show();
+    }
+
+    function showBackupModal() {
+        new bootstrap.Modal(document.getElementById('backupModal')).show();
+    }
+
+    function showRestoreModal() {
+        alert('Funcionalidade de restore em desenvolvimento.');
+    }
+
+    function showMaintenanceModal() {
+        alert('Funcionalidade de manutenção em desenvolvimento.');
+    }
+
+    function showCleanupModal() {
+        new bootstrap.Modal(document.getElementById('cleanupModal')).show();
+    }
+
+    function confirmCleanup() {
+        const days = document.getElementById('cleanupPeriod').value;
+        if (confirm(`Confirma a remoção de logs anteriores a ${days} dias?`)) {
+            alert('Funcionalidade em desenvolvimento.');
+        }
+    }
+</script>

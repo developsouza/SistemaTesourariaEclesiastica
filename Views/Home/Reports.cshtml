@@ -1,0 +1,565 @@
+﻿@{
+    ViewData["Title"] = "Central de Relatórios";
+}
+
+<div class="container-fluid">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1 fw-bold text-primary">
+                <i class="bi bi-bar-chart-fill me-2"></i>Central de Relatórios
+            </h1>
+            <p class="text-muted mb-0">Todos os relatórios financeiros em um só local</p>
+        </div>
+        <div class="text-muted">
+            <i class="bi bi-calendar-range me-2"></i>
+            <span id="currentDate"></span>
+        </div>
+    </div>
+
+    <!-- Filtros Globais -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Data Início</label>
+                    <input type="date" class="form-control" id="globalDateStart" value="@DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd")">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Data Fim</label>
+                    <input type="date" class="form-control" id="globalDateEnd" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                </div>
+                @if (ViewBag.CanViewAllData == true)
+                {
+                    <div class="col-md-3">
+                        <label class="form-label">Centro de Custo</label>
+                        <select class="form-select" id="globalCentroCusto">
+                            <option value="">Todos os centros</option>
+                            <option value="1">Sede</option>
+                            <!-- Opções serão carregadas via JavaScript -->
+                        </select>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" id="globalCentroCusto" value="@ViewBag.UserCentroCustoId">
+                }
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-primary w-100" onclick="applyGlobalFilters()">
+                        <i class="bi bi-funnel me-2"></i>Aplicar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Relatórios em Cards -->
+    <div class="row g-4">
+
+        <!-- Relatórios de Dízimos -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-heart-fill me-2"></i>Dízimos e Ofertas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="#" onclick="generateReport('dizimos-membro')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-person-heart me-2 text-success"></i>
+                                    <strong>Dízimos por Membro</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Contribuições individuais detalhadas</small>
+                        </a>
+
+                        <a href="#" onclick="generateReport('dizimos-congregacao')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-building me-2 text-primary"></i>
+                                    <strong>Dízimos por Congregação</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Totalizações por centro de custo</small>
+                        </a>
+
+                        <a href="#" onclick="generateReport('dizimos-periodo')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-calendar-range me-2 text-info"></i>
+                                    <strong>Relatório Mensal</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Análise por período específico</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relatórios Financeiros -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cash-stack me-2"></i>Financeiro
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="#" onclick="generateReport('fluxo-caixa')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-graph-up me-2 text-primary"></i>
+                                    <strong>Fluxo de Caixa</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Entradas e saídas do período</small>
+                        </a>
+
+                        <a href="#" onclick="generateReport('dre')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-calculator me-2 text-success"></i>
+                                    <strong>DRE (Resultado)</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Demonstração de resultados</small>
+                        </a>
+
+                        <a href="#" onclick="generateReport('balancete')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-journal-text me-2 text-info"></i>
+                                    <strong>Balancete Geral</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Resumo por plano de contas</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relatórios de Entrada -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-arrow-down-left me-2"></i>Entradas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="#" onclick="generateReport('entradas-meio-pagamento')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-credit-card me-2 text-primary"></i>
+                                    <strong>Por Meio de Pagamento</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Dinheiro, PIX, cartões...</small>
+                        </a>
+
+                        <a href="#" onclick="generateReport('entradas-fonte')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-funnel me-2 text-success"></i>
+                                    <strong>Por Fonte de Renda</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Dízimos, ofertas, eventos...</small>
+                        </a>
+
+                        <a href="#" onclick="generateReport('diario-culto')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-calendar-day me-2 text-info"></i>
+                                    <strong>Relatório Diário de Culto</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Coletas por culto/evento</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relatórios de Saída -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-arrow-up-right me-2"></i>Saídas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="#" onclick="generateReport('despesas-categoria')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-tags me-2 text-danger"></i>
+                                    <strong>Por Categoria</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Evangelismo, manutenção, pessoal...</small>
+                        </a>
+
+                        <a href="#" onclick="generateReport('despesas-tipo')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-pie-chart me-2 text-warning"></i>
+                                    <strong>Fixas vs Variáveis</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Análise por tipo de despesa</small>
+                        </a>
+
+                        <a href="#" onclick="generateReport('despesas-fornecedor')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-shop me-2 text-info"></i>
+                                    <strong>Por Fornecedor</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Pagamentos por empresa</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prestação de Contas -->
+        @if (ViewBag.CanViewAllData == true)
+        {
+            <div class="col-lg-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="bi bi-file-earmark-check me-2"></i>Prestação de Contas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+                            <a href="#" onclick="generateReport('guias-repasse')" class="list-group-item list-group-item-action border-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-file-earmark-arrow-up me-2 text-warning"></i>
+                                        <strong>Guias de Repasse</strong>
+                                    </div>
+                                    <i class="bi bi-arrow-right"></i>
+                                </div>
+                                <small class="text-muted">Comprovantes de envio à Sede</small>
+                            </a>
+
+                            <a href="#" onclick="generateReport('posicao-congregacoes')" class="list-group-item list-group-item-action border-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-building me-2 text-primary"></i>
+                                        <strong>Posição das Congregações</strong>
+                                    </div>
+                                    <i class="bi bi-arrow-right"></i>
+                                </div>
+                                <small class="text-muted">Status dos fechamentos</small>
+                            </a>
+
+                            <a href="#" onclick="generateReport('fechamentos-periodo')" class="list-group-item list-group-item-action border-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-calendar-check me-2 text-success"></i>
+                                        <strong>Fechamentos por Período</strong>
+                                    </div>
+                                    <i class="bi bi-arrow-right"></i>
+                                </div>
+                                <small class="text-muted">Histórico de prestações</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Empréstimos -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-arrow-left-right me-2"></i>Transferências e Empréstimos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <a href="#" onclick="generateReport('emprestimos-ativos')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-clock me-2 text-warning"></i>
+                                    <strong>Empréstimos Ativos</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Em aberto por período</small>
+                        </a>
+
+                        <a href="#" onclick="generateReport('transferencias-internas')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-arrow-left-right me-2 text-info"></i>
+                                    <strong>Transferências Internas</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Movimentações entre fundos</small>
+                        </a>
+
+                        <a href="#" onclick="generateReport('conciliacao-bancaria')" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-bank me-2 text-primary"></i>
+                                    <strong>Conciliação Bancária</strong>
+                                </div>
+                                <i class="bi bi-arrow-right"></i>
+                            </div>
+                            <small class="text-muted">Conferência com extratos</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área de Preview do Relatório -->
+    <div id="reportPreview" class="mt-4" style="display: none;">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0" id="reportTitle">
+                    <i class="bi bi-file-earmark-text me-2"></i>Preview do Relatório
+                </h5>
+                <div>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="hideReportPreview()">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2">Gerando relatório...</p>
+                </div>
+                <div id="reportContent" style="display: none;"></div>
+                <div class="mt-3 text-center" id="reportActions" style="display: none;">
+                    <button class="btn btn-success me-2">
+                        <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
+                    </button>
+                    <button class="btn btn-danger me-2">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>Exportar PDF
+                    </button>
+                    <button class="btn btn-primary">
+                        <i class="bi bi-printer me-2"></i>Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Definir a data atual
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('pt-BR');
+
+    function applyGlobalFilters() {
+        const dateStart = document.getElementById('globalDateStart').value;
+        const dateEnd = document.getElementById('globalDateEnd').value;
+        const centroCusto = document.getElementById('globalCentroCusto').value;
+
+        // Validações
+        if (!dateStart || !dateEnd) {
+            alert('Por favor, selecione as datas de início e fim.');
+            return;
+        }
+
+        if (new Date(dateStart) > new Date(dateEnd)) {
+            alert('A data de início deve ser anterior à data de fim.');
+            return;
+        }
+
+        // Atualizar interface para mostrar filtros aplicados
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-info alert-dismissible fade show mt-3';
+        alertDiv.innerHTML = `
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Filtros aplicados:</strong> ${dateStart} até ${dateEnd}
+            ${centroCusto ? ` | Centro: ${centroCusto}` : ' | Todos os centros'}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        // Remover alert anterior se existir
+        const existingAlert = document.querySelector('.alert-info');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+
+        // Inserir novo alert
+        document.querySelector('.card').after(alertDiv);
+    }
+
+    function generateReport(reportType) {
+        const dateStart = document.getElementById('globalDateStart').value;
+        const dateEnd = document.getElementById('globalDateEnd').value;
+        const centroCusto = document.getElementById('globalCentroCusto').value;
+
+        // Validar se filtros foram definidos
+        if (!dateStart || !dateEnd) {
+            alert('Por favor, defina as datas de início e fim antes de gerar o relatório.');
+            document.getElementById('globalDateStart').focus();
+            return;
+        }
+
+        // Mostrar preview
+        showReportPreview(reportType);
+
+        // Simular carregamento do relatório
+        setTimeout(() => {
+            displayReportContent(reportType);
+        }, 2000);
+    }
+
+    function showReportPreview(reportType) {
+        const reportTitles = {
+            'dizimos-membro': 'Relatório de Dízimos por Membro',
+            'dizimos-congregacao': 'Relatório de Dízimos por Congregação',
+            'dizimos-periodo': 'Relatório Mensal de Dízimos',
+            'fluxo-caixa': 'Relatório de Fluxo de Caixa',
+            'dre': 'Demonstração de Resultado do Exercício',
+            'balancete': 'Balancete Geral',
+            'entradas-meio-pagamento': 'Entradas por Meio de Pagamento',
+            'entradas-fonte': 'Entradas por Fonte de Renda',
+            'diario-culto': 'Relatório Diário de Culto',
+            'despesas-categoria': 'Despesas por Categoria',
+            'despesas-tipo': 'Despesas: Fixas vs Variáveis',
+            'despesas-fornecedor': 'Despesas por Fornecedor',
+            'guias-repasse': 'Guias de Repasse',
+            'posicao-congregacoes': 'Posição das Congregações',
+            'fechamentos-periodo': 'Fechamentos por Período',
+            'emprestimos-ativos': 'Empréstimos Ativos',
+            'transferencias-internas': 'Transferências Internas',
+            'conciliacao-bancaria': 'Conciliação Bancária'
+        };
+
+        document.getElementById('reportTitle').innerHTML = `
+            <i class="bi bi-file-earmark-text me-2"></i>${reportTitles[reportType] || 'Relatório'}
+        `;
+
+        document.getElementById('reportPreview').style.display = 'block';
+        document.getElementById('reportContent').style.display = 'none';
+        document.getElementById('reportActions').style.display = 'none';
+
+        // Scroll suave para o preview
+        document.getElementById('reportPreview').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function displayReportContent(reportType) {
+        const content = document.getElementById('reportContent');
+        const dateStart = document.getElementById('globalDateStart').value;
+        const dateEnd = document.getElementById('globalDateEnd').value;
+
+        // Simular conteúdo do relatório
+        content.innerHTML = `
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle me-2"></i>
+                Relatório gerado com sucesso para o período de ${new Date(dateStart).toLocaleDateString('pt-BR')} até ${new Date(dateEnd).toLocaleDateString('pt-BR')}.
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Item</th>
+                            <th>Descrição</th>
+                            <th class="text-end">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Exemplo de entrada</td>
+                            <td class="text-end">R$ 1.000,00</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Exemplo de saída</td>
+                            <td class="text-end">R$ 500,00</td>
+                        </tr>
+                        <tr class="table-primary fw-bold">
+                            <td colspan="2">TOTAL</td>
+                            <td class="text-end">R$ 500,00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted small">
+                <i class="bi bi-info-circle me-1"></i>
+                Este é um exemplo de como o relatório seria exibido. A implementação real deve buscar dados do banco de dados.
+            </p>
+        `;
+
+        // Ocultar loading e mostrar conteúdo
+        document.querySelector('.spinner-border').parentElement.style.display = 'none';
+        document.getElementById('reportContent').style.display = 'block';
+        document.getElementById('reportActions').style.display = 'block';
+    }
+
+    function hideReportPreview() {
+        document.getElementById('reportPreview').style.display = 'none';
+    }
+</script>
+
+<style>
+    .card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+    .list-group-item-action:hover {
+        background-color: rgba(0,123,255,0.05);
+        border-left: 3px solid #007bff;
+    }
+
+    #reportPreview {
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @@keyframes slideIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+</style>

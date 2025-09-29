@@ -3,9 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
@@ -194,7 +191,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                                i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id)
                     .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
 
-                
+
             }
             else
             {
@@ -220,7 +217,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
                 else
                 {
-                                        // Retornar 0 para evitar empréstimos indevidos
+                    // Retornar 0 para evitar empréstimos indevidos
                     return 0;
                 }
             }

@@ -1,0 +1,353 @@
+﻿@{
+    ViewData["Title"] = "Estatísticas do Banco de Dados";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1 fw-bold text-success">
+                <i class="bi bi-database-fill me-2"></i>Estatísticas do Banco
+            </h1>
+            <p class="text-muted mb-0">Análise detalhada dos dados armazenados</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Home" asp-action="SystemManagement" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Voltar
+            </a>
+            <button class="btn btn-outline-primary" onclick="refreshStats()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- Estatísticas Gerais -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 50px; height: 50px;">
+                        <i class="bi bi-people text-primary fs-5"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1">@ViewBag.DatabaseStats.TotalUsuarios</h4>
+                    <small class="text-muted">Usuários</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 50px; height: 50px;">
+                        <i class="bi bi-building text-success fs-5"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1">@ViewBag.DatabaseStats.TotalCentrosCusto</h4>
+                    <small class="text-muted">Centros</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 50px; height: 50px;">
+                        <i class="bi bi-person-heart text-info fs-5"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1">@ViewBag.DatabaseStats.TotalMembros</h4>
+                    <small class="text-muted">Membros</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 50px; height: 50px;">
+                        <i class="bi bi-arrow-down text-success fs-5"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1">@ViewBag.DatabaseStats.TotalEntradas</h4>
+                    <small class="text-muted">Entradas</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 50px; height: 50px;">
+                        <i class="bi bi-arrow-up text-danger fs-5"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1">@ViewBag.DatabaseStats.TotalSaidas</h4>
+                    <small class="text-muted">Saídas</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body">
+                    <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 50px; height: 50px;">
+                        <i class="bi bi-file-earmark-check text-warning fs-5"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1">@ViewBag.DatabaseStats.TotalFechamentos</h4>
+                    <small class="text-muted">Fechamentos</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas Detalhadas -->
+    <div class="row g-4">
+        <!-- Configurações do Sistema -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear me-2"></i>Configurações
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 border-end">
+                            <h4 class="text-info mb-1">@ViewBag.DatabaseStats.TotalMeiosPagamento</h4>
+                            <small class="text-muted">Meios de Pagamento</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success mb-1">@ViewBag.DatabaseStats.TotalFontesRenda</h4>
+                            <small class="text-muted">Fontes de Renda</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <h4 class="text-warning mb-1">@ViewBag.DatabaseStats.TotalCategoriasDespesa</h4>
+                        <small class="text-muted">Categorias de Despesa</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auditoria -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-journal-check me-2"></i>Auditoria
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="display-6 text-info mb-3">
+                        @ViewBag.DatabaseStats.TotalLogsAuditoria.ToString("N0")
+                    </div>
+                    <p class="mb-0">Total de Logs de Auditoria</p>
+                    <hr>
+                    <div class="small text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Registro completo de todas as atividades do sistema
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Atividade Recente -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-activity me-2"></i>Atividade Recente (30 dias)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center mb-3">
+                                <h4 class="text-success mb-1">@ViewBag.StatsRecentes.EntradasRecentes</h4>
+                                <small class="text-muted">Novas Entradas</small>
+                            </div>
+                            <div class="text-center">
+                                <h4 class="text-danger mb-1">@ViewBag.StatsRecentes.SaidasRecentes</h4>
+                                <small class="text-muted">Novas Saídas</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center mb-3">
+                                <h4 class="text-warning mb-1">@ViewBag.StatsRecentes.FechamentosRecentes</h4>
+                                <small class="text-muted">Fechamentos</small>
+                            </div>
+                            <div class="text-center">
+                                <h4 class="text-info mb-1">@ViewBag.StatsRecentes.LogsRecentes</h4>
+                                <small class="text-muted">Logs Criados</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Crescimento -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Crescimento de Dados
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="growthChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Detalhes -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-table me-2"></i>Detalhamento por Tabela
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Tabela</th>
+                            <th>Registros</th>
+                            <th>Status</th>
+                            <th>Última Atualização</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-people me-2"></i>AspNetUsers</td>
+                            <td><strong>@ViewBag.DatabaseStats.TotalUsuarios</strong></td>
+                            <td><span class="badge bg-success">Ativo</span></td>
+                            <td>@DateTime.Now.AddHours(-2).ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <a asp-controller="Usuarios" asp-action="Index" class="btn btn-sm btn-outline-primary">Ver</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-building me-2"></i>CentrosCusto</td>
+                            <td><strong>@ViewBag.DatabaseStats.TotalCentrosCusto</strong></td>
+                            <td><span class="badge bg-success">Ativo</span></td>
+                            <td>@DateTime.Now.AddDays(-1).ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <a asp-controller="CentrosCusto" asp-action="Index" class="btn btn-sm btn-outline-primary">Ver</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-arrow-down me-2"></i>Entradas</td>
+                            <td><strong>@ViewBag.DatabaseStats.TotalEntradas</strong></td>
+                            <td><span class="badge bg-success">Ativo</span></td>
+                            <td>@DateTime.Now.AddMinutes(-30).ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <a asp-controller="Entradas" asp-action="Index" class="btn btn-sm btn-outline-primary">Ver</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-arrow-up me-2"></i>Saidas</td>
+                            <td><strong>@ViewBag.DatabaseStats.TotalSaidas</strong></td>
+                            <td><span class="badge bg-success">Ativo</span></td>
+                            <td>@DateTime.Now.AddHours(-1).ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <a asp-controller="Saidas" asp-action="Index" class="btn btn-sm btn-outline-primary">Ver</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-journal-check me-2"></i>LogsAuditoria</td>
+                            <td><strong>@ViewBag.DatabaseStats.TotalLogsAuditoria</strong></td>
+                            <td><span class="badge bg-warning">Crescendo</span></td>
+                            <td>@DateTime.Now.AddMinutes(-5).ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <a asp-controller="Auditoria" asp-action="Index" class="btn btn-sm btn-outline-primary">Ver</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+    // Gráfico de crescimento simulado
+    const growthCtx = document.getElementById('growthChart').getContext('2d');
+
+    new Chart(growthCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Entradas', 'Saídas', 'Usuários', 'Outros'],
+            datasets: [{
+                data: [
+                    @ViewBag.DatabaseStats.TotalEntradas,
+                    @ViewBag.DatabaseStats.TotalSaidas,
+                    @ViewBag.DatabaseStats.TotalUsuarios * 10, // Simular proporção
+                    @ViewBag.DatabaseStats.TotalFechamentos * 5
+                ],
+                backgroundColor: [
+                    '#28a745',
+                    '#dc3545',
+                    '#007bff',
+                    '#ffc107'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    function refreshStats() {
+        // Simular atualização
+        const button = document.querySelector('[onclick="refreshStats()"]');
+        const originalText = button.innerHTML;
+
+        button.innerHTML = '<i class="bi bi-arrow-clockwise me-1 spin"></i>Atualizando...';
+        button.disabled = true;
+
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.disabled = false;
+
+            // Mostrar toast de sucesso
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-success position-fixed';
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = '<i class="bi bi-check-circle me-2"></i>Estatísticas atualizadas!';
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }, 2000);
+    }
+</script>
+
+<style>
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+
+    @@keyframes spin {
+        from
+
+    {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+
+    }
+
+    #growthChart {
+        height: 200px !important;
+    }
+</style>

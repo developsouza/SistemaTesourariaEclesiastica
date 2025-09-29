@@ -1,0 +1,291 @@
+﻿@{
+    ViewData["Title"] = "Atividade de Usuários";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1 fw-bold text-info">
+                <i class="bi bi-people-fill me-2"></i>Atividade de Usuários
+            </h1>
+            <p class="text-muted mb-0">Monitoramento detalhado das ações dos usuários</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Home" asp-action="SystemManagement" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Voltar
+            </a>
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-funnel me-1"></i>Filtros
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="?page=1">Todas as atividades</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="?page=1&action=LOGIN">Apenas Logins</a></li>
+                    <li><a class="dropdown-item" href="?page=1&action=CREATE">Criações</a></li>
+                    <li><a class="dropdown-item" href="?page=1&action=UPDATE">Edições</a></li>
+                    <li><a class="dropdown-item" href="?page=1&action=DELETE">Exclusões</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumo -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="bi bi-activity display-4 mb-2"></i>
+                    <h3 class="mb-1">@ViewBag.TotalAtividades</h3>
+                    <p class="mb-0">Atividades (7 dias)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="bi bi-person-check display-4 mb-2"></i>
+                    <!-- CORRIGIDO: Usar valor calculado no Controller -->
+                    <h3 class="mb-1">@ViewBag.UsuariosUnicos</h3>
+                    <p class="mb-0">Usuários Únicos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="bi bi-clock display-4 mb-2"></i>
+                    <!-- CORRIGIDO: Usar valor calculado no Controller -->
+                    <h3 class="mb-1">@ViewBag.AtividadesUltimaHora</h3>
+                    <p class="mb-0">Última Hora</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="bi bi-graph-up display-4 mb-2"></i>
+                    <!-- CORRIGIDO: Usar valor calculado no Controller -->
+                    <h3 class="mb-1">@ViewBag.MediaPorDia</h3>
+                    <p class="mb-0">Média/Dia</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline de Atividades -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-clock-history me-2"></i>Timeline de Atividades (Últimos 7 dias)
+            </h5>
+            <div class="d-flex align-items-center">
+                <small class="text-muted me-3">
+                    Página @ViewBag.CurrentPage de @ViewBag.TotalPages
+                </small>
+                <div class="btn-group btn-group-sm">
+                    @if (ViewBag.CurrentPage > 1)
+                    {
+                        <a href="?page=@(ViewBag.CurrentPage - 1)" class="btn btn-outline-secondary">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    }
+                    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                    {
+                        <a href="?page=@(ViewBag.CurrentPage + 1)" class="btn btn-outline-secondary">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (ViewBag.Atividades != null && ((IEnumerable<dynamic>)ViewBag.Atividades).Any())
+            {
+                <div class="timeline">
+                    @foreach (var item in (IEnumerable<dynamic>)ViewBag.Atividades)
+                    {
+                        var atividade = item.Atividade;
+                        var usuario = item.Usuario;
+
+                        var iconClass = "bi-info-circle text-primary";
+                        var badgeClass = "bg-primary";
+
+                        if (atividade.Acao.Contains("LOGIN"))
+                        {
+                            iconClass = "bi-door-open text-success";
+                            badgeClass = "bg-success";
+                        }
+                        else if (atividade.Acao.Contains("CREATE"))
+                        {
+                            iconClass = "bi-plus-circle text-info";
+                            badgeClass = "bg-info";
+                        }
+                        else if (atividade.Acao.Contains("UPDATE"))
+                        {
+                            iconClass = "bi-pencil-square text-warning";
+                            badgeClass = "bg-warning";
+                        }
+                        else if (atividade.Acao.Contains("DELETE"))
+                        {
+                            iconClass = "bi-trash text-danger";
+                            badgeClass = "bg-danger";
+                        }
+                        else if (atividade.Acao.Contains("ADMIN") || atividade.Acao.Contains("SYSTEM"))
+                        {
+                            iconClass = "bi-gear text-warning";
+                            badgeClass = "bg-warning";
+                        }
+
+                        <div class="timeline-item">
+                            <div class="timeline-marker">
+                                <i class="bi @iconClass"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="timeline-header">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <span class="badge @badgeClass me-2">@atividade.Acao</span>
+                                                @atividade.Entidade
+                                                @if (!string.IsNullOrEmpty(atividade.EntidadeId) && atividade.EntidadeId != "0")
+                                                {
+                                                    <small class="text-muted">#@atividade.EntidadeId</small>
+                                                }
+                                            </h6>
+                                            <div class="d-flex align-items-center text-muted small">
+                                                <i class="bi bi-person me-1"></i>
+                                                <strong class="me-3">@(usuario?.NomeCompleto ?? "Usuário não encontrado")</strong>
+                                                <i class="bi bi-envelope me-1"></i>
+                                                <span class="me-3">@(usuario?.Email ?? "N/A")</span>
+                                                @if (!string.IsNullOrEmpty(atividade.EnderecoIP))
+                                                {
+                                                    <i class="bi bi-globe me-1"></i>
+                                                    <span>@atividade.EnderecoIP</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted">@atividade.DataHora.ToString("dd/MM HH:mm:ss")</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(atividade.Detalhes))
+                                {
+                                    <div class="timeline-body mt-2">
+                                        <div class="alert alert-light border-0 small mb-0">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            @atividade.Detalhes
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Paginação -->
+                @if (ViewBag.TotalPages > 1)
+                {
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link" href="?page=1">Primeira</a>
+                            </li>
+                            <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link" href="?page=@Math.Max(1, ViewBag.CurrentPage - 1)">Anterior</a>
+                            </li>
+
+                            @for (int i = Math.Max(1, ViewBag.CurrentPage - 2); i <= Math.Min(ViewBag.TotalPages, ViewBag.CurrentPage + 2); i++)
+                            {
+                                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                                    <a class="page-link" href="?page=@i">@i</a>
+                                </li>
+                            }
+
+                            <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="?page=@Math.Min(ViewBag.TotalPages, ViewBag.CurrentPage + 1)">Próxima</a>
+                            </li>
+                            <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="?page=@ViewBag.TotalPages">Última</a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            }
+            else
+            {
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-inbox display-1"></i>
+                    <h4 class="mt-3">Nenhuma atividade encontrada</h4>
+                    <p>Não há registros de atividade nos últimos 7 dias.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline {
+        position: relative;
+        padding: 0;
+        margin: 0;
+    }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 25px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+
+    .timeline-item {
+        position: relative;
+        padding: 0 0 30px 60px;
+        margin: 0;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: 15px;
+        top: 5px;
+        width: 20px;
+        height: 20px;
+        background: white;
+        border: 2px solid #dee2e6;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        z-index: 1;
+    }
+
+    .timeline-content {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+        .timeline-content:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+            transition: all 0.2s ease;
+        }
+
+    .timeline-header h6 {
+        margin-bottom: 0;
+    }
+
+    .badge {
+        font-size: 0.7rem;
+        font-weight: 500;
+    }
+</style>

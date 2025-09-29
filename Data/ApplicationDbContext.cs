@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Models;
-using SistemaTesourariaEclesiastica.Enums;
 
 namespace SistemaTesourariaEclesiastica.Data
 {
