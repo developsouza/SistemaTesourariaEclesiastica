@@ -72,45 +72,78 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: TransferenciasInternas/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Data,Valor,Descricao,MeioDePagamentoOrigemId,MeioDePagamentoDestinoId,CentroCustoOrigemId,CentroCustoDestinoId")] TransferenciaInterna transferenciaInterna)
+        public async Task<IActionResult> Create([Bind("Data,Valor,Descricao,MeioDePagamentoOrigemId,MeioDePagamentoDestinoId,CentroCustoOrigemId,CentroCustoDestinoId")] TransferenciaInterna transferenciaInterna)
         {
-            if (ModelState.IsValid)
+            try
             {
-                var user = await _userManager.GetUserAsync(User);
-                transferenciaInterna.UsuarioId = user!.Id;
-                transferenciaInterna.DataCriacao = DateTime.Now;
+                // CRÍTICO: Remover navigation properties do ModelState
+                ModelState.Remove("MeioDePagamentoOrigem");
+                ModelState.Remove("MeioDePagamentoDestino");
+                ModelState.Remove("CentroCustoOrigem");
+                ModelState.Remove("CentroCustoDestino");
+                ModelState.Remove("Usuario");
 
-                // Lógica de transferência
-                var meioDePagamentoOrigem = await _context.MeiosDePagamento.FindAsync(transferenciaInterna.MeioDePagamentoOrigemId);
-                var meioDePagamentoDestino = await _context.MeiosDePagamento.FindAsync(transferenciaInterna.MeioDePagamentoDestinoId);
-
-                if (meioDePagamentoOrigem == null || meioDePagamentoDestino == null)
+                // Validação customizada: origem e destino devem ser diferentes
+                if (transferenciaInterna.MeioDePagamentoOrigemId == transferenciaInterna.MeioDePagamentoDestinoId)
                 {
-                    ModelState.AddModelError(string.Empty, "Meio de pagamento de origem ou destino não encontrado.");
-                    ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
-                    ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
-                    ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
-                    ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
-                    return View(transferenciaInterna);
+                    ModelState.AddModelError("MeioDePagamentoDestinoId", "O meio de pagamento de destino deve ser diferente do origem.");
                 }
 
-                // Não há saldo em MeioDePagamento, apenas em ContaBancaria. A lógica de saldo será mais complexa.
-                // Por enquanto, apenas registra a transferência.
-
-                _context.Add(transferenciaInterna);
-                await _context.SaveChangesAsync();
-                if (user != null)
+                if (transferenciaInterna.CentroCustoOrigemId == transferenciaInterna.CentroCustoDestinoId)
                 {
-                    await _auditService.LogAuditAsync(user.Id, "Criar", "TransferenciaInterna", transferenciaInterna.Id.ToString(), $"Transferência de {transferenciaInterna.Valor:C2} de {meioDePagamentoOrigem.Nome} para {meioDePagamentoDestino.Nome}.");
+                    ModelState.AddModelError("CentroCustoDestinoId", "O centro de custo de destino deve ser diferente do origem.");
                 }
-                TempData["SuccessMessage"] = "Transferência interna registrada com sucesso!";
-                return RedirectToAction(nameof(Index));
+
+                if (ModelState.IsValid)
+                {
+                    var user = await _userManager.GetUserAsync(User);
+                    transferenciaInterna.UsuarioId = user!.Id;
+                    transferenciaInterna.DataCriacao = DateTime.Now;
+
+                    // Buscar nomes dos meios de pagamento para log
+                    var meioDePagamentoOrigem = await _context.MeiosDePagamento.FindAsync(transferenciaInterna.MeioDePagamentoOrigemId);
+                    var meioDePagamentoDestino = await _context.MeiosDePagamento.FindAsync(transferenciaInterna.MeioDePagamentoDestinoId);
+
+                    if (meioDePagamentoOrigem == null || meioDePagamentoDestino == null)
+                    {
+                        ModelState.AddModelError(string.Empty, "Meio de pagamento de origem ou destino não encontrado.");
+                        ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
+                        ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
+                        ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
+                        ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
+                        return View(transferenciaInterna);
+                    }
+
+                    _context.Add(transferenciaInterna);
+                    await _context.SaveChangesAsync();
+
+                    // Log de auditoria com método tipado
+                    if (user != null)
+                    {
+                        await _auditService.LogCreateAsync(user.Id, transferenciaInterna, transferenciaInterna.Id.ToString());
+                    }
+
+                    TempData["SuccessMessage"] = "Transferência interna registrada com sucesso!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
+                ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
+                ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
+                ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
+                return View(transferenciaInterna);
             }
-            ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
-            ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
-            ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
-            ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
-            return View(transferenciaInterna);
+            catch (Exception ex)
+            {
+                // Log do erro
+                // _logger.LogError(ex, "Erro ao criar transferência interna");
+                ModelState.AddModelError(string.Empty, "Erro interno ao salvar transferência. Tente novamente.");
+                ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
+                ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
+                ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
+                ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
+                return View(transferenciaInterna);
+            }
         }
 
         // GET: TransferenciasInternas/Edit/5
@@ -136,55 +169,84 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: TransferenciasInternas/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Data,Valor,Descricao,MeioDePagamentoOrigemId,MeioDePagamentoDestinoId,CentroCustoOrigemId,CentroCustoDestinoId,UsuarioId,DataCriacao")] TransferenciaInterna transferenciaInterna)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Data,Valor,Descricao,MeioDePagamentoOrigemId,MeioDePagamentoDestinoId,CentroCustoOrigemId,CentroCustoDestinoId,Quitada")] TransferenciaInterna transferenciaInterna)
         {
             if (id != transferenciaInterna.Id)
             {
                 return NotFound();
             }
 
-            if (ModelState.IsValid)
+            try
             {
-                try
-                {
-                    // Para editar uma transferência, precisamos reverter a anterior e aplicar a nova
-                    var oldTransferencia = await _context.TransferenciasInternas.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
-                    if (oldTransferencia == null)
-                    {
-                        return NotFound();
-                    }
+                // CRÍTICO: Remover navigation properties do ModelState
+                ModelState.Remove("MeioDePagamentoOrigem");
+                ModelState.Remove("MeioDePagamentoDestino");
+                ModelState.Remove("CentroCustoOrigem");
+                ModelState.Remove("CentroCustoDestino");
+                ModelState.Remove("Usuario");
+                ModelState.Remove("UsuarioId");
+                ModelState.Remove("DataCriacao");
 
-                    // Reverter a transferência antiga
-                    // A lógica de saldo será mais complexa, pois MeioDePagamento não tem saldo.
-                    // Por enquanto, apenas registra a transferência.
+                // Validação customizada: origem e destino devem ser diferentes
+                if (transferenciaInterna.MeioDePagamentoOrigemId == transferenciaInterna.MeioDePagamentoDestinoId)
+                {
+                    ModelState.AddModelError("MeioDePagamentoDestinoId", "O meio de pagamento de destino deve ser diferente do origem.");
+                }
+
+                if (transferenciaInterna.CentroCustoOrigemId == transferenciaInterna.CentroCustoDestinoId)
+                {
+                    ModelState.AddModelError("CentroCustoDestinoId", "O centro de custo de destino deve ser diferente do origem.");
+                }
+
+                // Buscar original para manter dados de auditoria
+                var originalTransferencia = await _context.TransferenciasInternas.AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.Id == id);
+                if (originalTransferencia == null) return NotFound();
+
+                if (ModelState.IsValid)
+                {
+                    // Manter dados originais de auditoria
+                    transferenciaInterna.UsuarioId = originalTransferencia.UsuarioId;
+                    transferenciaInterna.DataCriacao = originalTransferencia.DataCriacao;
 
                     _context.Update(transferenciaInterna);
                     await _context.SaveChangesAsync();
+
                     var user = await _userManager.GetUserAsync(User);
                     if (user != null)
                     {
-                        await _auditService.LogAuditAsync(user.Id, "Editar", "TransferenciaInterna", transferenciaInterna.Id.ToString(), $"Transferência de {transferenciaInterna.Valor:C2} atualizada.");
+                        await _auditService.LogUpdateAsync(user.Id, originalTransferencia, transferenciaInterna, transferenciaInterna.Id.ToString());
                     }
+
                     TempData["SuccessMessage"] = "Transferência interna atualizada com sucesso!";
+                    return RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!TransferenciaInternaExists(transferenciaInterna.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+
+                ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
+                ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
+                ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
+                ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
+                return View(transferenciaInterna);
             }
-            ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
-            ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
-            ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
-            ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
-            return View(transferenciaInterna);
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!TransferenciaInternaExists(transferenciaInterna.Id))
+                {
+                    return NotFound();
+                }
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Log do erro
+                // _logger.LogError(ex, "Erro ao atualizar transferência {Id}", id);
+                ModelState.AddModelError(string.Empty, "Erro interno ao atualizar transferência. Tente novamente.");
+                ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
+                ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
+                ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
+                ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
+                return View(transferenciaInterna);
+            }
         }
 
         // GET: TransferenciasInternas/Delete/5

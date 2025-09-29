@@ -203,6 +203,15 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             try
             {
+                // CRÍTICO: Remover navigation properties do ModelState
+                ModelState.Remove("MeioDePagamento");
+                ModelState.Remove("CentroCusto");
+                ModelState.Remove("PlanoDeContas");
+                ModelState.Remove("Membro");
+                ModelState.Remove("Usuario");
+                ModelState.Remove("UsuarioId");
+                ModelState.Remove("ModeloRateioEntrada");
+
                 // Validações de negócio
                 var validationResult = await _businessRules.ValidateEntradaAsync(entrada);
                 if (!validationResult.IsValid)
@@ -275,12 +284,22 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: Entradas/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Data,Valor,Descricao,MembroId,PlanoDeContasId,CentroCustoId,MeioDePagamentoId,Observacoes,DataCriacao,UsuarioId")] Entrada entrada)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Data,Valor,Descricao,MembroId,PlanoDeContasId,CentroCustoId,MeioDePagamentoId,Observacoes")] Entrada entrada)
         {
             if (id != entrada.Id) return NotFound();
 
             try
             {
+                // CRÍTICO: Remover navigation properties do ModelState
+                ModelState.Remove("MeioDePagamento");
+                ModelState.Remove("CentroCusto");
+                ModelState.Remove("PlanoDeContas");
+                ModelState.Remove("Membro");
+                ModelState.Remove("Usuario");
+                ModelState.Remove("ModeloRateioEntrada");
+                ModelState.Remove("UsuarioId");
+                ModelState.Remove("DataCriacao");
+
                 // Buscar entrada original
                 var originalEntrada = await _context.Entradas.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id);
                 if (originalEntrada == null) return NotFound();

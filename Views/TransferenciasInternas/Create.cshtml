@@ -7,96 +7,108 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">
-            <i class="bi bi-arrow-left-right me-2"></i>
+            <i class="bi bi-arrow-left-right me-2 text-info"></i>
             Nova Transferência Interna
         </h1>
-        <p class="text-muted mb-0">Registrar uma nova transferência de valores entre contas</p>
+        <p class="text-muted mb-0">Registrar transferência de valores entre contas</p>
     </div>
     <a asp-action="Index" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-2"></i>
-        Voltar
+        <i class="bi bi-arrow-left me-2"></i>Voltar
     </a>
 </div>
 
 <div class="row">
     <div class="col-lg-8">
-        <div class="card">
+        <div class="card shadow-sm">
             <div class="card-header">
-                <h5 class="card-title mb-0">
+                <h5 class="mb-0">
                     <i class="bi bi-cash-coin me-2"></i>
                     Dados da Transferência
                 </h5>
             </div>
             <div class="card-body">
-                <form asp-action="Create">
+                <form asp-action="Create" method="post">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-                    
-                    <!-- Data -->
-                    <div class="mb-3">
-                        <label asp-for="Data" class="form-label required"></label>
-                        <input asp-for="Data" class="form-control" type="date">
-                        <span asp-validation-for="Data" class="text-danger"></span>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Data" class="form-label">Data <span class="text-danger">*</span></label>
+                            <input asp-for="Data" class="form-control" type="date">
+                            <span asp-validation-for="Data" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Valor" class="form-label">Valor <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input asp-for="Valor" class="form-control" type="number" step="0.01" min="0.01" placeholder="0,00">
+                            </div>
+                            <span asp-validation-for="Valor" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Descricao" class="form-label">Descrição</label>
+                            <textarea asp-for="Descricao" class="form-control" rows="2" placeholder="Motivo da transferência (opcional)"></textarea>
+                            <span asp-validation-for="Descricao" class="text-danger"></span>
+                        </div>
                     </div>
 
-                    <!-- Valor -->
-                    <div class="mb-3">
-                        <label asp-for="Valor" class="form-label required"></label>
-                        <input asp-for="Valor" class="form-control" type="number" step="0.01" placeholder="0.00">
-                        <span asp-validation-for="Valor" class="text-danger"></span>
+                    <hr class="my-4">
+                    <h6 class="mb-3">
+                        <i class="bi bi-box-arrow-up-right me-2 text-danger"></i>
+                        Origem da Transferência
+                    </h6>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="MeioDePagamentoOrigemId" class="form-label">Meio de Pagamento Origem <span class="text-danger">*</span></label>
+                            <select asp-for="MeioDePagamentoOrigemId" class="form-select" asp-items="@((SelectList)ViewData["MeioDePagamentoOrigemId"])">
+                                <option value="">Selecione o meio de pagamento</option>
+                            </select>
+                            <span asp-validation-for="MeioDePagamentoOrigemId" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="CentroCustoOrigemId" class="form-label">Centro de Custo Origem <span class="text-danger">*</span></label>
+                            <select asp-for="CentroCustoOrigemId" class="form-select" asp-items="@((SelectList)ViewData["CentroCustoOrigemId"])">
+                                <option value="">Selecione o centro de custo</option>
+                            </select>
+                            <span asp-validation-for="CentroCustoOrigemId" class="text-danger"></span>
+                        </div>
                     </div>
 
-                    <!-- Descrição -->
-                    <div class="mb-3">
-                        <label asp-for="Descricao" class="form-label"></label>
-                        <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Breve descrição da transferência..."></textarea>
-                        <span asp-validation-for="Descricao" class="text-danger"></span>
+                    <hr class="my-4">
+                    <h6 class="mb-3">
+                        <i class="bi bi-box-arrow-in-down-right me-2 text-success"></i>
+                        Destino da Transferência
+                    </h6>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="MeioDePagamentoDestinoId" class="form-label">Meio de Pagamento Destino <span class="text-danger">*</span></label>
+                            <select asp-for="MeioDePagamentoDestinoId" class="form-select" asp-items="@((SelectList)ViewData["MeioDePagamentoDestinoId"])">
+                                <option value="">Selecione o meio de pagamento</option>
+                            </select>
+                            <span asp-validation-for="MeioDePagamentoDestinoId" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="CentroCustoDestinoId" class="form-label">Centro de Custo Destino <span class="text-danger">*</span></label>
+                            <select asp-for="CentroCustoDestinoId" class="form-select" asp-items="@((SelectList)ViewData["CentroCustoDestinoId"])">
+                                <option value="">Selecione o centro de custo</option>
+                            </select>
+                            <span asp-validation-for="CentroCustoDestinoId" class="text-danger"></span>
+                        </div>
                     </div>
 
-                    <!-- Meio de Pagamento Origem -->
-                    <div class="mb-3">
-                        <label asp-for="MeioDePagamentoOrigemId" class="form-label required"></label>
-                        <select asp-for="MeioDePagamentoOrigemId" class="form-select" asp-items="ViewBag.MeioDePagamentoOrigemId">
-                            <option value="">-- Selecione o Meio de Pagamento de Origem --</option>
-                        </select>
-                        <span asp-validation-for="MeioDePagamentoOrigemId" class="text-danger"></span>
-                    </div>
+                    <hr class="my-4">
 
-                    <!-- Meio de Pagamento Destino -->
-                    <div class="mb-3">
-                        <label asp-for="MeioDePagamentoDestinoId" class="form-label required"></label>
-                        <select asp-for="MeioDePagamentoDestinoId" class="form-select" asp-items="ViewBag.MeioDePagamentoDestinoId">
-                            <option value="">-- Selecione o Meio de Pagamento de Destino --</option>
-                        </select>
-                        <span asp-validation-for="MeioDePagamentoDestinoId" class="text-danger"></span>
-                    </div>
-
-                    <!-- Centro de Custo Origem -->
-                    <div class="mb-3">
-                        <label asp-for="CentroCustoOrigemId" class="form-label required"></label>
-                        <select asp-for="CentroCustoOrigemId" class="form-select" asp-items="ViewBag.CentroCustoOrigemId">
-                            <option value="">-- Selecione o Centro de Custo de Origem --</option>
-                        </select>
-                        <span asp-validation-for="CentroCustoOrigemId" class="text-danger"></span>
-                    </div>
-
-                    <!-- Centro de Custo Destino -->
-                    <div class="mb-3">
-                        <label asp-for="CentroCustoDestinoId" class="form-label required"></label>
-                        <select asp-for="CentroCustoDestinoId" class="form-select" asp-items="ViewBag.CentroCustoDestinoId">
-                            <option value="">-- Selecione o Centro de Custo de Destino --</option>
-                        </select>
-                        <span asp-validation-for="CentroCustoDestinoId" class="text-danger"></span>
-                    </div>
-
-                    <!-- Botões -->
                     <div class="d-flex justify-content-end gap-2">
-                        <a asp-action="Index" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle me-2"></i>
-                            Cancelar
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
                         </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle me-2"></i>
-                            Registrar Transferência
+                        <button type="submit" class="btn btn-info">
+                            <i class="bi bi-check-circle me-2"></i>Registrar Transferência
                         </button>
                     </div>
                 </form>
@@ -104,47 +116,87 @@
         </div>
     </div>
 
-    <!-- Sidebar de Ajuda -->
     <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="bi bi-lightbulb me-2"></i>
-                    Dicas de Preenchimento
+        <div class="card bg-light border-0">
+            <div class="card-header bg-transparent">
+                <h6 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Informações
                 </h6>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <h6 class="text-primary">
-                        <i class="bi bi-arrow-left-right me-1"></i>
-                        Contas de Origem e Destino
-                    </h6>
-                    <p class="small text-muted mb-0">
-                        Selecione as contas bancárias entre as quais o valor será transferido.
-                    </p>
-                </div>
+                <p class="small mb-2">
+                    <strong>Importante:</strong> Todos os campos marcados com <span class="text-danger">*</span> são obrigatórios.
+                </p>
+                <p class="small mb-2">
+                    <strong>Atenção:</strong> Os meios de pagamento e centros de custo de origem e destino devem ser diferentes.
+                </p>
+                <p class="small mb-0">
+                    <strong>Uso:</strong> Use transferências internas para movimentar valores entre contas da mesma instituição.
+                </p>
+            </div>
+        </div>
 
-                <div class="mb-3">
-                    <h6 class="text-primary">
-                        <i class="bi bi-currency-dollar me-1"></i>
-                        Valor da Transferência
-                    </h6>
-                    <p class="small text-muted mb-0">
-                        Certifique-se de que o valor seja positivo e que a conta de origem tenha saldo suficiente.
-                    </p>
-                </div>
-
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Importante:</strong> A data e o valor são campos obrigatórios.
-                </div>
+        <div class="card mt-3 bg-info bg-opacity-10 border-info">
+            <div class="card-header bg-transparent border-info">
+                <h6 class="mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>Exemplo de Uso
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-1">
+                    <strong>Origem:</strong> Caixa Físico - Sede<br>
+                    <strong>Destino:</strong> Conta Bancária - Sede<br>
+                    <strong>Motivo:</strong> Depósito dos dízimos em dinheiro
+                </p>
             </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function() {
+            // Definir data de hoje como padrão
+            if (!$('#Data').val()) {
+                var today = new Date().toISOString().split('T')[0];
+                $('#Data').val(today);
+            }
+
+            // Validação do valor
+            $('#Valor').on('input', function() {
+                var val = $(this).val();
+                if (val < 0.01) {
+                    $(this).addClass('is-invalid');
+                } else {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+
+            // Validação: Origem diferente de Destino
+            function validateOriginDestination() {
+                var meioPgtoOrigem = $('#MeioDePagamentoOrigemId').val();
+                var meioPgtoDestino = $('#MeioDePagamentoDestinoId').val();
+                var ccOrigem = $('#CentroCustoOrigemId').val();
+                var ccDestino = $('#CentroCustoDestinoId').val();
+
+                if (meioPgtoOrigem && meioPgtoDestino && meioPgtoOrigem === meioPgtoDestino) {
+                    $('#MeioDePagamentoDestinoId').addClass('is-invalid');
+                } else {
+                    $('#MeioDePagamentoDestinoId').removeClass('is-invalid');
+                }
+
+                if (ccOrigem && ccDestino && ccOrigem === ccDestino) {
+                    $('#CentroCustoDestinoId').addClass('is-invalid');
+                } else {
+                    $('#CentroCustoDestinoId').removeClass('is-invalid');
+                }
+            }
+
+            $('#MeioDePagamentoOrigemId, #MeioDePagamentoDestinoId, #CentroCustoOrigemId, #CentroCustoDestinoId')
+                .on('change', validateOriginDestination);
+        });
+    </script>
 }
-
-

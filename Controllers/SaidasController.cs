@@ -142,26 +142,48 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: Saidas/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Data,Valor,Descricao,MeioDePagamentoId,CentroCustoId,PlanoDeContasId,FornecedorId,TipoDespesa,NumeroDocumento,DataVencimento,ComprovanteUrl")] Saida saida)
+        public async Task<IActionResult> Create([Bind("Data,Valor,Descricao,MeioDePagamentoId,CentroCustoId,PlanoDeContasId,FornecedorId,TipoDespesa,NumeroDocumento,DataVencimento,ComprovanteUrl,Observacoes")] Saida saida)
         {
-            if (ModelState.IsValid)
+            try
             {
-                var user = await _userManager.GetUserAsync(User);
-                saida.UsuarioId = user!.Id;
-                saida.DataCriacao = DateTime.Now;
+                // CRÍTICO: Remover navigation properties do ModelState
+                ModelState.Remove("MeioDePagamento");
+                ModelState.Remove("CentroCusto");
+                ModelState.Remove("PlanoDeContas");
+                ModelState.Remove("Fornecedor");
+                ModelState.Remove("Usuario");
+                ModelState.Remove("UsuarioId");
 
-                _context.Add(saida);
-                await _context.SaveChangesAsync();
-                if (user != null)
+                if (ModelState.IsValid)
                 {
-                    await _auditService.LogAuditAsync(user.Id, "Criar", "Saida", saida.Id.ToString(), $"Saída de {saida.Valor:C2} registrada.");
-                }
-                TempData["SuccessMessage"] = "Saída registrada com sucesso!";
-                return RedirectToAction(nameof(Index));
-            }
+                    var user = await _userManager.GetUserAsync(User);
+                    saida.UsuarioId = user!.Id;
+                    saida.DataCriacao = DateTime.Now;
 
-            await PopulateDropdowns(saida);
-            return View(saida);
+                    _context.Add(saida);
+                    await _context.SaveChangesAsync();
+
+                    // Log de auditoria (já corrigido no AuditService)
+                    if (user != null)
+                    {
+                        await _auditService.LogCreateAsync(user.Id, saida, saida.Id.ToString());
+                    }
+
+                    TempData["SuccessMessage"] = "Saída registrada com sucesso!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                await PopulateDropdowns(saida);
+                return View(saida);
+            }
+            catch (Exception ex)
+            {
+                // Log do erro
+                // _logger.LogError(ex, "Erro ao criar saída");
+                ModelState.AddModelError(string.Empty, "Erro interno ao salvar saída. Tente novamente.");
+                await PopulateDropdowns(saida);
+                return View(saida);
+            }
         }
 
         // GET: Saidas/Edit/5
@@ -185,42 +207,66 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: Saidas/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Data,Valor,Descricao,MeioDePagamentoId,CentroCustoId,PlanoDeContasId,FornecedorId,TipoDespesa,NumeroDocumento,DataVencimento,ComprovanteUrl,UsuarioId,DataCriacao")] Saida saida)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Data,Valor,Descricao,MeioDePagamentoId,CentroCustoId,PlanoDeContasId,FornecedorId,TipoDespesa,NumeroDocumento,DataVencimento,ComprovanteUrl,Observacoes")] Saida saida)
         {
             if (id != saida.Id)
             {
                 return NotFound();
             }
 
-            if (ModelState.IsValid)
+            try
             {
-                try
+                // CRÍTICO: Remover navigation properties do ModelState
+                ModelState.Remove("MeioDePagamento");
+                ModelState.Remove("CentroCusto");
+                ModelState.Remove("PlanoDeContas");
+                ModelState.Remove("Fornecedor");
+                ModelState.Remove("Usuario");
+                ModelState.Remove("UsuarioId");
+                ModelState.Remove("DataCriacao");
+
+                // Buscar saída original para manter dados de auditoria
+                var originalSaida = await _context.Saidas.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);
+                if (originalSaida == null) return NotFound();
+
+                if (ModelState.IsValid)
                 {
+                    // Manter dados originais de auditoria
+                    saida.UsuarioId = originalSaida.UsuarioId;
+                    saida.DataCriacao = originalSaida.DataCriacao;
+
                     _context.Update(saida);
                     await _context.SaveChangesAsync();
+
                     var user = await _userManager.GetUserAsync(User);
                     if (user != null)
                     {
-                        await _auditService.LogAuditAsync(user.Id, "Editar", "Saida", saida.Id.ToString(), $"Saída de {saida.Valor:C2} atualizada.");
+                        await _auditService.LogUpdateAsync(user.Id, originalSaida, saida, saida.Id.ToString());
                     }
-                    TempData["SuccessMessage"] = "Saída atualizada com sucesso!";
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!SaidaExists(saida.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
 
-            await PopulateDropdowns(saida);
-            return View(saida);
+                    TempData["SuccessMessage"] = "Saída atualizada com sucesso!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                await PopulateDropdowns(saida);
+                return View(saida);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!SaidaExists(saida.Id))
+                {
+                    return NotFound();
+                }
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Log do erro
+                // _logger.LogError(ex, "Erro ao atualizar saída {SaidaId}", id);
+                ModelState.AddModelError(string.Empty, "Erro interno ao atualizar saída. Tente novamente.");
+                await PopulateDropdowns(saida);
+                return View(saida);
+            }
         }
 
         // GET: Saidas/Delete/5

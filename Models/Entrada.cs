@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using SistemaTesourariaEclesiastica.Attributes;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -56,13 +57,23 @@ namespace SistemaTesourariaEclesiastica.Models
         [Display(Name = "Data de Criação")]
         public DateTime DataCriacao { get; set; } = DateTime.Now;
 
-        // Navigation properties
+        // Navigation properties - ADICIONAR [ValidateNever] para evitar validação
+        [ValidateNever]
         public virtual MeioDePagamento MeioDePagamento { get; set; } = null!;
+
+        [ValidateNever]
         public virtual CentroCusto CentroCusto { get; set; } = null!;
+
+        [ValidateNever]
         public virtual PlanoDeContas PlanoDeContas { get; set; } = null!;
+
+        [ValidateNever]
         public virtual Membro? Membro { get; set; }
+
+        [ValidateNever]
         public virtual ModeloRateioEntrada? ModeloRateioEntrada { get; set; }
+
+        [ValidateNever]
         public virtual ApplicationUser Usuario { get; set; } = null!;
     }
 }
-

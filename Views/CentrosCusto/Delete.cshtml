@@ -1,15 +1,19 @@
-@model SistemaTesourariaEclesiastica.ViewModels.UsuarioViewModel
+@model SistemaTesourariaEclesiastica.Models.CentroCusto
 
 @{
-    ViewData["Title"] = "Excluir Usuário";
-    var possuiLogsAuditoria = (bool)(ViewBag.PossuiLogsAuditoria ?? false);
+    ViewData["Title"] = "Excluir Centro de Custo";
+    var possuiDependencias = (bool)(ViewBag.PossuiDependencias ?? false);
+    var totalMembros = (int)(ViewBag.TotalMembros ?? 0);
+    var totalUsuarios = (int)(ViewBag.TotalUsuarios ?? 0);
+    var totalEntradas = (int)(ViewBag.TotalEntradas ?? 0);
+    var totalSaidas = (int)(ViewBag.TotalSaidas ?? 0);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">
             <i class="bi bi-trash me-2 text-danger"></i>
-            Excluir Usuário
+            Excluir Centro de Custo
         </h1>
         <p class="text-muted mb-0">Confirmar exclusão do registro</p>
     </div>
@@ -18,13 +22,32 @@
     </a>
 </div>
 
-@if (possuiLogsAuditoria)
+@if (possuiDependencias)
 {
     <div class="alert alert-danger d-flex align-items-center" role="alert">
         <i class="bi bi-exclamation-octagon me-3 fs-3"></i>
         <div>
-            <h5 class="alert-heading mb-2">Não é possível excluir este usuário!</h5>
-            <p class="mb-0">Este usuário possui logs de auditoria associados. Para preservar a integridade do histórico do sistema, não é permitido excluir usuários com registros de auditoria. <strong>Recomendamos desativar o usuário ao invés de excluí-lo.</strong></p>
+            <h5 class="alert-heading mb-2">Não é possível excluir este centro de custo!</h5>
+            <p class="mb-2">Este centro de custo possui registros associados:</p>
+            <ul class="mb-0">
+                @if (totalMembros > 0)
+                {
+                    <li><strong>@totalMembros</strong> membro(s) vinculado(s)</li>
+                }
+                @if (totalUsuarios > 0)
+                {
+                    <li><strong>@totalUsuarios</strong> usuário(s) vinculado(s)</li>
+                }
+                @if (totalEntradas > 0)
+                {
+                    <li><strong>@totalEntradas</strong> entrada(s) registrada(s)</li>
+                }
+                @if (totalSaidas > 0)
+                {
+                    <li><strong>@totalSaidas</strong> saída(s) registrada(s)</li>
+                }
+            </ul>
+            <p class="mb-0 mt-2">Para preservar a integridade do histórico do sistema, não é permitido excluir centros de custo com registros associados. <strong>Recomendamos desativar o centro de custo ao invés de excluí-lo.</strong></p>
         </div>
     </div>
 }
@@ -34,7 +57,7 @@ else
         <i class="bi bi-exclamation-triangle me-3 fs-3"></i>
         <div>
             <h5 class="alert-heading mb-2">Atenção!</h5>
-            <p class="mb-0">Você está prestes a excluir este usuário. Esta ação não pode ser desfeita e o usuário perderá permanentemente o acesso ao sistema.</p>
+            <p class="mb-0">Você está prestes a excluir este centro de custo. Esta ação não pode ser desfeita.</p>
         </div>
     </div>
 }
@@ -45,47 +68,35 @@ else
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="bi bi-info-circle me-2"></i>
-                    Detalhes do Usuário
+                    Detalhes do Centro de Custo
                 </h5>
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-4">Nome Completo:</dt>
-                    <dd class="col-sm-8 fw-semibold">@Model.NomeCompleto</dd>
+                    <dt class="col-sm-4">Nome:</dt>
+                    <dd class="col-sm-8 fw-semibold">@Model.Nome</dd>
 
-                    <dt class="col-sm-4">E-mail:</dt>
+                    <dt class="col-sm-4">Tipo:</dt>
                     <dd class="col-sm-8">
-                        <i class="bi bi-envelope me-1 text-muted"></i>
-                        @Model.Email
-                    </dd>
-
-                    <dt class="col-sm-4">Centro de Custo:</dt>
-                    <dd class="col-sm-8">
-                        <span class="badge bg-info">@Model.CentroCustoNome</span>
-                    </dd>
-
-                    <dt class="col-sm-4">Perfil de Acesso:</dt>
-                    <dd class="col-sm-8">
-                        @if (Model.Roles.Any())
+                        @if (Model.Tipo == SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Sede)
                         {
-                            @foreach (var role in Model.Roles)
-                            {
-                                var badgeClass = role switch
-                                {
-                                    "Administrador" => "bg-danger",
-                                    "TesoureiroGeral" => "bg-primary",
-                                    "TesoureiroLocal" => "bg-info",
-                                    "Pastor" => "bg-secondary",
-                                    _ => "bg-dark"
-                                };
-                                <span class="badge @badgeClass me-1">@role</span>
-                            }
+                            <span class="badge bg-primary">
+                                <i class="bi bi-building me-1"></i>Sede
+                            </span>
                         }
                         else
                         {
-                            <span class="badge bg-secondary">Sem perfil</span>
+                            <span class="badge bg-info">
+                                <i class="bi bi-people me-1"></i>Congregação
+                            </span>
                         }
                     </dd>
+
+                    @if (!string.IsNullOrEmpty(Model.Descricao))
+                    {
+                        <dt class="col-sm-4">Descrição:</dt>
+                        <dd class="col-sm-8">@Model.Descricao</dd>
+                    }
 
                     <dt class="col-sm-4">Status:</dt>
                     <dd class="col-sm-8">
@@ -114,12 +125,13 @@ else
 
                 <hr class="my-4">
 
-                @if (!possuiLogsAuditoria)
+                @if (!possuiDependencias)
                 {
                     <form asp-action="Delete" method="post">
                         <input type="hidden" asp-for="Id" />
+                        @Html.AntiForgeryToken()
                         <div class="d-flex gap-2 justify-content-end">
-                            <a asp-action="Index" class="btn btn-outline-secondary">
+                            <a asp-action="Index" class="btn btn-secondary">
                                 <i class="bi bi-x-circle me-2"></i>Cancelar
                             </a>
                             <button type="submit" class="btn btn-danger">
@@ -130,12 +142,12 @@ else
                 }
                 else
                 {
-                    <div class="d-flex gap-2 justify-content-end">
-                        <a asp-action="Index" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-left me-2"></i>Voltar para Lista
+                    <div class="d-flex justify-content-end">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning me-2">
+                            <i class="bi bi-pencil me-2"></i>Desativar Centro de Custo
                         </a>
-                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
-                            <i class="bi bi-pencil me-2"></i>Editar e Desativar
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Voltar à Lista
                         </a>
                     </div>
                 }
@@ -143,96 +155,72 @@ else
         </div>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card shadow-sm border-info border-opacity-25 mb-3">
-            <div class="card-header bg-info bg-opacity-10">
-                <h6 class="mb-0 text-info">
-                    <i class="bi bi-link-45deg me-2"></i>Registros Associados
-                </h6>
+    @if (possuiDependencias)
+    {
+        <div class="col-lg-4">
+            <div class="card border-warning shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Registros Associados
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        @if (totalMembros > 0)
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>
+                                    <i class="bi bi-person-fill text-primary me-2"></i>
+                                    Membros
+                                </span>
+                                <span class="badge bg-primary rounded-pill">@totalMembros</span>
+                            </div>
+                        }
+                        @if (totalUsuarios > 0)
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>
+                                    <i class="bi bi-people-fill text-info me-2"></i>
+                                    Usuários
+                                </span>
+                                <span class="badge bg-info rounded-pill">@totalUsuarios</span>
+                            </div>
+                        }
+                        @if (totalEntradas > 0)
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>
+                                    <i class="bi bi-arrow-down-circle-fill text-success me-2"></i>
+                                    Entradas
+                                </span>
+                                <span class="badge bg-success rounded-pill">@totalEntradas</span>
+                            </div>
+                        }
+                        @if (totalSaidas > 0)
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>
+                                    <i class="bi bi-arrow-up-circle-fill text-danger me-2"></i>
+                                    Saídas
+                                </span>
+                                <span class="badge bg-danger rounded-pill">@totalSaidas</span>
+                            </div>
+                        }
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-arrow-down-circle text-success me-2"></i>
-                        <span class="small">Entradas</span>
-                    </div>
-                    <span class="badge bg-success">@ViewBag.TotalEntradas</span>
-                </div>
 
-                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-arrow-up-circle text-danger me-2"></i>
-                        <span class="small">Saídas</span>
-                    </div>
-                    <span class="badge bg-danger">@ViewBag.TotalSaidas</span>
-                </div>
-
-                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-arrow-left-right text-primary me-2"></i>
-                        <span class="small">Transferências</span>
-                    </div>
-                    <span class="badge bg-primary">@ViewBag.TotalTransferencias</span>
-                </div>
-
-                <div class="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-folder text-warning me-2"></i>
-                        <span class="small">Fechamentos</span>
-                    </div>
-                    <span class="badge bg-warning">@ViewBag.TotalFechamentos</span>
-                </div>
-
-                <div class="d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-journal-text text-secondary me-2"></i>
-                        <span class="small">Logs de Auditoria</span>
-                    </div>
-                    <span class="badge @(possuiLogsAuditoria ? "bg-danger" : "bg-secondary")">
-                        @ViewBag.TotalLogsAuditoria
-                    </span>
-                </div>
-
-                @if (possuiLogsAuditoria)
-                {
-                    <div class="alert alert-danger small mt-3 mb-0">
-                        <i class="bi bi-shield-exclamation me-1"></i>
-                        <strong>Bloqueio:</strong> Logs de auditoria impedem a exclusão
-                    </div>
-                }
-                else
-                {
-                    <div class="alert alert-info small mt-3 mb-0">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Os registros acima terão o usuário desvinculado (UsuarioId = null)
-                    </div>
-                }
+            <div class="alert alert-info mt-3" role="alert">
+                <i class="bi bi-lightbulb me-2"></i>
+                <strong>Dica:</strong> Você pode desativar este centro de custo para mantê-lo no histórico sem permitir novos registros.
             </div>
         </div>
-
-        <div class="card shadow-sm border-warning border-opacity-25">
-            <div class="card-header bg-warning bg-opacity-10">
-                <h6 class="mb-0 text-warning">
-                    <i class="bi bi-lightbulb me-2"></i>Alternativa Recomendada
-                </h6>
-            </div>
-            <div class="card-body">
-                <p class="small text-muted mb-3">
-                    Se você deseja apenas impedir o acesso, considere <strong>desativar</strong> o usuário ao invés de excluí-lo. Isso preserva todo o histórico e permite reativação futura.
-                </p>
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-warning btn-sm w-100">
-                    <i class="bi bi-pencil me-1"></i>
-                    Editar e Desativar
-                </a>
-            </div>
-        </div>
-
-        @if (Model.Roles.Contains("Administrador"))
-        {
-            <div class="alert alert-danger mt-3 mb-0">
-                <i class="bi bi-shield-exclamation me-2"></i>
-                <strong>Atenção Especial:</strong> Este usuário é um Administrador do sistema!
-            </div>
-        }
-    </div>
+    }
 </div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
