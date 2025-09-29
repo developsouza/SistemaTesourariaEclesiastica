@@ -1,0 +1,279 @@
+﻿@model IEnumerable<SistemaTesourariaEclesiastica.Models.Emprestimo>
+
+@{
+    ViewData["Title"] = "Gestão de Empréstimos";
+    var saldoFundo = ViewBag.SaldoFundo ?? 0m;
+    var filtroAtual = ViewBag.FiltroAtual ?? "todos";
+}
+
+<div class="container-fluid mt-4">
+    <!-- Cabeçalho -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-hand-holding-usd"></i> Gestão de Fundos e Empréstimos</h2>
+            <hr>
+        </div>
+    </div>
+
+    <!-- Card de Saldo do Fundo -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="fas fa-piggy-bank"></i> Saldo Disponível no Fundo</h5>
+                    <h2 class="mb-0">R$ @saldoFundo.ToString("N2")</h2>
+                    <small>Dízimo dos Dízimos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="fas fa-exclamation-circle"></i> Empréstimos Ativos</h5>
+                    <h2 class="mb-0">@Model.Count(e => e.Status == SistemaTesourariaEclesiastica.Models.StatusEmprestimo.Ativo)</h2>
+                    <small>Aguardando quitação</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="fas fa-check-circle"></i> Total Quitado</h5>
+                    <h2 class="mb-0">R$ @Model.Where(e => e.Status == SistemaTesourariaEclesiastica.Models.StatusEmprestimo.Quitado).Sum(e => e.ValorTotal).ToString("N2")</h2>
+                    <small>Histórico completo</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Ações -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <a asp-action="Create" class="btn btn-success">
+                <i class="fas fa-plus-circle"></i> Solicitar Novo Empréstimo
+            </a>
+        </div>
+        <div class="col-md-6 text-end">
+            <div class="btn-group" role="group">
+                <a asp-action="Index" asp-route-filtro="todos"
+                   class="btn btn-outline-secondary @(filtroAtual == "todos" ? "active" : "")">
+                    Todos
+                </a>
+                <a asp-action="Index" asp-route-filtro="ativos"
+                   class="btn btn-outline-warning @(filtroAtual == "ativos" ? "active" : "")">
+                    Ativos
+                </a>
+                <a asp-action="Index" asp-route-filtro="quitados"
+                   class="btn btn-outline-success @(filtroAtual == "quitados" ? "active" : "")">
+                    Quitados
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Empréstimos -->
+    <div class="card">
+        <div class="card-body">
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle"></i> Nenhum empréstimo registrado ainda.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Data</th>
+                                <th>Justificativa</th>
+                                <th>Valor Total</th>
+                                <th>Devolvido</th>
+                                <th>Saldo Devedor</th>
+                                <th>Progresso</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td><strong>#@item.Id.ToString("D3")</strong></td>
+                                    <td>@item.DataEmprestimo.ToString("dd/MM/yyyy")</td>
+                                    <td>@item.Justificativa</td>
+                                    <td><strong>R$ @item.ValorTotal.ToString("N2")</strong></td>
+                                    <td class="text-success">R$ @item.ValorDevolvido.ToString("N2")</td>
+                                    <td class="text-danger"><strong>R$ @item.SaldoDevedor.ToString("N2")</strong></td>
+                                    <td style="min-width: 200px;">
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar @(item.PercentualDevolvido == 100 ? "bg-success" : "bg-info")"
+                                                 role="progressbar"
+                                                 style="width: @item.PercentualDevolvido%"
+                                                 aria-valuenow="@item.PercentualDevolvido"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100">
+                                                @item.PercentualDevolvido.ToString("N1")%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @switch (item.Status)
+                                        {
+                                            case SistemaTesourariaEclesiastica.Models.StatusEmprestimo.Ativo:
+                                                <span class="badge bg-warning">Ativo</span>
+                                                break;
+                                            case SistemaTesourariaEclesiastica.Models.StatusEmprestimo.Quitado:
+                                                <span class="badge bg-success">Quitado</span>
+                                                break;
+                                            case SistemaTesourariaEclesiastica.Models.StatusEmprestimo.Cancelado:
+                                                <span class="badge bg-secondary">Cancelado</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            @if (item.Status == SistemaTesourariaEclesiastica.Models.StatusEmprestimo.Ativo)
+                                            {
+                                                <button type="button"
+                                                        class="btn btn-sm btn-primary btn-devolucao"
+                                                        data-emprestimo-id="@item.Id"
+                                                        data-saldo-devedor="@item.SaldoDevedor">
+                                                    <i class="fas fa-coins"></i> Devolver
+                                                </button>
+                                            }
+                                            <a asp-action="Details" asp-route-id="@item.Id"
+                                               class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Devolução -->
+<div class="modal fade" id="modalDevolucao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-coins"></i> Registrar Devolução</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formDevolucao">
+                <div class="modal-body">
+                    <input type="hidden" id="emprestimoId" name="emprestimoId">
+
+                    <div class="alert alert-info">
+                        <strong>Saldo Devedor:</strong> R$ <span id="saldoDevedorDisplay">0,00</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="valorDevolvido" class="form-label">Valor a Devolver *</label>
+                        <input type="number" step="0.01" class="form-control" id="valorDevolvido"
+                               name="valorDevolvido" required min="0.01">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="dataDevolucao" class="form-label">Data da Devolução *</label>
+                        <input type="date" class="form-control" id="dataDevolucao"
+                               name="dataDevolucao" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="observacoes" class="form-label">Observações</label>
+                        <textarea class="form-control" id="observacoes" name="observacoes"
+                                  rows="3" maxlength="300"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Registrar Devolução
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Configurar data atual como padrão
+            $('#dataDevolucao').val(new Date().toISOString().split('T')[0]);
+
+            // Abrir modal de devolução
+            $('.btn-devolucao').click(function() {
+                var emprestimoId = $(this).data('emprestimo-id');
+                var saldoDevedor = $(this).data('saldo-devedor');
+
+                $('#emprestimoId').val(emprestimoId);
+                $('#saldoDevedorDisplay').text(saldoDevedor.toFixed(2).replace('.', ','));
+                $('#valorDevolvido').attr('max', saldoDevedor);
+                $('#valorDevolvido').val('');
+                $('#observacoes').val('');
+
+                $('#modalDevolucao').modal('show');
+            });
+
+            // Submit do formulário de devolução
+            $('#formDevolucao').submit(function(e) {
+                e.preventDefault();
+
+                var emprestimoId = $('#emprestimoId').val();
+                var valorDevolvido = parseFloat($('#valorDevolvido').val());
+                var dataDevolucao = $('#dataDevolucao').val();
+                var observacoes = $('#observacoes').val();
+
+                $.ajax({
+                    url: '@Url.Action("RegistrarDevolucao", "Emprestimos")',
+                    type: 'POST',
+                    data: {
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val(),
+                        emprestimoId: emprestimoId,
+                        valorDevolvido: valorDevolvido,
+                        dataDevolucao: dataDevolucao,
+                        observacoes: observacoes
+                    },
+                    success: function(response) {
+                        if (response.sucesso) {
+                            $('#modalDevolucao').modal('hide');
+
+                            // Exibir mensagem de sucesso
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Sucesso!',
+                                text: response.mensagem,
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erro',
+                                text: response.mensagem
+                            });
+                        }
+                    },
+                    error: function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erro',
+                            text: 'Ocorreu um erro ao processar a devolução.'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+}

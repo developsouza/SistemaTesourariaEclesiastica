@@ -25,10 +25,16 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- CSS do Módulo de Empréstimos -->
+    <link rel="stylesheet" href="~/css/emprestimos.css" asp-append-version="true" />
+
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
     <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- SweetAlert2 para Alertas Modernos (usado em Empréstimos) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="d-flex flex-column h-100">
@@ -110,6 +116,17 @@
                                 <a class="nav-link" asp-controller="FechamentoPeriodo" asp-action="Index">
                                     <i class="bi bi-file-earmark-check"></i>
                                     <span class="nav-text">Fechamentos</span>
+                                </a>
+                            </li>
+                        }
+
+                        @* Gestão de Empréstimos *@
+                        @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Emprestimos" asp-action="Index">
+                                    <i class="bi bi-cash-coin"></i>
+                                    <span class="nav-text">Empréstimos</span>
                                 </a>
                             </li>
                         }

@@ -1,0 +1,206 @@
+﻿@model SistemaTesourariaEclesiastica.Models.Emprestimo
+
+@{
+    ViewData["Title"] = "Solicitar Novo Empréstimo";
+    var saldoFundo = ViewBag.SaldoFundo ?? 0m;
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <!-- Cabeçalho -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-plus-circle"></i> Solicitar Novo Empréstimo</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Alerta de Saldo Disponível -->
+                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                        <i class="fas fa-piggy-bank fa-2x me-3"></i>
+                        <div>
+                            <strong>Saldo Disponível no Fundo:</strong><br>
+                            <h3 class="mb-0 text-primary">R$ @saldoFundo.ToString("N2")</h3>
+                        </div>
+                    </div>
+
+                    @if (saldoFundo <= 0)
+                    {
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Atenção:</strong> Não há saldo disponível no fundo para realizar empréstimos no momento.
+                        </div>
+                    }
+
+                    <hr>
+
+                    <!-- Formulário -->
+                    <form asp-action="Create" method="post" id="formEmprestimo">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="DataEmprestimo" class="form-label"></label>
+                            <input asp-for="DataEmprestimo" class="form-control" type="date" readonly />
+                            <span asp-validation-for="DataEmprestimo" class="text-danger"></span>
+                            <small class="form-text text-muted">A data do empréstimo é automaticamente definida como hoje.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ValorTotal" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input asp-for="ValorTotal" class="form-control" type="number"
+                                       step="0.01" min="0.01" max="@saldoFundo"
+                                       placeholder="0,00" id="valorEmprestimo" />
+                            </div>
+                            <span asp-validation-for="ValorTotal" class="text-danger"></span>
+                            <small class="form-text text-muted">
+                                Valor máximo disponível: <strong>R$ @saldoFundo.ToString("N2")</strong>
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Justificativa" class="form-label"></label>
+                            <textarea asp-for="Justificativa" class="form-control" rows="4"
+                                      maxlength="500" placeholder="Descreva o motivo do empréstimo..."></textarea>
+                            <span asp-validation-for="Justificativa" class="text-danger"></span>
+                            <div class="form-text">
+                                <span id="contadorCaracteres">0</span>/500 caracteres
+                            </div>
+                        </div>
+
+                        <!-- Área de Confirmação -->
+                        <div class="card bg-light mb-3" id="resumoEmprestimo" style="display:none;">
+                            <div class="card-body">
+                                <h5 class="card-title">Resumo do Empréstimo</h5>
+                                <ul class="list-unstyled mb-0">
+                                    <li><strong>Valor Solicitado:</strong> R$ <span id="resumoValor">0,00</span></li>
+                                    <li><strong>Saldo após empréstimo:</strong> R$ <span id="resumoSaldoRestante">0,00</span></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Botões -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success" @(saldoFundo <= 0 ? "disabled" : "")>
+                                <i class="fas fa-check"></i> Confirmar Empréstimo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Card Informativo -->
+            <div class="card border-primary">
+                <div class="card-body">
+                    <h5 class="card-title text-primary"><i class="fas fa-info-circle"></i> Informações Importantes</h5>
+                    <ul>
+                        <li>O valor do empréstimo não pode exceder o saldo disponível no fundo.</li>
+                        <li>Todo empréstimo deve conter uma justificativa clara.</li>
+                        <li>Após aprovado, o empréstimo deve ser devolvido de forma parcial ou integral.</li>
+                        <li>O fundo é alimentado automaticamente com 20% dos dízimos e ofertas da Sede.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        $(document).ready(function() {
+            var saldoFundo = @saldoFundo;
+
+            // Definir data atual
+            var hoje = new Date().toISOString().split('T')[0];
+            $('#DataEmprestimo').val(hoje);
+
+            // Contador de caracteres
+            $('#Justificativa').on('input', function() {
+                var length = $(this).val().length;
+                $('#contadorCaracteres').text(length);
+            });
+
+            // Atualizar resumo ao digitar valor
+            $('#valorEmprestimo').on('input', function() {
+                var valor = parseFloat($(this).val()) || 0;
+
+                if (valor > 0) {
+                    $('#resumoValor').text(valor.toFixed(2).replace('.', ','));
+                    var saldoRestante = saldoFundo - valor;
+                    $('#resumoSaldoRestante').text(saldoRestante.toFixed(2).replace('.', ','));
+
+                    // Aplicar cor ao saldo restante
+                    if (saldoRestante < 0) {
+                        $('#resumoSaldoRestante').addClass('text-danger').removeClass('text-success');
+                    } else {
+                        $('#resumoSaldoRestante').addClass('text-success').removeClass('text-danger');
+                    }
+
+                    $('#resumoEmprestimo').slideDown();
+                } else {
+                    $('#resumoEmprestimo').slideUp();
+                }
+            });
+
+            // Validação antes do submit
+            $('#formEmprestimo').on('submit', function(e) {
+                var valor = parseFloat($('#valorEmprestimo').val()) || 0;
+                var justificativa = $('#Justificativa').val().trim();
+
+                if (valor <= 0) {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Atenção',
+                        text: 'Informe um valor válido para o empréstimo.'
+                    });
+                    return false;
+                }
+
+                if (valor > saldoFundo) {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Saldo Insuficiente',
+                        text: 'O valor solicitado excede o saldo disponível no fundo.'
+                    });
+                    return false;
+                }
+
+                if (justificativa.length < 10) {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Atenção',
+                        text: 'A justificativa deve ter pelo menos 10 caracteres.'
+                    });
+                    return false;
+                }
+
+                // Confirmação final
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Confirmar Empréstimo?',
+                    html: `Você está solicitando um empréstimo de <strong>R$ ${valor.toFixed(2).replace('.', ',')}</strong>.<br>Deseja confirmar?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#198754',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Sim, confirmar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.submit();
+                    }
+                });
+            });
+        });
+    </script>
+}

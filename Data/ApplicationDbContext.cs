@@ -11,6 +11,7 @@ namespace SistemaTesourariaEclesiastica.Data
         {
         }
 
+        // DbSets Existentes
         public DbSet<CentroCusto> CentrosCusto { get; set; }
         public DbSet<Membro> Membros { get; set; }
         public DbSet<PlanoDeContas> PlanosDeContas { get; set; }
@@ -26,6 +27,12 @@ namespace SistemaTesourariaEclesiastica.Data
         public DbSet<RegraRateio> RegrasRateio { get; set; }
         public DbSet<ItemRateioFechamento> ItensRateioFechamento { get; set; }
         public DbSet<DetalheFechamento> DetalhesFechamento { get; set; }
+
+        // ========================================
+        // 💰 NOVOS DbSets - MÓDULO DE EMPRÉSTIMOS
+        // ========================================
+        public DbSet<Emprestimo> Emprestimos { get; set; }
+        public DbSet<DevolucaoEmprestimo> DevolucaoEmprestimos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -251,7 +258,65 @@ namespace SistemaTesourariaEclesiastica.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
             // ========================================
-            // ÍNDICES ÚNICOS
+            // 💰 CONFIGURAÇÕES - MÓDULO DE EMPRÉSTIMOS
+            // ========================================
+
+            // Emprestimo - Configuração da Entidade Principal
+            builder.Entity<Emprestimo>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.DataEmprestimo)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.Property(e => e.ValorTotal)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.Justificativa)
+                    .HasMaxLength(500)
+                    .IsRequired();
+
+                entity.Property(e => e.Status)
+                    .HasConversion<int>()
+                    .IsRequired();
+
+                entity.Property(e => e.DataQuitacao)
+                    .IsRequired(false);
+
+                // Relacionamento com Devoluções (Cascade para excluir devoluções ao excluir empréstimo)
+                entity.HasMany(e => e.Devolucoes)
+                    .WithOne(d => d.Emprestimo)
+                    .HasForeignKey(d => d.EmprestimoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // DevolucaoEmprestimo - Configuração da Entidade de Devolução
+            builder.Entity<DevolucaoEmprestimo>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.EmprestimoId)
+                    .IsRequired();
+
+                entity.Property(e => e.DataDevolucao)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.Property(e => e.ValorDevolvido)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.Observacoes)
+                    .HasMaxLength(300)
+                    .IsRequired(false);
+
+                // Relacionamento com Emprestimo (já configurado acima via HasMany)
+            });
+
+            // ========================================
+            // ÍNDICES ÚNICOS (EXISTENTES)
             // ========================================
 
             builder.Entity<Membro>()
@@ -277,6 +342,31 @@ namespace SistemaTesourariaEclesiastica.Data
             builder.Entity<Fornecedor>()
                 .HasIndex(f => f.Nome)
                 .IsUnique();
+
+            // ========================================
+            // 💰 ÍNDICES - MÓDULO DE EMPRÉSTIMOS
+            // ========================================
+
+            // Índice para buscar devoluções por empréstimo (melhora performance)
+            builder.Entity<DevolucaoEmprestimo>()
+                .HasIndex(d => d.EmprestimoId)
+                .HasDatabaseName("IX_DevolucaoEmprestimos_EmprestimoId");
+
+            // Índice para filtrar empréstimos por status (usado frequentemente)
+            builder.Entity<Emprestimo>()
+                .HasIndex(e => e.Status)
+                .HasDatabaseName("IX_Emprestimos_Status");
+
+            // Índice para ordenar empréstimos por data (descendente)
+            builder.Entity<Emprestimo>()
+                .HasIndex(e => e.DataEmprestimo)
+                .IsDescending()
+                .HasDatabaseName("IX_Emprestimos_DataEmprestimo");
+
+            // Índice composto para consultas de empréstimos ativos por data
+            builder.Entity<Emprestimo>()
+                .HasIndex(e => new { e.Status, e.DataEmprestimo })
+                .HasDatabaseName("IX_Emprestimos_Status_DataEmprestimo");
         }
     }
 }
