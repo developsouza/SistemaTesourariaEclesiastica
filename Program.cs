@@ -12,8 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
     throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
+// Configuração do Entity Framework para SQL Server
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+    options.UseSqlServer(connectionString));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -67,6 +68,40 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
+// ========================================
+// CONFIGURAÇÕES DE AUTORIZAÇÃO - CRÍTICO!
+// ========================================
+builder.Services.AddAuthorization(options =>
+{
+    // Política apenas para administradores
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Administrador"));
+
+    // Política para tesoureiros (inclui admin)
+    options.AddPolicy("Tesoureiros", policy =>
+        policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal"));
+
+    // Política para relatórios (todos menos usuários básicos)
+    options.AddPolicy("Relatorios", policy =>
+        policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal", "Pastor"));
+
+    // Política para operações financeiras (entradas, saídas, etc.)
+    options.AddPolicy("OperacoesFinanceiras", policy =>
+        policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal"));
+
+    // Política para aprovação de prestações de contas
+    options.AddPolicy("AprovacaoPrestacoes", policy =>
+        policy.RequireRole("Administrador", "TesoureiroGeral"));
+
+    // Política para gerenciar usuários
+    options.AddPolicy("GerenciarUsuarios", policy =>
+        policy.RequireRole("Administrador"));
+
+    // Política para auditoria
+    options.AddPolicy("Auditoria", policy =>
+        policy.RequireRole("Administrador"));
+});
+
 // Serviços da aplicação
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<SistemaTesourariaEclesiastica.Services.AuditService>();
@@ -84,90 +119,32 @@ builder.Services.AddControllersWithViews(options =>
 
     // Configuração de model binding
     options.ModelBindingMessageProvider.SetValueIsInvalidAccessor(x => $"O valor '{x}' é inválido.");
-    options.ModelBindingMessageProvider.SetValueMustBeANumberAccessor(x => $"O campo {x} deve ser um número.");
-    options.ModelBindingMessageProvider.SetMissingBindRequiredValueAccessor(x => $"O campo {x} é obrigatório.");
+    options.ModelBindingMessageProvider.SetValueMustBeANumberAccessor(x => $"O campo '{x}' deve ser um número.");
+    options.ModelBindingMessageProvider.SetMissingBindRequiredValueAccessor(x => $"O campo '{x}' é obrigatório.");
+    options.ModelBindingMessageProvider.SetAttemptedValueIsInvalidAccessor((x, y) => $"O valor '{x}' não é válido para {y}.");
+    options.ModelBindingMessageProvider.SetMissingKeyOrValueAccessor(() => "Valor obrigatório.");
+    options.ModelBindingMessageProvider.SetUnknownValueIsInvalidAccessor(x => $"O valor fornecido é inválido para {x}.");
+    options.ModelBindingMessageProvider.SetValueIsInvalidAccessor(x => $"O valor '{x}' é inválido.");
+    options.ModelBindingMessageProvider.SetMissingRequestBodyRequiredValueAccessor(() => "O corpo da requisição é obrigatório.");
+    options.ModelBindingMessageProvider.SetNonPropertyAttemptedValueIsInvalidAccessor(x => $"O valor '{x}' não é válido.");
+    options.ModelBindingMessageProvider.SetNonPropertyUnknownValueIsInvalidAccessor(() => "O valor fornecido é inválido.");
+    options.ModelBindingMessageProvider.SetNonPropertyValueMustBeANumberAccessor(() => "O campo deve ser um número.");
 });
 
-// Configurações de autorização personalizadas
-builder.Services.AddAuthorization(options =>
+// Configuração de localização para português brasileiro
+builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
-    options.AddPolicy("AdminOnly", policy =>
-        policy.RequireRole("Administrador"));
-
-    options.AddPolicy("Tesoureiros", policy =>
-        policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal"));
-
-    options.AddPolicy("Relatorios", policy =>
-        policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal", "Pastor"));
-
-    options.AddPolicy("OperacoesFinanceiras", policy =>
-        policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal"));
-
-    options.AddPolicy("AprovacaoPrestacoes", policy =>
-        policy.RequireRole("Administrador", "TesoureiroGeral"));
-
-    options.AddPolicy("GerenciarUsuarios", policy =>
-        policy.RequireRole("Administrador"));
-
-    options.AddPolicy("Auditoria", policy =>
-        policy.RequireRole("Administrador"));
+    options.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("pt-BR");
+    options.SupportedCultures = new List<System.Globalization.CultureInfo> { new("pt-BR") };
+    options.SupportedUICultures = new List<System.Globalization.CultureInfo> { new("pt-BR") };
 });
-
-// Configurações adicionais
-builder.Services.Configure<RouteOptions>(options =>
-{
-    options.LowercaseUrls = true;
-    options.LowercaseQueryStrings = false;
-});
-
-// Configuração de logging
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
-
-if (builder.Environment.IsProduction())
-{
-    builder.Logging.SetMinimumLevel(LogLevel.Warning);
-}
-else
-{
-    builder.Logging.SetMinimumLevel(LogLevel.Information);
-}
 
 var app = builder.Build();
 
-// Inicialização do banco de dados e roles
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-    try
-    {
-        await context.Database.EnsureCreatedAsync();
-        logger.LogInformation("Banco de dados inicializado com sucesso.");
-
-        await SistemaTesourariaEclesiastica.Services.RoleInitializerService.InitializeAsync(app.Services);
-        logger.LogInformation("Roles e usuário administrador inicializados com sucesso.");
-
-        if (app.Environment.IsDevelopment())
-        {
-            await SistemaTesourariaEclesiastica.Services.RoleInitializerService.RemoverRolesAntigasAsync(app.Services);
-            logger.LogInformation("Roles antigas removidas com sucesso.");
-        }
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Erro durante a inicialização do banco de dados ou roles.");
-        throw;
-    }
-}
-
-// Configure the HTTP request pipeline
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
-    app.UseDeveloperExceptionPage();
 }
 else
 {
@@ -175,53 +152,45 @@ else
     app.UseHsts();
 }
 
-// Middleware de segurança
+// Configuração de localização
+app.UseRequestLocalization();
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-// Middleware de roteamento
 app.UseRouting();
 
-// Middleware de autenticação e autorização
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Middlewares personalizados
-app.UseAccessControl();
-app.UseCentroCustoAccess();
-
-// Configuração das rotas
-app.MapControllerRoute(
-    name: "areas",
-    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+// Middleware personalizado de auditoria
+app.UseAuditMiddleware();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Health check endpoint
-app.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow });
-
-// Configuração de graceful shutdown
-var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
-lifetime.ApplicationStopping.Register(() =>
+// Seed de dados inicial
+using (var scope = app.Services.CreateScope())
 {
-    var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("Aplicação sendo finalizada...");
-});
+    var serviceProvider = scope.ServiceProvider;
+    try
+    {
+        var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-// Log de inicialização
-var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
-startupLogger.LogInformation("Sistema de Tesouraria Eclesiástica iniciado em {Environment} mode",
-    app.Environment.EnvironmentName);
+        // Aplica migrations automaticamente
+        await context.Database.MigrateAsync();
 
-if (app.Environment.IsDevelopment())
-{
-    startupLogger.LogInformation("Usuários padrão criados:");
-    startupLogger.LogInformation("- Administrador: admin@tesouraria.com / Admin@123");
-    startupLogger.LogInformation("- Tesoureiro Geral: tesoureiro@tesouraria.com / Tesoureiro@123");
-    startupLogger.LogInformation("- Tesoureiro Local: local@tesouraria.com / Local@123");
-    startupLogger.LogInformation("- Pastor: pastor@tesouraria.com / Pastor@123");
+        // Seed de dados iniciais
+        await SeedData.Initialize(serviceProvider, userManager, roleManager);
+    }
+    catch (Exception ex)
+    {
+        var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Erro ao inicializar dados do banco.");
+    }
 }
 
 app.Run();

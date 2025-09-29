@@ -31,7 +31,9 @@ namespace SistemaTesourariaEclesiastica.Data
         {
             base.OnModelCreating(builder);
 
-            // Configurações de relacionamentos
+            // ========================================
+            // CONFIGURAÇÃO MANUAL EXPLÍCITA PARA FORÇAR RESTRICT
+            // ========================================
 
             // ApplicationUser -> CentroCusto
             builder.Entity<ApplicationUser>()
@@ -89,12 +91,12 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(e => e.ModeloRateioEntradaId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // ⚠️ CORRIGIDO: Entrada -> ApplicationUser (SetNull ao invés de Restrict)
+            // Entrada -> ApplicationUser - RESTRICT porque é obrigatório
             builder.Entity<Entrada>()
                 .HasOne(e => e.Usuario)
                 .WithMany()
                 .HasForeignKey(e => e.UsuarioId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Saida -> MeioDePagamento
             builder.Entity<Saida>()
@@ -124,12 +126,12 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(s => s.FornecedorId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // ⚠️ CORRIGIDO: Saida -> ApplicationUser (SetNull ao invés de Restrict)
+            // Saida -> ApplicationUser - RESTRICT porque é obrigatório
             builder.Entity<Saida>()
                 .HasOne(s => s.Usuario)
                 .WithMany()
                 .HasForeignKey(s => s.UsuarioId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
 
             // TransferenciaInterna -> MeioDePagamento (Origem)
             builder.Entity<TransferenciaInterna>()
@@ -159,12 +161,12 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(ti => ti.CentroCustoDestinoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ⚠️ CORRIGIDO: TransferenciaInterna -> ApplicationUser (SetNull ao invés de Restrict)
+            // TransferenciaInterna -> ApplicationUser - RESTRICT porque é obrigatório
             builder.Entity<TransferenciaInterna>()
                 .HasOne(ti => ti.Usuario)
                 .WithMany()
                 .HasForeignKey(ti => ti.UsuarioId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
 
             // FechamentoPeriodo -> CentroCusto
             builder.Entity<FechamentoPeriodo>()
@@ -173,53 +175,45 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(fp => fp.CentroCustoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ⚠️ CORRIGIDO: FechamentoPeriodo -> ApplicationUser (Submissão) (SetNull ao invés de Restrict)
+            // ========================================
+            // 🎯 CONFIGURAÇÃO CRÍTICA - FECHAMENTO PERÍODO
+            // ========================================
+
+            // PRIMEIRA CONFIGURAÇÃO: Submissão - RESTRICT
             builder.Entity<FechamentoPeriodo>()
                 .HasOne(fp => fp.UsuarioSubmissao)
                 .WithMany()
                 .HasForeignKey(fp => fp.UsuarioSubmissaoId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(true); // FORÇAR COMO OBRIGATÓRIO
 
-            // FechamentoPeriodo -> ApplicationUser (Aprovação)
+            // SEGUNDA CONFIGURAÇÃO: Aprovação - SetNull  
             builder.Entity<FechamentoPeriodo>()
                 .HasOne(fp => fp.UsuarioAprovacao)
                 .WithMany()
                 .HasForeignKey(fp => fp.UsuarioAprovacaoId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false); // FORÇAR COMO OPCIONAL
 
-            // ⚠️ MANTIDO: LogAuditoria -> ApplicationUser (Restrict para preservar auditoria)
-            // Nota: Logs de auditoria devem ser preservados mesmo após exclusão do usuário
-            // Considere adicionar verificação no Controller para impedir exclusão se houver logs
+            // ========================================
+            // CONFIGURAÇÃO DE PROPRIEDADES EXPLÍCITAS
+            // ========================================
+
+            // Forçar as propriedades das foreign keys
+            builder.Entity<FechamentoPeriodo>()
+                .Property(fp => fp.UsuarioSubmissaoId)
+                .IsRequired(true); // OBRIGATÓRIO
+
+            builder.Entity<FechamentoPeriodo>()
+                .Property(fp => fp.UsuarioAprovacaoId)
+                .IsRequired(false); // OPCIONAL
+
+            // LogAuditoria -> ApplicationUser - RESTRICT para preservar auditoria
             builder.Entity<LogAuditoria>()
                 .HasOne(la => la.Usuario)
                 .WithMany()
                 .HasForeignKey(la => la.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            // Índices únicos
-            builder.Entity<Membro>()
-                .HasIndex(m => m.CPF)
-                .IsUnique();
-
-            builder.Entity<CentroCusto>()
-                .HasIndex(c => c.Nome)
-                .IsUnique();
-
-            builder.Entity<PlanoDeContas>()
-                .HasIndex(pc => pc.Descricao)
-                .IsUnique();
-
-            builder.Entity<MeioDePagamento>()
-                .HasIndex(mp => mp.Nome)
-                .IsUnique();
-
-            builder.Entity<ModeloRateioEntrada>()
-                .HasIndex(mre => mre.Nome)
-                .IsUnique();
-
-            builder.Entity<Fornecedor>()
-                .HasIndex(f => f.Nome)
-                .IsUnique();
 
             // RegraRateio -> CentroCusto (Origem)
             builder.Entity<RegraRateio>()
@@ -255,6 +249,34 @@ namespace SistemaTesourariaEclesiastica.Data
                 .WithMany(fp => fp.DetalhesFechamento)
                 .HasForeignKey(df => df.FechamentoPeriodoId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // ========================================
+            // ÍNDICES ÚNICOS
+            // ========================================
+
+            builder.Entity<Membro>()
+                .HasIndex(m => m.CPF)
+                .IsUnique();
+
+            builder.Entity<CentroCusto>()
+                .HasIndex(c => c.Nome)
+                .IsUnique();
+
+            builder.Entity<PlanoDeContas>()
+                .HasIndex(pc => pc.Descricao)
+                .IsUnique();
+
+            builder.Entity<MeioDePagamento>()
+                .HasIndex(mp => mp.Nome)
+                .IsUnique();
+
+            builder.Entity<ModeloRateioEntrada>()
+                .HasIndex(mre => mre.Nome)
+                .IsUnique();
+
+            builder.Entity<Fornecedor>()
+                .HasIndex(f => f.Nome)
+                .IsUnique();
         }
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ using SistemaTesourariaEclesiastica.Services;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
+    [Authorize]
     public class PlanoDeContasController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -22,39 +24,55 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
 
         // GET: PlanoDeContas
-        public async Task<IActionResult> Index(string searchString, TipoPlanoContas? tipo, int page = 1, int pageSize = 10)
+        public async Task<IActionResult> Index(string searchString, TipoPlanoContas? tipo, string sortOrder, int? pageNumber)
         {
             ViewData["CurrentFilter"] = searchString;
             ViewData["TipoFilter"] = tipo;
+            ViewData["CurrentSort"] = sortOrder;
+            ViewData["NameSortParm"] = string.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
+            ViewData["TipoSortParm"] = sortOrder == "tipo" ? "tipo_desc" : "tipo";
+            ViewData["DateSortParm"] = sortOrder == "date" ? "date_desc" : "date";
 
-            var planosContas = _context.PlanosDeContas.AsQueryable();
+            var planosDeContas = from p in _context.PlanosDeContas select p;
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                planosContas = planosContas.Where(p => p.Descricao.Contains(searchString) ||
-                                                      p.Codigo.Contains(searchString));
+                planosDeContas = planosDeContas.Where(p => p.Nome.Contains(searchString) ||
+                                                          p.Descricao.Contains(searchString));
             }
 
             if (tipo.HasValue)
             {
-                planosContas = planosContas.Where(p => p.Tipo == tipo);
+                planosDeContas = planosDeContas.Where(p => p.Tipo == tipo);
             }
 
-            var totalItems = await planosContas.CountAsync();
-            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+            switch (sortOrder)
+            {
+                case "name_desc":
+                    planosDeContas = planosDeContas.OrderByDescending(p => p.Nome);
+                    break;
+                case "tipo":
+                    planosDeContas = planosDeContas.OrderBy(p => p.Tipo);
+                    break;
+                case "tipo_desc":
+                    planosDeContas = planosDeContas.OrderByDescending(p => p.Tipo);
+                    break;
+                case "date":
+                    planosDeContas = planosDeContas.OrderBy(p => p.DataCriacao);
+                    break;
+                case "date_desc":
+                    planosDeContas = planosDeContas.OrderByDescending(p => p.DataCriacao);
+                    break;
+                default:
+                    planosDeContas = planosDeContas.OrderBy(p => p.Nome);
+                    break;
+            }
 
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = totalPages;
-            ViewBag.PageSize = pageSize;
+            var totalItems = await planosDeContas.CountAsync();
             ViewBag.TotalItems = totalItems;
 
-            var paginatedPlanos = await planosContas
-                .OrderBy(p => p.Codigo)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            return View(paginatedPlanos);
+            int pageSize = 10;
+            return View(await PaginatedList<PlanoDeContas>.CreateAsync(planosDeContas.AsNoTracking(), pageNumber ?? 1, pageSize));
         }
 
         // GET: PlanoDeContas/Details/5
@@ -75,7 +93,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
-            // Calcular estatísticas
             ViewBag.TotalEntradas = planoDeContas.Entradas?.Sum(e => e.Valor) ?? 0;
             ViewBag.TotalSaidas = planoDeContas.Saidas?.Sum(s => s.Valor) ?? 0;
             ViewBag.QuantidadeEntradas = planoDeContas.Entradas?.Count ?? 0;
@@ -87,37 +104,34 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // GET: PlanoDeContas/Create
         public IActionResult Create()
         {
-            var proximoCodigo = GerarProximoCodigo();
-            var planoDeContas = new PlanoDeContas
-            {
-                Codigo = proximoCodigo
-            };
-
-            return View(planoDeContas);
+            return View(new PlanoDeContas());
         }
 
         // POST: PlanoDeContas/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Codigo,Nome,Descricao,Tipo")] PlanoDeContas planoDeContas)
+        public async Task<IActionResult> Create([Bind("Nome,Descricao,Tipo")] PlanoDeContas planoDeContas)
         {
             if (ModelState.IsValid)
             {
-                // Verifica se o código já existe
-                var codigoExistente = await _context.PlanosDeContas.AnyAsync(p => p.Codigo == planoDeContas.Codigo);
-                if (codigoExistente)
+                // Verifica se a descrição já existe
+                var descricaoExistente = await _context.PlanosDeContas.AnyAsync(p => p.Descricao == planoDeContas.Descricao);
+                if (descricaoExistente)
                 {
-                    ModelState.AddModelError("Codigo", "Este código já está cadastrado.");
+                    ModelState.AddModelError("Descricao", "Esta descrição já está cadastrada.");
                     return View(planoDeContas);
                 }
 
                 _context.Add(planoDeContas);
                 await _context.SaveChangesAsync();
+
                 var user = await _userManager.GetUserAsync(User);
                 if (user != null)
                 {
-                    await _auditService.LogAuditAsync(user.Id, "Criar", "PlanoDeContas", planoDeContas.Id.ToString(), $"Plano de Contas {planoDeContas.Codigo} - {planoDeContas.Descricao} criado.");
+                    await _auditService.LogAuditAsync(user.Id, "Criar", "PlanoDeContas", planoDeContas.Id.ToString(),
+                        $"Plano de Contas {planoDeContas.Nome} - {planoDeContas.Descricao} criado.");
                 }
+
                 TempData["SuccessMessage"] = "Plano de contas cadastrado com sucesso!";
                 return RedirectToAction(nameof(Index));
             }
@@ -145,7 +159,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: PlanoDeContas/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Codigo,Nome,Descricao,Tipo,Ativo")] PlanoDeContas planoDeContas)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Nome,Descricao,Tipo,Ativo")] PlanoDeContas planoDeContas)
         {
             if (id != planoDeContas.Id)
             {
@@ -156,21 +170,24 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 try
                 {
-                    // Verifica se o código já existe para outro plano
-                    var codigoExistente = await _context.PlanosDeContas.AnyAsync(p => p.Codigo == planoDeContas.Codigo && p.Id != planoDeContas.Id);
-                    if (codigoExistente)
+                    // Verifica se a descrição já existe para outro plano
+                    var descricaoExistente = await _context.PlanosDeContas.AnyAsync(p => p.Descricao == planoDeContas.Descricao && p.Id != planoDeContas.Id);
+                    if (descricaoExistente)
                     {
-                        ModelState.AddModelError("Codigo", "Este código já está cadastrado para outro plano de contas.");
+                        ModelState.AddModelError("Descricao", "Esta descrição já está cadastrada para outro plano de contas.");
                         return View(planoDeContas);
                     }
 
                     _context.Update(planoDeContas);
                     await _context.SaveChangesAsync();
+
                     var user = await _userManager.GetUserAsync(User);
                     if (user != null)
                     {
-                        await _auditService.LogAuditAsync(user.Id, "Editar", "PlanoDeContas", planoDeContas.Id.ToString(), $"Plano de Contas {planoDeContas.Codigo} - {planoDeContas.Descricao} atualizado.");
+                        await _auditService.LogAuditAsync(user.Id, "Editar", "PlanoDeContas", planoDeContas.Id.ToString(),
+                            $"Plano de Contas {planoDeContas.Nome} - {planoDeContas.Descricao} atualizado.");
                     }
+
                     TempData["SuccessMessage"] = "Plano de contas atualizado com sucesso!";
                 }
                 catch (DbUpdateConcurrencyException)
@@ -199,11 +216,20 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
 
             var planoDeContas = await _context.PlanosDeContas
+                .Include(p => p.Entradas)
+                .Include(p => p.Saidas)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (planoDeContas == null)
             {
                 return NotFound();
+            }
+
+            // Verifica se há movimentações vinculadas
+            if (planoDeContas.Entradas.Any() || planoDeContas.Saidas.Any())
+            {
+                TempData["ErrorMessage"] = "Não é possível excluir este plano de contas pois existem movimentações vinculadas a ele.";
+                return RedirectToAction(nameof(Index));
             }
 
             return View(planoDeContas);
@@ -214,37 +240,60 @@ namespace SistemaTesourariaEclesiastica.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var planoDeContas = await _context.PlanosDeContas.FindAsync(id);
+            var planoDeContas = await _context.PlanosDeContas
+                .Include(p => p.Entradas)
+                .Include(p => p.Saidas)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
             if (planoDeContas != null)
             {
-                // Verifica se o plano possui movimentações associadas
-                var possuiEntradas = await _context.Entradas.AnyAsync(e => e.PlanoDeContasId == id);
-                var possuiSaidas = await _context.Saidas.AnyAsync(s => s.PlanoDeContasId == id);
-
-                if (possuiEntradas || possuiSaidas)
+                // Verifica novamente se há movimentações vinculadas
+                if (planoDeContas.Entradas.Any() || planoDeContas.Saidas.Any())
                 {
-                    TempData["ErrorMessage"] = "Não é possível excluir este plano de contas pois ele possui movimentações associadas.";
+                    TempData["ErrorMessage"] = "Não é possível excluir este plano de contas pois existem movimentações vinculadas a ele.";
                     return RedirectToAction(nameof(Index));
                 }
 
                 _context.PlanosDeContas.Remove(planoDeContas);
                 await _context.SaveChangesAsync();
+
                 var user = await _userManager.GetUserAsync(User);
                 if (user != null)
                 {
-                    await _auditService.LogAuditAsync(user.Id, "Excluir", "PlanoDeContas", planoDeContas.Id.ToString(), $"Plano de Contas {planoDeContas.Codigo} - {planoDeContas.Descricao} excluído.");
+                    await _auditService.LogAuditAsync(user.Id, "Excluir", "PlanoDeContas", planoDeContas.Id.ToString(),
+                        $"Plano de Contas {planoDeContas.Nome} - {planoDeContas.Descricao} excluído.");
                 }
+
                 TempData["SuccessMessage"] = "Plano de contas excluído com sucesso!";
             }
 
             return RedirectToAction(nameof(Index));
         }
 
-        // AJAX: Verificar Código
+        // AJAX: Buscar planos por tipo
         [HttpGet]
-        public async Task<IActionResult> VerificarCodigo(string codigo, int? id)
+        public async Task<IActionResult> BuscarPlanosPorTipo(TipoPlanoContas tipo)
         {
-            var query = _context.PlanosDeContas.Where(p => p.Codigo == codigo);
+            var planos = await _context.PlanosDeContas
+                .Where(p => p.Tipo == tipo && p.Ativo)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    nome = p.Nome,
+                    descricao = p.Descricao,
+                    text = $"{p.Nome} - {p.Descricao}"
+                })
+                .OrderBy(p => p.nome)
+                .ToListAsync();
+
+            return Json(planos);
+        }
+
+        // AJAX: Verificar Descrição Única
+        [HttpGet]
+        public async Task<IActionResult> VerificarDescricao(string descricao, int? id)
+        {
+            var query = _context.PlanosDeContas.Where(p => p.Descricao == descricao);
 
             if (id.HasValue)
             {
@@ -255,52 +304,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return Json(!existe);
         }
 
-        // AJAX: Buscar planos por tipo
-        [HttpGet]
-        public async Task<IActionResult> BuscarPlanosPorTipo(TipoPlanoContas tipo)
-        {
-            var planos = await _context.PlanosDeContas
-                .Where(p => p.Tipo == tipo)
-                .Select(p => new
-                {
-                    id = p.Id,
-                    codigo = p.Codigo,
-                    descricao = p.Descricao,
-                    text = $"{p.Codigo} - {p.Descricao}"
-                })
-                .OrderBy(p => p.codigo)
-                .ToListAsync();
-
-            return Json(planos);
-        }
-
-        private string GerarProximoCodigo()
-        {
-            var ultimoCodigo = _context.PlanosDeContas
-                .OrderByDescending(p => p.Codigo)
-                .Select(p => p.Codigo)
-                .FirstOrDefault();
-
-            if (string.IsNullOrEmpty(ultimoCodigo))
-            {
-                return "1.01.001";
-            }
-
-            // Lógica simples para incrementar o código
-            var partes = ultimoCodigo.Split('.');
-            if (partes.Length == 3 && int.TryParse(partes[2], out int ultimoNumero))
-            {
-                var novoNumero = ultimoNumero + 1;
-                return $"{partes[0]}.{partes[1]}.{novoNumero:D3}";
-            }
-
-            return "1.01.001";
-        }
-
         private bool PlanoDeContasExists(int id)
         {
             return _context.PlanosDeContas.Any(e => e.Id == id);
         }
     }
 }
-

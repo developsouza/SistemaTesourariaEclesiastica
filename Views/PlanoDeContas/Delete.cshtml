@@ -20,44 +20,135 @@
 
 <div class="alert alert-danger" role="alert">
     <h4 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Atenção!</h4>
-    <p>Você está prestes a excluir o plano de contas <strong>@Model.Descricao (@Model.Codigo)</strong>. Esta ação é irreversível.</p>
+    <p>Você está prestes a excluir o plano de contas <strong>@Model.Nome</strong>. Esta ação é irreversível.</p>
     <hr>
     <p class="mb-0">Tem certeza que deseja prosseguir com a exclusão?</p>
 </div>
 
-<div class="card">
-    <div class="card-header">
-        <h5 class="card-title mb-0">
-            <i class="bi bi-info-circle me-2"></i>
-            Detalhes do Plano de Contas
-        </h5>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Detalhes do Plano de Contas
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Nome)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Nome)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Tipo)</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita)
+                        {
+                            <span class="badge bg-success">@Html.DisplayFor(model => model.Tipo)</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">@Html.DisplayFor(model => model.Tipo)</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataCriacao)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.DataCriacao)</dd>
+
+                    <dt class="col-sm-3">Status</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.Ativo)
+                        {
+                            <span class="badge bg-success">Ativo</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inativo</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <form asp-action="Delete">
+                <input type="hidden" asp-for="Id" />
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash me-2"></i>
+                    Confirmar Exclusão
+                </button>
+            </form>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-2"></i>
+                Cancelar
+            </a>
+        </div>
     </div>
-    <div class="card-body">
-        <dl class="row">
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Codigo)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(model => model.Codigo)</dd>
 
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
+    <!-- Sidebar de Informações -->
+    <div class="col-lg-4">
+        <div class="card border-warning">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h6 class="card-title mb-0 text-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Verificações de Segurança
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-muted">Movimentações Vinculadas</h6>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border rounded p-2">
+                                <i class="bi bi-arrow-down-circle text-success"></i>
+                                <div class="fw-bold">@(Model.Entradas?.Count ?? 0)</div>
+                                <small class="text-muted">Entradas</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-2">
+                                <i class="bi bi-arrow-up-circle text-danger"></i>
+                                <div class="fw-bold">@(Model.Saidas?.Count ?? 0)</div>
+                                <small class="text-muted">Saídas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Tipo)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(model => model.Tipo)</dd>
-        </dl>
+                @if ((Model.Entradas?.Count ?? 0) > 0 || (Model.Saidas?.Count ?? 0) > 0)
+                {
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Atenção:</strong> Esta conta possui movimentações vinculadas e não pode ser excluída.
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong>OK:</strong> Esta conta não possui movimentações vinculadas e pode ser excluída com segurança.
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informações Importantes
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li class="mb-2">A exclusão é <strong>irreversível</strong></li>
+                    <li class="mb-2">Contas com movimentações <strong>não podem ser excluídas</strong></li>
+                    <li class="mb-2">Considere <strong>inativar</strong> ao invés de excluir</li>
+                    <li>Verifique se não há dependências em outros módulos</li>
+                </ul>
+            </div>
+        </div>
     </div>
 </div>
-
-<div class="d-flex justify-content-end gap-2 mt-4">
-    <form asp-action="Delete">
-        <input type="hidden" asp-for="Id" />
-        <button type="submit" class="btn btn-danger">
-            <i class="bi bi-trash me-2"></i>
-            Confirmar Exclusão
-        </button>
-    </form>
-    <a asp-action="Index" class="btn btn-outline-secondary">
-        <i class="bi bi-x-circle me-2"></i>
-        Cancelar
-    </a>
-</div>
-
-

@@ -1,4 +1,4 @@
-@model IEnumerable<SistemaTesourariaEclesiastica.Models.PlanoDeContas>
+@model PaginatedList<SistemaTesourariaEclesiastica.Models.PlanoDeContas>
 
 @{
     ViewData["Title"] = "Plano de Contas";
@@ -24,13 +24,13 @@
         <form method="get" class="row g-3">
             <div class="col-md-4">
                 <label class="form-label">Buscar</label>
-                <input type="text" class="form-control" name="searchString" value="@ViewData["CurrentFilter"]" 
-                       placeholder="Código ou descrição...">
+                <input type="text" class="form-control" name="searchString" value="@ViewData["CurrentFilter"]"
+                       placeholder="Nome ou descrição...">
             </div>
             <div class="col-md-4">
                 <label class="form-label">Tipo</label>
-                @Html.DropDownList("tipo", Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.TipoPlanoContas>(), "Todos", 
-                    new { @class = "form-select" })
+                @Html.DropDownList("tipo", Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.TipoPlanoContas>(), "Todos",
+                new { @class = "form-select" })
             </div>
             <div class="col-md-4 d-flex align-items-end">
                 <button type="submit" class="btn btn-outline-primary me-2">
@@ -66,11 +66,54 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Código</th>
-                            <th>Descrição</th>
-                            <th>Tipo</th>
+                            <th>
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]"
+                                   asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                                   asp-route-tipo="@ViewData["TipoFilter"]">
+                                    @Html.DisplayNameFor(model => model.First().Nome)
+                                    @if (ViewData["CurrentSort"]?.ToString() == "")
+                                    {
+                                        <i class="bi bi-caret-up-fill"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "name_desc")
+                                    {
+                                        <i class="bi bi-caret-down-fill"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th>@Html.DisplayNameFor(model => model.First().Descricao)</th>
+                            <th>
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["TipoSortParm"]"
+                                   asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                                   asp-route-tipo="@ViewData["TipoFilter"]">
+                                    @Html.DisplayNameFor(model => model.First().Tipo)
+                                    @if (ViewData["CurrentSort"]?.ToString() == "tipo")
+                                    {
+                                        <i class="bi bi-caret-up-fill"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "tipo_desc")
+                                    {
+                                        <i class="bi bi-caret-down-fill"></i>
+                                    }
+                                </a>
+                            </th>
+                            <th>
+                                <a asp-action="Index" asp-route-sortOrder="@ViewData["DateSortParm"]"
+                                   asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                                   asp-route-tipo="@ViewData["TipoFilter"]">
+                                    @Html.DisplayNameFor(model => model.First().DataCriacao)
+                                    @if (ViewData["CurrentSort"]?.ToString() == "date")
+                                    {
+                                        <i class="bi bi-caret-up-fill"></i>
+                                    }
+                                    else if (ViewData["CurrentSort"]?.ToString() == "date_desc")
+                                    {
+                                        <i class="bi bi-caret-down-fill"></i>
+                                    }
+                                </a>
+                            </th>
                             <th>Status</th>
-                            <th width="120">Ações</th>
+                            <th width="150">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -78,39 +121,39 @@
                         {
                             <tr>
                                 <td>
-                                    <span class="font-monospace fw-bold">@item.Codigo</span>
+                                    <strong>@Html.DisplayFor(modelItem => item.Nome)</strong>
                                 </td>
+                                <td>@Html.DisplayFor(modelItem => item.Descricao)</td>
                                 <td>
-                                    <div>
-                                        <span class="fw-semibold">@item.Descricao</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    @{
-                                        var badgeClass = item.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita ? "bg-success" : "bg-danger";
-                                        var icon = item.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita ? "bi-arrow-down-circle" : "bi-arrow-up-circle";
+                                    @if (item.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita)
+                                    {
+                                        <span class="badge bg-success">@Html.DisplayFor(modelItem => item.Tipo)</span>
                                     }
-                                    <span class="badge @badgeClass">
-                                        <i class="bi @icon me-1"></i>
-                                        @item.Tipo.ToString()
-                                    </span>
+                                    else
+                                    {
+                                        <span class="badge bg-danger">@Html.DisplayFor(modelItem => item.Tipo)</span>
+                                    }
                                 </td>
+                                <td>@Html.DisplayFor(modelItem => item.DataCriacao)</td>
                                 <td>
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-check-circle me-1"></i>
-                                        Ativo
-                                    </span>
+                                    @if (item.Ativo)
+                                    {
+                                        <span class="badge bg-success">Ativo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inativo</span>
+                                    }
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info" title="Detalhes">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning" title="Editar">
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Editar">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Excluir"
-                                           data-confirm="Tem certeza que deseja excluir esta conta?">
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Excluir">
                                             <i class="bi bi-trash"></i>
                                         </a>
                                     </div>
@@ -120,107 +163,56 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Paginação -->
+            @if (Model.HasPreviousPage || Model.HasNextPage)
+            {
+                <div class="card-footer">
+                    <nav aria-label="Navegação de páginas">
+                        <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                                <a asp-action="Index"
+                                   asp-route-sortOrder="@ViewData["CurrentSort"]"
+                                   asp-route-pageNumber="@(Model.PageIndex - 1)"
+                                   asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                                   asp-route-tipo="@ViewData["TipoFilter"]"
+                                   class="page-link">Anterior</a>
+                            </li>
+                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            {
+                                <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                                    <a asp-action="Index"
+                                       asp-route-sortOrder="@ViewData["CurrentSort"]"
+                                       asp-route-pageNumber="@i"
+                                       asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                                       asp-route-tipo="@ViewData["TipoFilter"]"
+                                       class="page-link">@i</a>
+                                </li>
+                            }
+                            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                                <a asp-action="Index"
+                                   asp-route-sortOrder="@ViewData["CurrentSort"]"
+                                   asp-route-pageNumber="@(Model.PageIndex + 1)"
+                                   asp-route-currentFilter="@ViewData["CurrentFilter"]"
+                                   asp-route-tipo="@ViewData["TipoFilter"]"
+                                   class="page-link">Próximo</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            }
         }
         else
         {
-            <div class="text-center py-5">
-                <i class="bi bi-list-ul display-1 text-muted"></i>
-                <h5 class="mt-3">Nenhuma conta encontrada</h5>
-                <p class="text-muted">Não há contas cadastradas com os filtros aplicados.</p>
+            <div class="text-center py-4">
+                <i class="bi bi-search display-4 text-muted"></i>
+                <h5 class="mt-2">Nenhuma conta encontrada</h5>
+                <p class="text-muted">Tente ajustar os filtros ou adicione uma nova conta.</p>
                 <a asp-action="Create" class="btn btn-primary">
                     <i class="bi bi-plus-circle me-2"></i>
-                    Criar Primeira Conta
+                    Adicionar Conta
                 </a>
             </div>
         }
     </div>
-    
-    @if (ViewBag.TotalPages > 1)
-    {
-        <div class="card-footer">
-            <nav aria-label="Navegação de páginas">
-                <ul class="pagination pagination-sm justify-content-center mb-0">
-                    @if (ViewBag.CurrentPage > 1)
-                    {
-                        <li class="page-item">
-                            <a class="page-link" asp-action="Index" 
-                               asp-route-page="@(ViewBag.CurrentPage - 1)"
-                               asp-route-searchString="@ViewData["CurrentFilter"]"
-                               asp-route-tipo="@ViewData["TipoFilter"]">
-                                <i class="bi bi-chevron-left"></i>
-                            </a>
-                        </li>
-                    }
-                    
-                    @for (int i = Math.Max(1, ViewBag.CurrentPage - 2); i <= Math.Min(ViewBag.TotalPages, ViewBag.CurrentPage + 2); i++)
-                    {
-                        <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
-                            <a class="page-link" asp-action="Index" 
-                               asp-route-page="@i"
-                               asp-route-searchString="@ViewData["CurrentFilter"]"
-                               asp-route-tipo="@ViewData["TipoFilter"]">
-                                @i
-                            </a>
-                        </li>
-                    }
-                    
-                    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
-                    {
-                        <li class="page-item">
-                            <a class="page-link" asp-action="Index" 
-                               asp-route-page="@(ViewBag.CurrentPage + 1)"
-                               asp-route-searchString="@ViewData["CurrentFilter"]"
-                               asp-route-tipo="@ViewData["TipoFilter"]">
-                                <i class="bi bi-chevron-right"></i>
-                            </a>
-                        </li>
-                    }
-                </ul>
-            </nav>
-        </div>
-    }
 </div>
-
-<!-- Cards de Resumo por Tipo -->
-<div class="row g-3 mt-4">
-    <div class="col-md-6">
-        <div class="card border-success">
-            <div class="card-header bg-success text-white">
-                <h6 class="card-title mb-0">
-                    <i class="bi bi-arrow-down-circle me-2"></i>
-                    Contas de Receita
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h4 class="mb-0">@Model.Count(m => m.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita)</h4>
-                        <small class="text-muted">contas cadastradas</small>
-                    </div>
-                    <i class="bi bi-graph-up-arrow display-6 text-success"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-6">
-        <div class="card border-danger">
-            <div class="card-header bg-danger text-white">
-                <h6 class="card-title mb-0">
-                    <i class="bi bi-arrow-up-circle me-2"></i>
-                    Contas de Despesa
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h4 class="mb-0">@Model.Count(m => m.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Despesa)</h4>
-                        <small class="text-muted">contas cadastradas</small>
-                    </div>
-                    <i class="bi bi-graph-down-arrow display-6 text-danger"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-

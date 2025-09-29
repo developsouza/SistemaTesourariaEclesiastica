@@ -1,192 +1,281 @@
 @model SistemaTesourariaEclesiastica.Models.PlanoDeContas
-@using SistemaTesourariaEclesiastica.Extensions
 
 @{
-    ViewData["Title"] = "Detalhes do Plano de Contas";
+    ViewData["Title"] = "Detalhes - " + Model.Nome;
+    var totalEntradas = (decimal)ViewBag.TotalEntradas;
+    var totalSaidas = (decimal)ViewBag.TotalSaidas;
+    var saldoLiquido = totalEntradas - totalSaidas;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">
-            <i class="bi bi-journal-check me-2"></i>
+            <i class="bi bi-info-circle me-2"></i>
             Detalhes do Plano de Contas
         </h1>
-        <p class="text-muted mb-0">Informações detalhadas sobre o plano de contas</p>
+        <p class="text-muted mb-0">@Model.Nome</p>
     </div>
-    <a asp-action="Index" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-2"></i>
-        Voltar
-    </a>
-</div>
-
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0">
-            <i class="bi bi-info-circle me-2"></i>
-            Dados da Conta
-        </h5>
-    </div>
-    <div class="card-body">
-        <dl class="row">
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Codigo)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(model => model.Codigo)</dd>
-
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
-
-            <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Tipo)</dt>
-            <dd class="col-sm-9">@Html.DisplayFor(model => model.Tipo)</dd>
-        </dl>
+    <div class="btn-group">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+            <i class="bi bi-pencil me-2"></i>
+            Editar
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>
+            Voltar
+        </a>
     </div>
 </div>
 
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0">
-            <i class="bi bi-arrow-down-up me-2"></i>
-            Movimentações Associadas
-        </h5>
-    </div>
-    <div class="card-body">
-        @if ((Model.Entradas != null && Model.Entradas.Any()) || (Model.Saidas != null && Model.Saidas.Any()))
-        {
-            <ul class="nav nav-tabs mb-3" id="movimentacoesTab" role="tablist">
-                @if (Model.Entradas != null && Model.Entradas.Any())
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Informações Básicas -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-file-text me-2"></i>
+                    Informações Básicas
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Nome)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Nome)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Descricao)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.Descricao)</dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Tipo)</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita)
+                        {
+                            <span class="badge bg-success fs-6">
+                                <i class="bi bi-arrow-down-circle me-1"></i>
+                                @Html.DisplayFor(model => model.Tipo)
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger fs-6">
+                                <i class="bi bi-arrow-up-circle me-1"></i>
+                                @Html.DisplayFor(model => model.Tipo)
+                            </span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">@Html.DisplayNameFor(model => model.DataCriacao)</dt>
+                    <dd class="col-sm-9">@Html.DisplayFor(model => model.DataCriacao)</dd>
+
+                    <dt class="col-sm-3">Status</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.Ativo)
+                        {
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Ativo
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">
+                                <i class="bi bi-x-circle me-1"></i>
+                                Inativo
+                            </span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Movimentações Recentes -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-task me-2"></i>
+                    Movimentações Recentes
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary">
+                        <i class="bi bi-eye"></i>
+                        Ver Todas
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (Model.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita)
                 {
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="entradas-tab" data-bs-toggle="tab" data-bs-target="#entradas" type="button" role="tab" aria-controls="entradas" aria-selected="true">
-                            Entradas (@Model.Entradas.Count())
-                        </button>
-                    </li>
-                }
-                @if (Model.Saidas != null && Model.Saidas.Any())
-                {
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link @(Model.Entradas == null || !Model.Entradas.Any() ? "active" : "")" id="saidas-tab" data-bs-toggle="tab" data-bs-target="#saidas" type="button" role="tab" aria-controls="saidas" aria-selected="false">
-                            Saídas (@Model.Saidas.Count())
-                        </button>
-                    </li>
-                }
-            </ul>
-            <div class="tab-content" id="movimentacoesTabContent">
-                @if (Model.Entradas != null && Model.Entradas.Any())
-                {
-                    <div class="tab-pane fade show active" id="entradas" role="tabpanel" aria-labelledby="entradas-tab">
+                    @if (Model.Entradas.Any())
+                    {
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0">
+                            <table class="table table-sm">
                                 <thead>
                                     <tr>
                                         <th>Data</th>
                                         <th>Descrição</th>
-                                        <th>Valor</th>
-                                        <th>Membro</th>
-                                        <th>Meio de Pagamento</th>
+                                        <th>Centro de Custo</th>
+                                        <th class="text-end">Valor</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var entrada in Model.Entradas.OrderByDescending(e => e.Data))
+                                    @foreach (var entrada in Model.Entradas.OrderByDescending(e => e.Data).Take(5))
                                     {
                                         <tr>
-                                            <td>@Html.DisplayFor(modelItem => entrada.Data)</td>
-                                            <td>@Html.DisplayFor(modelItem => entrada.Descricao)</td>
-                                            <td>@Html.DisplayFor(modelItem => entrada.Valor)</td>
-                                            <td>@(entrada.Membro?.NomeCompleto ?? "N/A")</td>
-                                            <td>@Html.DisplayFor(modelItem => entrada.MeioDePagamento.Nome)</td>
+                                            <td>@entrada.Data.ToString("dd/MM/yyyy")</td>
+                                            <td>@entrada.Descricao</td>
+                                            <td>@entrada.CentroCusto?.Nome</td>
+                                            <td class="text-end text-success fw-bold">@entrada.Valor.ToString("C")</td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-3">
+                            <i class="bi bi-inbox display-6 text-muted"></i>
+                            <p class="text-muted mt-2">Nenhuma entrada registrada para esta conta</p>
+                        </div>
+                    }
                 }
-                @if (Model.Saidas != null && Model.Saidas.Any())
+                else
                 {
-                    <div class="tab-pane fade @(Model.Entradas == null || !Model.Entradas.Any() ? "show active" : "")" id="saidas" role="tabpanel" aria-labelledby="saidas-tab">
+                    @if (Model.Saidas.Any())
+                    {
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0">
+                            <table class="table table-sm">
                                 <thead>
                                     <tr>
                                         <th>Data</th>
                                         <th>Descrição</th>
-                                        <th>Valor</th>
-                                        <th>Fornecedor</th>
-                                        <th>Meio de Pagamento</th>
+                                        <th>Centro de Custo</th>
+                                        <th class="text-end">Valor</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var saida in Model.Saidas.OrderByDescending(s => s.Data))
+                                    @foreach (var saida in Model.Saidas.OrderByDescending(s => s.Data).Take(5))
                                     {
                                         <tr>
-                                            <td>@Html.DisplayFor(modelItem => saida.Data)</td>
-                                            <td>@Html.DisplayFor(modelItem => saida.Descricao)</td>
-                                            <td>@Html.DisplayFor(modelItem => saida.Valor)</td>
-                                            <td>@(saida.Fornecedor?.Nome ?? "N/A")</td>
-                                            <td>@Html.DisplayFor(modelItem => saida.MeioDePagamento.Nome)</td>
+                                            <td>@saida.Data.ToString("dd/MM/yyyy")</td>
+                                            <td>@saida.Descricao</td>
+                                            <td>@saida.CentroCusto?.Nome</td>
+                                            <td class="text-end text-danger fw-bold">@saida.Valor.ToString("C")</td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
                         </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-3">
+                            <i class="bi bi-inbox display-6 text-muted"></i>
+                            <p class="text-muted mt-2">Nenhuma saída registrada para esta conta</p>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar com Estatísticas -->
+    <div class="col-lg-4">
+        <!-- Resumo Financeiro -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    Resumo Financeiro
+                </h6>
+            </div>
+            <div class="card-body">
+                @if (Model.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita)
+                {
+                    <div class="row text-center">
+                        <div class="col-12 mb-3">
+                            <div class="border rounded p-3">
+                                <i class="bi bi-arrow-down-circle text-success display-6"></i>
+                                <div class="fw-bold h4 text-success mt-2">@totalEntradas.ToString("C")</div>
+                                <small class="text-muted">Total de Entradas</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-2">
+                                <div class="fw-bold">@ViewBag.QuantidadeEntradas</div>
+                                <small class="text-muted">Lançamentos</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-2">
+                                <div class="fw-bold">@(ViewBag.QuantidadeEntradas > 0 ? (totalEntradas / (int)ViewBag.QuantidadeEntradas).ToString("C") : "R$ 0,00")</div>
+                                <small class="text-muted">Média</small>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="row text-center">
+                        <div class="col-12 mb-3">
+                            <div class="border rounded p-3">
+                                <i class="bi bi-arrow-up-circle text-danger display-6"></i>
+                                <div class="fw-bold h4 text-danger mt-2">@totalSaidas.ToString("C")</div>
+                                <small class="text-muted">Total de Saídas</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-2">
+                                <div class="fw-bold">@ViewBag.QuantidadeSaidas</div>
+                                <small class="text-muted">Lançamentos</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-2">
+                                <div class="fw-bold">@(ViewBag.QuantidadeSaidas > 0 ? (totalSaidas / (int)ViewBag.QuantidadeSaidas).ToString("C") : "R$ 0,00")</div>
+                                <small class="text-muted">Média</small>
+                            </div>
+                        </div>
                     </div>
                 }
             </div>
-        }
-        else
-        {
-            <div class="alert alert-info mb-0">
-                <i class="bi bi-info-circle me-2"></i>
-                Nenhuma movimentação associada a este plano de contas.
-            </div>
-        }
-    </div>
-</div>
-
-<div class="d-flex justify-content-end gap-2">
-    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
-        <i class="bi bi-pencil me-2"></i>
-        Editar
-    </a>
-    <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
-        <i class="bi bi-trash me-2"></i>
-        Excluir
-    </a>
-</div>
-
-<!-- Sidebar de Estatísticas -->
-<div class="col-lg-4 d-none">
-    <div class="card">
-        <div class="card-header">
-            <h6 class="card-title mb-0">
-                <i class="bi bi-graph-up me-2"></i>
-                Estatísticas da Conta
-            </h6>
         </div>
-        <div class="card-body">
-            <div class="mb-3">
-                <h6 class="text-primary">
-                    <i class="bi bi-arrow-down-circle me-1"></i>
-                    Total de Entradas
-                </h6>
-                <p class="small text-muted mb-0">
-                    R$ @(Model.Entradas?.Sum(e => e.Valor).ToString("N2") ?? "0,00")
-                </p>
-            </div>
 
-            <div class="mb-3">
-                <h6 class="text-primary">
-                    <i class="bi bi-arrow-up-circle me-1"></i>
-                    Total de Saídas
+        <!-- Ações Rápidas -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2"></i>
+                    Ações Rápidas
                 </h6>
-                <p class="small text-muted mb-0">
-                    R$ @(Model.Saidas?.Sum(s => s.Valor).ToString("N2") ?? "0,00")
-                </p>
             </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    @if (Model.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita)
+                    {
+                        <a href="#" class="btn btn-success btn-sm">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Nova Entrada
+                        </a>
+                    }
+                    else
+                    {
+                        <a href="#" class="btn btn-danger btn-sm">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Nova Saída
+                        </a>
+                    }
 
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>
-                <strong>Dica:</strong> Analise as movimentações para entender o fluxo financeiro desta conta.
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-pencil me-2"></i>
+                        Editar Conta
+                    </a>
+
+                    <a href="#" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-file-earmark-text me-2"></i>
+                        Relatório Detalhado
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
