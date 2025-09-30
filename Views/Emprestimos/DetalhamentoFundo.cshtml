@@ -1,0 +1,366 @@
+﻿@{
+    ViewData["Title"] = "Detalhamento do Fundo de Empréstimos";
+    var detalhamento = ViewBag.Detalhamento;
+    var historico = ViewBag.Historico as List<SistemaTesourariaEclesiastica.Models.ItemRateioFechamento>;
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-cash-stack me-2"></i>
+                Detalhamento do Fundo de Empréstimos
+            </h1>
+            <p class="text-muted mb-0">Análise completa das entradas e saídas do fundo</p>
+        </div>
+        <div class="btn-group">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>
+                Voltar
+            </a>
+            <a asp-action="DetalhamentoFundo" class="btn btn-primary">
+                <i class="bi bi-arrow-clockwise me-2"></i>
+                Atualizar
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumo do Fundo -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <i class="bi bi-piggy-bank display-4 text-success"></i>
+                    <h6 class="text-muted mt-2">Total em Entradas</h6>
+                    <h3 class="text-success mb-0">@(((decimal)detalhamento.totalEntradasFundo).ToString("C"))</h3>
+                    <small class="text-muted">@detalhamento.quantidadeFechamentosAprovados fechamento(s) aprovado(s)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="bi bi-hourglass-split display-4 text-warning"></i>
+                    <h6 class="text-muted mt-2">Empréstimos Ativos</h6>
+                    <h3 class="text-warning mb-0">@(((decimal)detalhamento.totalEmprestimosAtivos).ToString("C"))</h3>
+                    <small class="text-muted">@detalhamento.quantidadeEmprestimosAtivos empréstimo(s)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="bi bi-arrow-return-left display-4 text-info"></i>
+                    <h6 class="text-muted mt-2">Devoluções Recebidas</h6>
+                    <h3 class="text-info mb-0">@(((decimal)detalhamento.devolucoesEmprestimosAtivos).ToString("C"))</h3>
+                    <small class="text-muted">dos empréstimos ativos</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <i class="bi bi-wallet2 display-4 text-primary"></i>
+                    <h6 class="text-muted mt-2">Saldo Disponível</h6>
+                    <h3 class="text-primary mb-0">@(((decimal)detalhamento.saldoDisponivel).ToString("C"))</h3>
+                    <small class="text-muted">para novos empréstimos</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações do Centro de Custo -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-building me-2"></i>
+                        Informações do Centro de Custo Fundo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong>Nome do Centro de Custo:</strong>
+                                <span class="ms-2">
+                                    @if ((bool)detalhamento.centroCustoFundoEncontrado)
+                                    {
+                                        <span class="badge bg-success">@detalhamento.nomeCentroCustoFundo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Não encontrado</span>
+                                    }
+                                </span>
+                            </p>
+                            <p class="mb-2">
+                                <strong>Status:</strong>
+                                @if ((bool)detalhamento.centroCustoFundoEncontrado)
+                                {
+                                    <span class="badge bg-success">Configurado</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Não Configurado</span>
+                                }
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong>Percentual Comprometido:</strong>
+                                <span class="ms-2">@(((decimal)detalhamento.percentualComprometido).ToString("F2"))%</span>
+                            </p>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar @(((decimal)detalhamento.percentualComprometido) > 80 ? "bg-danger" : ((decimal)detalhamento.percentualComprometido) > 50 ? "bg-warning" : "bg-success")"
+                                     role="progressbar"
+                                     style="width: @(((decimal)detalhamento.percentualComprometido))%"
+                                     aria-valuenow="@(((decimal)detalhamento.percentualComprometido))"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">
+                                    @(((decimal)detalhamento.percentualComprometido).ToString("F1"))%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cálculo Detalhado -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Entradas no Fundo
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total de Rateios Aprovados:</span>
+                        <strong>@(((decimal)detalhamento.totalEntradasFundo).ToString("C"))</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Quantidade de Fechamentos:</span>
+                        <strong>@detalhamento.quantidadeFechamentosAprovados</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span><strong>Total Disponibilizado:</strong></span>
+                        <strong class="text-success">@(((decimal)detalhamento.totalEntradasFundo).ToString("C"))</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-dash-circle me-2"></i>
+                        Saídas do Fundo
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Empréstimos Ativos:</span>
+                        <strong>@(((decimal)detalhamento.totalEmprestimosAtivos).ToString("C"))</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Devoluções Recebidas:</span>
+                        <strong class="text-success">- @(((decimal)detalhamento.devolucoesEmprestimosAtivos).ToString("C"))</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span><strong>Saldo Devedor:</strong></span>
+                        <strong class="text-warning">@(((decimal)detalhamento.saldoDevedorAtivos).ToString("C"))</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cálculo Final -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-calculator me-2"></i>
+                        Cálculo do Saldo Disponível
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-light">
+                        <div class="row align-items-center">
+                            <div class="col-md-3 text-center">
+                                <h4>@(((decimal)detalhamento.totalEntradasFundo).ToString("C"))</h4>
+                                <small>Total Entradas</small>
+                            </div>
+                            <div class="col-md-1 text-center">
+                                <h4>−</h4>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <h4>@(((decimal)detalhamento.saldoDevedorAtivos).ToString("C"))</h4>
+                                <small>Saldo Devedor</small>
+                            </div>
+                            <div class="col-md-1 text-center">
+                                <h4>=</h4>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <h2 class="text-primary mb-0">@(((decimal)detalhamento.saldoDisponivel).ToString("C"))</h2>
+                                <small>Saldo Disponível</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Histórico de Rateios -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Histórico de Rateios Aprovados (últimos 20)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (historico != null && historico.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Data Aprovação</th>
+                                        <th>Período</th>
+                                        <th>Centro Origem</th>
+                                        <th>Centro Destino</th>
+                                        <th>Valor Base</th>
+                                        <th>Percentual</th>
+                                        <th class="text-end">Valor Rateio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in historico)
+                                    {
+                                        <tr>
+                                            <td>@item.FechamentoPeriodo.DataAprovacao?.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@item.FechamentoPeriodo.Mes/@item.FechamentoPeriodo.Ano</td>
+                                            <td>@item.FechamentoPeriodo.CentroCusto.Nome</td>
+                                            <td>
+                                                <span class="badge bg-info">@item.RegraRateio.CentroCustoDestino.Nome</span>
+                                            </td>
+                                            <td>@item.ValorBase.ToString("C")</td>
+                                            <td>
+                                                <span class="badge bg-secondary">@item.Percentual.ToString("F2")%</span>
+                                            </td>
+                                            <td class="text-end">
+                                                <strong class="text-success">@item.ValorRateio.ToString("C")</strong>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="6" class="text-end"><strong>Total Exibido:</strong></td>
+                                        <td class="text-end">
+                                            <strong class="text-success">@historico.Sum(h => h.ValorRateio).ToString("C")</strong>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="bi bi-inbox display-1 text-muted"></i>
+                            <p class="text-muted mt-2">Nenhum rateio aprovado encontrado.</p>
+                            <p class="small text-muted">
+                                Para que os rateios apareçam aqui:
+                                <br>1. Crie fechamentos pela SEDE
+                                <br>2. Aprove os fechamentos
+                                <br>3. Os rateios serão contabilizados automaticamente
+                            </p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas Adicionais -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-bar-chart me-2"></i>
+                        Empréstimos Quitados
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Quantidade:</span>
+                        <strong>@detalhamento.quantidadeEmprestimosQuitados</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Valor Total Quitado:</span>
+                        <strong class="text-success">@(((decimal)detalhamento.totalQuitado).ToString("C"))</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Resumo Geral
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <i class="bi bi-check-circle text-success me-2"></i>
+                        Total movimentado no fundo: <strong>@(((decimal)detalhamento.totalEntradasFundo).ToString("C"))</strong>
+                    </p>
+                    <p class="small mb-2">
+                        <i class="bi bi-arrow-repeat text-warning me-2"></i>
+                        Total de empréstimos (ativos): <strong>@detalhamento.quantidadeEmprestimosAtivos</strong>
+                    </p>
+                    <p class="small mb-0">
+                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        Total de empréstimos quitados: <strong>@detalhamento.quantidadeEmprestimosQuitados</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Animação nos cards
+            $('.card').hover(
+                function() { $(this).addClass('shadow-sm'); },
+                function() { $(this).removeClass('shadow-sm'); }
+            );
+
+            // Tooltip para percentual comprometido
+            $('[data-bs-toggle="tooltip"]').tooltip();
+        });
+    </script>
+}

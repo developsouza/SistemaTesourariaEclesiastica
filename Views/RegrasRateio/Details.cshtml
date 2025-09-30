@@ -1,0 +1,264 @@
+﻿@model SistemaTesourariaEclesiastica.Models.RegraRateio
+
+@{
+    ViewData["Title"] = "Detalhes da Regra de Rateio";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            Detalhes da Regra de Rateio
+        </h1>
+        <p class="text-muted mb-0">Informações completas da regra</p>
+    </div>
+    <div class="btn-group">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+            <i class="bi bi-pencil me-2"></i>
+            Editar
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>
+            Voltar
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-file-text me-2"></i>
+                    Informações da Regra
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">Nome da Regra</label>
+                        <p class="h5">@Model.Nome</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">Percentual</label>
+                        <p class="h5">
+                            <span class="badge bg-info" style="font-size: 1.1rem;">@Model.Percentual.ToString("F2")%</span>
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">Status</label>
+                        <p class="h5">
+                            @if (Model.Ativo)
+                            {
+                                <span class="badge bg-success" style="font-size: 1rem;">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Ativo
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary" style="font-size: 1rem;">
+                                    <i class="bi bi-x-circle me-1"></i>
+                                    Inativo
+                                </span>
+                            }
+                        </p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">
+                            <i class="bi bi-arrow-right-circle me-1"></i>
+                            Centro de Custo Origem
+                        </label>
+                        <div class="alert alert-light border mb-0">
+                            <h6 class="mb-0">@Model.CentroCustoOrigem.Nome</h6>
+                        </div>
+                        <small class="text-muted">Centro que fará o rateio</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">
+                            <i class="bi bi-bullseye me-1"></i>
+                            Centro de Custo Destino
+                        </label>
+                        <div class="alert alert-primary border-primary mb-0">
+                            <h6 class="mb-0 text-primary">@Model.CentroCustoDestino.Nome</h6>
+                        </div>
+                        <small class="text-muted">Centro que receberá o rateio</small>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Descricao))
+                {
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Descrição</label>
+                        <p class="text-muted">@Model.Descricao</p>
+                    </div>
+                }
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">Data de Criação</label>
+                        <p>
+                            <i class="bi bi-calendar-event me-1"></i>
+                            @Model.DataCriacao.ToString("dd/MM/yyyy HH:mm")
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">ID da Regra</label>
+                        <p>
+                            <i class="bi bi-hash me-1"></i>
+                            @Model.Id
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    Utilização da Regra
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Esta regra é aplicada automaticamente em fechamentos do centro de custo <strong>@Model.CentroCustoOrigem.Nome</strong>.
+                </p>
+
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">Como funciona:</h6>
+                    <ul class="mb-0 small">
+                        <li>A regra só é aplicada se o centro de custo for <strong>SEDE</strong> ou <strong>GERAL</strong></li>
+                        <li>O rateio é calculado sobre o <strong>Balanço Digital</strong> do fechamento</li>
+                        <li>A regra precisa estar <strong>ATIVA</strong> para ser aplicada</li>
+                        <li>O valor é enviado automaticamente para <strong>@Model.CentroCustoDestino.Nome</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-calculator me-2"></i>
+                    Simulação de Rateio
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Balanço Digital (R$):</label>
+                    <input type="number" id="balanco" class="form-control form-control-lg" placeholder="10000.00" step="0.01" value="10000">
+                </div>
+
+                <div class="alert alert-light mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Percentual da Regra:</span>
+                        <strong class="text-primary">@Model.Percentual.ToString("F2")%</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Valor do Rateio:</span>
+                        <strong id="valorRateio" class="text-success">R$ 0,00</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Saldo Restante:</span>
+                        <strong id="saldoRestante" class="text-dark">R$ 0,00</strong>
+                    </div>
+                </div>
+
+                <div class="card bg-light border-0">
+                    <div class="card-body small">
+                        <p class="mb-2"><strong>Cálculo:</strong></p>
+                        <p class="mb-0">
+                            Valor do Rateio = Balanço Digital × (@Model.Percentual.ToString("F2")% ÷ 100)
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-gear me-2"></i>
+                    Ações
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                        <i class="bi bi-pencil me-2"></i>
+                        Editar Regra
+                    </a>
+
+                    @if (Model.Ativo)
+                    {
+                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalDesativar">
+                            <i class="bi bi-pause-circle me-2"></i>
+                            Desativar Regra
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalAtivar">
+                            <i class="bi bi-play-circle me-2"></i>
+                            Ativar Regra
+                        </button>
+                    }
+
+                    <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">
+                        <i class="bi bi-trash me-2"></i>
+                        Excluir Regra
+                    </a>
+
+                    <hr>
+
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Voltar para Lista
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            const percentual = @Model.Percentual;
+
+            function calcularRateio() {
+                const balanco = parseFloat($('#balanco').val()) || 0;
+                const rateio = balanco * (percentual / 100);
+                const saldo = balanco - rateio;
+
+                $('#valorRateio').text(rateio.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }));
+
+                $('#saldoRestante').text(saldo.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }));
+            }
+
+            $('#balanco').on('input', calcularRateio);
+
+            // Calcular inicialmente
+            calcularRateio();
+        });
+    </script>
+}

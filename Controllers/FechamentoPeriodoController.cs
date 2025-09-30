@@ -7,6 +7,7 @@ using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
+using System.Text;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
@@ -18,19 +19,22 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly BusinessRulesService _businessRules;
         private readonly PdfService _pdfService;
+        private readonly ILogger<FechamentoPeriodoController> _logger;
 
         public FechamentoPeriodoController(
             ApplicationDbContext context,
             AuditService auditService,
             UserManager<ApplicationUser> userManager,
             BusinessRulesService businessRules,
-            PdfService pdfService)
+            PdfService pdfService,
+            ILogger<FechamentoPeriodoController> logger)
         {
             _context = context;
             _auditService = auditService;
             _userManager = userManager;
             _businessRules = businessRules;
             _pdfService = pdfService;
+            _logger = logger;
         }
 
         // GET: FechamentoPeriodo
@@ -100,8 +104,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ModelState.Remove("CentroCusto");
             ModelState.Remove("UsuarioSubmissao");
             ModelState.Remove("UsuarioSubmissaoId");
+            
             if (ModelState.IsValid)
             {
+                // USAR TRANSAÇÃO PARA GARANTIR ATOMICIDADE
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                
                 try
                 {
                     var user = await _userManager.GetUserAsync(User);
@@ -111,7 +119,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         return RedirectToAction(nameof(Index));
                     }
 
-                    // VALIDAR E AJUSTAR DATAS CONFORME TIPO DE FECHAMENTO
+                    // Validar e ajustar datas
                     ValidarTipoFechamento(fechamento);
 
                     fechamento.UsuarioSubmissaoId = user.Id;
@@ -120,26 +128,53 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                     // Calcular totais do período
                     await CalcularTotaisFechamento(fechamento);
+                    
+                    _logger.LogInformation($"Fechamento criado - Balanço Digital: {fechamento.BalancoDigital:C}");
 
-                    // =====================================================
-                    // APLICAR RATEIOS (com verificação melhorada)
-                    // =====================================================
-                    await AplicarRateios(fechamento);
+                    // APLICAR RATEIOS COM LOG DETALHADO
+                    var resultadoRateio = await AplicarRateiosComLog(fechamento);
+                    
+                    if (!string.IsNullOrEmpty(resultadoRateio))
+                    {
+                        _logger.LogInformation($"Resultado do Rateio: {resultadoRateio}");
+                        ViewBag.LogRateio = resultadoRateio;
+                    }
 
                     // Gerar detalhes do fechamento
                     await GerarDetalhesFechamento(fechamento);
 
+                    // SALVAR FECHAMENTO
                     _context.Add(fechamento);
                     await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation($"Fechamento ID {fechamento.Id} salvo com sucesso");
+                    
+                    // VERIFICAR SE OS ITENS DE RATEIO FORAM SALVOS
+                    var itensRateioSalvos = await _context.ItensRateioFechamento
+                        .Where(i => i.FechamentoPeriodoId == fechamento.Id)
+                        .ToListAsync();
+                    
+                    _logger.LogInformation($"Itens de rateio salvos: {itensRateioSalvos.Count}");
+
+                    // CONFIRMAR TRANSAÇÃO
+                    await transaction.CommitAsync();
 
                     await _auditService.LogAsync("Criação", "FechamentoPeriodo",
-                        $"Fechamento {ObterDescricaoFechamento(fechamento)} criado");
+                        $"Fechamento {ObterDescricaoFechamento(fechamento)} criado. Rateios aplicados: {itensRateioSalvos.Count}");
 
-                    TempData["SuccessMessage"] = "Fechamento criado com sucesso!";
+                    TempData["SuccessMessage"] = $"Fechamento criado com sucesso! {itensRateioSalvos.Count} rateio(s) aplicado(s).";
+                    
+                    if (!string.IsNullOrEmpty(resultadoRateio))
+                    {
+                        TempData["InfoMessage"] = resultadoRateio;
+                    }
+                    
                     return RedirectToAction(nameof(Details), new { id = fechamento.Id });
                 }
                 catch (Exception ex)
                 {
+                    await transaction.RollbackAsync();
+                    _logger.LogError(ex, "Erro ao criar fechamento");
                     TempData["ErrorMessage"] = $"Erro ao criar fechamento: {ex.Message}";
                 }
             }
@@ -270,7 +305,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 if (centroCusto?.Nome.ToUpper().Contains("SEDE") == true ||
                     centroCusto?.Nome.ToUpper().Contains("GERAL") == true)
                 {
-                    await AplicarRateios(fechamento);
+                    await AplicarRateiosComLog(fechamento);
                 }
                 else
                 {
@@ -321,7 +356,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Aprovar(int id)
         {
-            var fechamento = await _context.FechamentosPeriodo.FindAsync(id);
+            var fechamento = await _context.FechamentosPeriodo
+                .Include(f => f.ItensRateio)
+                    .ThenInclude(i => i.RegraRateio)
+                        .ThenInclude(r => r.CentroCustoDestino)
+                .FirstOrDefaultAsync(f => f.Id == id);
+                
             if (fechamento == null)
             {
                 return NotFound();
@@ -339,6 +379,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return Unauthorized();
             }
 
+            // LOGGING ANTES DA APROVAÇÃO
+            _logger.LogInformation($"Aprovando fechamento ID {id}. Itens de rateio: {fechamento.ItensRateio.Count}");
+            
+            foreach (var item in fechamento.ItensRateio)
+            {
+                _logger.LogInformation($"  Rateio: {item.ValorRateio:C} para {item.RegraRateio?.CentroCustoDestino?.Nome ?? "N/A"}");
+            }
+
             fechamento.Status = StatusFechamentoPeriodo.Aprovado;
             fechamento.DataAprovacao = DateTime.Now;
             fechamento.UsuarioAprovacaoId = user.Id;
@@ -346,8 +394,20 @@ namespace SistemaTesourariaEclesiastica.Controllers
             _context.Update(fechamento);
             await _context.SaveChangesAsync();
 
-            await _auditService.LogAsync("Aprovação", "FechamentoPeriodo", $"Fechamento {fechamento.Mes:00}/{fechamento.Ano} aprovado");
-            TempData["SuccessMessage"] = "Fechamento aprovado com sucesso!";
+            // VERIFICAR SE OS RATEIOS FORAM PERSISTIDOS
+            var rateiosAprovados = await _context.ItensRateioFechamento
+                .Include(i => i.FechamentoPeriodo)
+                .Include(i => i.RegraRateio)
+                    .ThenInclude(r => r.CentroCustoDestino)
+                .Where(i => i.FechamentoPeriodoId == id)
+                .ToListAsync();
+
+            _logger.LogInformation($"Após aprovação: {rateiosAprovados.Count} rateios persistidos no banco");
+
+            await _auditService.LogAsync("Aprovação", "FechamentoPeriodo", 
+                $"Fechamento {fechamento.Mes:00}/{fechamento.Ano} aprovado com {rateiosAprovados.Count} rateios");
+            
+            TempData["SuccessMessage"] = $"Fechamento aprovado com sucesso! {rateiosAprovados.Count} rateio(s) confirmado(s).";
 
             return RedirectToAction(nameof(Index));
         }
@@ -418,6 +478,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
             }
 
+            // Verificar se pode ser excluído
+            if (fechamento.Status == StatusFechamentoPeriodo.Aprovado)
+            {
+                TempData["ErrorMessage"] = "Fechamentos aprovados não podem ser excluídos.";
+                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+            }
+
             return View(fechamento);
         }
 
@@ -436,14 +503,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
-            // Apenas fechamentos pendentes podem ser excluídos
-            if (fechamento.Status != StatusFechamentoPeriodo.Pendente)
-            {
-                TempData["ErrorMessage"] = $"Não é possível excluir fechamentos com status '{fechamento.Status}'. Apenas fechamentos pendentes podem ser excluídos.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            // Verificar permissões
+            // Verificar permissões novamente
             var user = await _userManager.GetUserAsync(User);
             if (!User.IsInRole("Administrador") && !User.IsInRole("TesoureiroGeral"))
             {
@@ -454,29 +514,264 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
             }
 
+            // Verificar se pode ser excluído
+            if (fechamento.Status == StatusFechamentoPeriodo.Aprovado)
+            {
+                TempData["ErrorMessage"] = "Fechamentos aprovados não podem ser excluídos.";
+                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+            }
+
             try
             {
-                // Remover itens relacionados (Cascade já está configurado, mas vamos garantir)
-                _context.ItensRateioFechamento.RemoveRange(fechamento.ItensRateio);
-                _context.DetalhesFechamento.RemoveRange(fechamento.DetalhesFechamento);
-                _context.FechamentosPeriodo.Remove(fechamento);
+                // Remover itens relacionados primeiro
+                if (fechamento.ItensRateio.Any())
+                {
+                    _context.ItensRateioFechamento.RemoveRange(fechamento.ItensRateio);
+                }
 
+                if (fechamento.DetalhesFechamento.Any())
+                {
+                    _context.DetalhesFechamento.RemoveRange(fechamento.DetalhesFechamento);
+                }
+
+                // Remover o fechamento
+                _context.FechamentosPeriodo.Remove(fechamento);
                 await _context.SaveChangesAsync();
 
                 await _auditService.LogAsync("Exclusão", "FechamentoPeriodo",
-                    $"Fechamento {(fechamento.TipoFechamento == TipoFechamento.Diario ? fechamento.DataInicio.ToString("dd/MM/yyyy") : $"{fechamento.Mes:00}/{fechamento.Ano}")} excluído");
+                    $"Fechamento {ObterDescricaoFechamento(fechamento)} excluído");
 
                 TempData["SuccessMessage"] = "Fechamento excluído com sucesso!";
             }
             catch (Exception ex)
             {
                 TempData["ErrorMessage"] = $"Erro ao excluir fechamento: {ex.Message}";
-                return RedirectToAction(nameof(Delete), new { id });
+                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
             }
 
             return RedirectToAction(nameof(Index));
         }
 
+        // NOVO MÉTODO: Diagnóstico de Rateios
+        [HttpGet]
+        public async Task<IActionResult> DiagnosticoRateios()
+        {
+            var diagnostico = new StringBuilder();
+            diagnostico.AppendLine("=== DIAGNÓSTICO COMPLETO DO SISTEMA DE RATEIOS ===");
+            diagnostico.AppendLine($"Data/Hora: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
+            diagnostico.AppendLine("");
+
+            try
+            {
+                // 1. Verificar Centro de Custo FUNDO
+                diagnostico.AppendLine("1. CENTRO DE CUSTO FUNDO");
+                var centroCustoFundo = await _context.CentrosCusto
+                    .FirstOrDefaultAsync(c => c.Nome.ToUpper().Contains("FUNDO") ||
+                                             c.Nome.ToUpper().Contains("REPASSE") ||
+                                             c.Nome.ToUpper().Contains("DÍZIMO") ||
+                                             c.Nome.ToUpper().Contains("DIZIMO"));
+
+                if (centroCustoFundo != null)
+                {
+                    diagnostico.AppendLine($"   ✓ Encontrado: {centroCustoFundo.Nome} (ID: {centroCustoFundo.Id})");
+                    diagnostico.AppendLine($"   ✓ Ativo: {centroCustoFundo.Ativo}");
+                }
+                else
+                {
+                    diagnostico.AppendLine("   ❌ NÃO ENCONTRADO!");
+                    diagnostico.AppendLine("   AÇÃO NECESSÁRIA: Criar um Centro de Custo com nome 'FUNDO' ou 'REPASSE'");
+                }
+                diagnostico.AppendLine("");
+
+                // 2. Verificar Centro de Custo SEDE
+                diagnostico.AppendLine("2. CENTRO DE CUSTO SEDE");
+                var centroCustoSede = await _context.CentrosCusto
+                    .FirstOrDefaultAsync(c => c.Nome.ToUpper().Contains("SEDE") ||
+                                             c.Nome.ToUpper().Contains("GERAL") ||
+                                             c.Nome.ToUpper().Contains("PRINCIPAL") ||
+                                             c.Nome.ToUpper().Contains("CENTRAL"));
+
+                if (centroCustoSede != null)
+                {
+                    diagnostico.AppendLine($"   ✓ Encontrado: {centroCustoSede.Nome} (ID: {centroCustoSede.Id})");
+                    diagnostico.AppendLine($"   ✓ Ativo: {centroCustoSede.Ativo}");
+                }
+                else
+                {
+                    diagnostico.AppendLine("   ❌ NÃO ENCONTRADO!");
+                    diagnostico.AppendLine("   AÇÃO NECESSÁRIA: Criar um Centro de Custo com nome 'SEDE' ou 'GERAL'");
+                }
+                diagnostico.AppendLine("");
+
+                // 3. Verificar Regras de Rateio
+                diagnostico.AppendLine("3. REGRAS DE RATEIO ATIVAS");
+                var regrasAtivas = await _context.RegrasRateio
+                    .Include(r => r.CentroCustoOrigem)
+                    .Include(r => r.CentroCustoDestino)
+                    .Where(r => r.Ativo)
+                    .ToListAsync();
+
+                if (regrasAtivas.Any())
+                {
+                    diagnostico.AppendLine($"   ✓ Total de regras ativas: {regrasAtivas.Count}");
+                    foreach (var regra in regrasAtivas)
+                    {
+                        diagnostico.AppendLine($"   - {regra.Nome}: {regra.CentroCustoOrigem.Nome} → {regra.CentroCustoDestino.Nome} ({regra.Percentual:F2}%)");
+                    }
+                }
+                else
+                {
+                    diagnostico.AppendLine("   ❌ NENHUMA REGRA ATIVA ENCONTRADA!");
+                    diagnostico.AppendLine("   AÇÃO NECESSÁRIA: Criar regras de rateio em Cadastros > Regras de Rateio");
+                }
+
+                ViewBag.DiagnosticoRateios = diagnostico.ToString();
+            }
+            catch (Exception ex)
+            {
+                diagnostico.AppendLine($"❌ ERRO no diagnóstico: {ex.Message}");
+                _logger.LogError(ex, "Erro no diagnóstico de rateios");
+            }
+
+            return View("DiagnosticoRateios");
+        }
+
+        // MÉTODO MELHORADO: Aplicar Rateios com Log Detalhado
+        private async Task<string> AplicarRateiosComLog(FechamentoPeriodo fechamento)
+        {
+            var log = new StringBuilder();
+            log.AppendLine("=== DIAGNÓSTICO DE RATEIO ===");
+
+            try
+            {
+                // Buscar o centro de custo
+                var centroCusto = await _context.CentrosCusto
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == fechamento.CentroCustoId);
+
+                if (centroCusto == null)
+                {
+                    log.AppendLine("❌ ERRO: Centro de custo não encontrado!");
+                    _logger.LogWarning($"Centro de custo ID {fechamento.CentroCustoId} não encontrado");
+                    return log.ToString();
+                }
+
+                log.AppendLine($"✓ Centro de Custo: {centroCusto.Nome}");
+
+                // Verificar se é SEDE
+                var nomeCentro = centroCusto.Nome.ToUpper().Trim();
+                var ehSede = nomeCentro.Contains("SEDE") ||
+                             nomeCentro.Contains("GERAL") ||
+                             nomeCentro.Contains("PRINCIPAL") ||
+                             nomeCentro.Contains("CENTRAL");
+
+                log.AppendLine($"✓ É SEDE/GERAL? {(ehSede ? "SIM" : "NÃO")}");
+
+                if (!ehSede)
+                {
+                    fechamento.TotalRateios = 0;
+                    fechamento.SaldoFinal = fechamento.BalancoDigital + fechamento.BalancoFisico;
+                    log.AppendLine("⚠ Rateios não aplicados: Centro não é SEDE/GERAL");
+                    log.AppendLine($"✓ Saldo Final = Balanço Total: {fechamento.SaldoFinal:C}");
+                    return log.ToString();
+                }
+
+                // Buscar regras de rateio ativas
+                var regrasRateio = await _context.RegrasRateio
+                    .Include(r => r.CentroCustoOrigem)
+                    .Include(r => r.CentroCustoDestino)
+                    .Where(r => r.CentroCustoOrigemId == fechamento.CentroCustoId && r.Ativo)
+                    .ToListAsync();
+
+                log.AppendLine($"✓ Regras de Rateio Ativas Encontradas: {regrasRateio.Count}");
+
+                if (!regrasRateio.Any())
+                {
+                    fechamento.TotalRateios = 0;
+                    fechamento.SaldoFinal = fechamento.BalancoDigital + fechamento.BalancoFisico;
+                    log.AppendLine("⚠ AVISO: Nenhuma regra de rateio ativa encontrada!");
+                    log.AppendLine($"  Para aplicar rateios, crie uma regra em: Cadastros > Regras de Rateio");
+                    log.AppendLine($"  Exemplo: {centroCusto.Nome} → FUNDO (10%)");
+                    return log.ToString();
+                }
+
+                // ===================================================================
+                // MUDANÇA PRINCIPAL: Calcular balanço TOTAL (físico + digital)
+                // ===================================================================
+                var balancoTotal = fechamento.BalancoFisico + fechamento.BalancoDigital;
+
+                log.AppendLine("");
+                log.AppendLine("=== CÁLCULO DO BALANÇO TOTAL ===");
+                log.AppendLine($"✓ Balanço Físico: {fechamento.BalancoFisico:C}");
+                log.AppendLine($"✓ Balanço Digital: {fechamento.BalancoDigital:C}");
+                log.AppendLine($"✓ BALANÇO TOTAL: {balancoTotal:C}");
+                log.AppendLine("");
+
+                // Aplicar cada regra
+                decimal totalRateios = 0;
+                var valorBase = balancoTotal; // USAR BALANÇO TOTAL
+                int contador = 0;
+
+                log.AppendLine($"✓ Valor Base para Rateio: {valorBase:C}");
+                log.AppendLine("");
+                log.AppendLine("--- APLICANDO RATEIOS ---");
+
+                foreach (var regra in regrasRateio)
+                {
+                    contador++;
+                    var valorRateio = Math.Round(valorBase * (regra.Percentual / 100), 2);
+
+                    log.AppendLine($"Rateio #{contador}:");
+                    log.AppendLine($"  Regra: {regra.Nome}");
+                    log.AppendLine($"  Origem: {regra.CentroCustoOrigem.Nome}");
+                    log.AppendLine($"  Destino: {regra.CentroCustoDestino.Nome}");
+                    log.AppendLine($"  Percentual: {regra.Percentual:F2}%");
+                    log.AppendLine($"  Cálculo: {valorBase:C} × {regra.Percentual:F2}% = {valorRateio:C}");
+
+                    var itemRateio = new ItemRateioFechamento
+                    {
+                        FechamentoPeriodoId = fechamento.Id,
+                        FechamentoPeriodo = fechamento,
+                        RegraRateioId = regra.Id,
+                        RegraRateio = regra,
+                        ValorBase = valorBase,
+                        Percentual = regra.Percentual,
+                        ValorRateio = valorRateio,
+                        Observacoes = $"Rateio automático de {regra.Percentual:F2}% sobre balanço TOTAL de {valorBase:C} = {valorRateio:C} para {regra.CentroCustoDestino.Nome}"
+                    };
+
+                    fechamento.ItensRateio.Add(itemRateio);
+                    totalRateios += valorRateio;
+
+                    log.AppendLine($"  Status: ✓ Adicionado à coleção");
+                    log.AppendLine("");
+                }
+
+                fechamento.TotalRateios = totalRateios;
+
+                // ===================================================================
+                // MUDANÇA: Saldo Final agora considera o balanço total menos rateios
+                // ===================================================================
+                fechamento.SaldoFinal = balancoTotal - totalRateios;
+
+                log.AppendLine("--- RESUMO ---");
+                log.AppendLine($"✓ Balanço Total (Base): {balancoTotal:C}");
+                log.AppendLine($"✓ Total de Rateios: {totalRateios:C}");
+                log.AppendLine($"✓ Saldo Final: {balancoTotal:C} - {totalRateios:C} = {fechamento.SaldoFinal:C}");
+                log.AppendLine($"✓ Itens na coleção: {fechamento.ItensRateio.Count}");
+
+                _logger.LogInformation($"Rateios aplicados com sucesso: {contador} regras, total {totalRateios:C} sobre balanço total de {balancoTotal:C}");
+            }
+            catch (Exception ex)
+            {
+                log.AppendLine($"❌ ERRO ao aplicar rateios: {ex.Message}");
+                _logger.LogError(ex, "Erro ao aplicar rateios");
+            }
+
+            return log.ToString();
+        }
+
+        // MÉTODO AUXILIAR: Calcular Totais do Fechamento
         private async Task CalcularTotaisFechamento(FechamentoPeriodo fechamento)
         {
             // Total de entradas FÍSICAS (Dinheiro)
@@ -524,85 +819,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             fechamento.BalancoDigital = fechamento.TotalEntradasDigitais - fechamento.TotalSaidasDigitais;
         }
 
-
-        private async Task AplicarRateios(FechamentoPeriodo fechamento)
-        {
-            // Buscar o centro de custo com Include para garantir que está carregado
-            var centroCusto = await _context.CentrosCusto
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == fechamento.CentroCustoId);
-
-            if (centroCusto == null)
-            {
-                return;
-            }
-
-            // =====================================================
-            // VERIFICAÇÃO MELHORADA: É SEDE/GERAL?
-            // =====================================================
-            var nomeCentro = centroCusto.Nome.ToUpper().Trim();
-            var ehSede = nomeCentro.Contains("SEDE") ||
-                         nomeCentro.Contains("GERAL") ||
-                         nomeCentro.Contains("PRINCIPAL") ||
-                         nomeCentro.Contains("CENTRAL");
-
-
-            if (!ehSede)
-            {
-                fechamento.TotalRateios = 0;
-                fechamento.SaldoFinal = fechamento.BalancoDigital;
-                return;
-            }
-
-            // =====================================================
-            // BUSCAR REGRAS DE RATEIO ATIVAS
-            // =====================================================
-            var regrasRateio = await _context.RegrasRateio
-                .Include(r => r.CentroCustoOrigem)
-                .Include(r => r.CentroCustoDestino)
-                .Where(r => r.CentroCustoOrigemId == fechamento.CentroCustoId && r.Ativo)
-                .ToListAsync();
-
-
-            if (!regrasRateio.Any())
-            {
-                fechamento.TotalRateios = 0;
-                fechamento.SaldoFinal = fechamento.BalancoDigital;
-                return;
-            }
-
-            // =====================================================
-            // APLICAR CADA REGRA DE RATEIO
-            // =====================================================
-            decimal totalRateios = 0;
-            var valorBase = fechamento.BalancoDigital;
-
-            foreach (var regra in regrasRateio)
-            {
-                var valorRateio = valorBase * (regra.Percentual / 100);
-
-                var itemRateio = new ItemRateioFechamento
-                {
-                    FechamentoPeriodoId = fechamento.Id,
-                    RegraRateioId = regra.Id,
-                    ValorBase = valorBase,
-                    Percentual = regra.Percentual,
-                    ValorRateio = valorRateio,
-                    Observacoes = $"Rateio automático de {regra.Percentual:F2}% sobre balanço digital de {valorBase:C} = {valorRateio:C} para {regra.CentroCustoDestino.Nome}"
-                };
-
-                fechamento.ItensRateio.Add(itemRateio);
-                totalRateios += valorRateio;
-            }
-
-            fechamento.TotalRateios = totalRateios;
-            fechamento.SaldoFinal = fechamento.BalancoDigital - totalRateios;
-
-        }
-
-        // ==================================================
         // MÉTODO AUXILIAR: Validar Tipo de Fechamento
-        // ==================================================
         private void ValidarTipoFechamento(FechamentoPeriodo fechamento)
         {
             if (fechamento.TipoFechamento == TipoFechamento.Diario)
@@ -632,6 +849,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var diasDiferenca = (fechamento.DataFim - fechamento.DataInicio).Days;
                 if (diasDiferenca > 6)
                 {
+                    // Permitir até 7 dias
                 }
 
                 // Extrair mês e ano da data de início
@@ -652,7 +870,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
         }
 
-
+        // MÉTODO AUXILIAR: Gerar Detalhes do Fechamento
         private async Task GerarDetalhesFechamento(FechamentoPeriodo fechamento)
         {
             // Gerar detalhes das entradas
@@ -712,6 +930,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
         }
 
+        // MÉTODO AUXILIAR: Popular Dropdowns
         private async Task PopulateDropdowns(FechamentoPeriodo? fechamento = null)
         {
             // Popular Centro de Custo
@@ -744,8 +963,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
         }
 
-        // Adicione este método auxiliar na classe FechamentoPeriodoController para corrigir o erro CS0103
-
+        // MÉTODO AUXILIAR: Obter Descrição do Fechamento
         private string ObterDescricaoFechamento(FechamentoPeriodo fechamento)
         {
             if (fechamento.TipoFechamento == TipoFechamento.Diario)
@@ -757,6 +975,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return fechamento.Id.ToString();
         }
 
+        // MÉTODO AUXILIAR: Verificar se Fechamento Existe
         private bool FechamentoPeriodoExists(int id)
         {
             return _context.FechamentosPeriodo.Any(f => f.Id == id);

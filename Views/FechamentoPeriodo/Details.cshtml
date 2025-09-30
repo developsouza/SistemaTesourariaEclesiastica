@@ -4,6 +4,7 @@
     ViewData["Title"] = "Detalhes do Fechamento";
     var podeAprovar = User.IsInRole("Administrador") || User.IsInRole("TesoureiroGeral");
     var diferenca = Model.BalancoFisico - Model.BalancoDigital;
+    var balancoTotal = Model.BalancoFisico + Model.BalancoDigital;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -217,17 +218,48 @@
 <!-- Rateios Aplicados -->
 @if (Model.ItensRateio.Any())
 {
-    <div class="card mb-4">
-        <div class="card-header">
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
             <h5 class="card-title mb-0">
                 <i class="bi bi-share me-2"></i>
-                Rateios Aplicados sobre o Balanço Digital
+                Rateios Aplicados sobre o Balanço TOTAL
             </h5>
         </div>
         <div class="card-body">
-            <div class="alert alert-primary">
-                <i class="bi bi-info-circle me-2"></i>
-                Os rateios foram aplicados sobre o <strong>Balanço Digital de @Model.BalancoDigital.ToString("C")</strong>
+            <!-- NOVO: Card explicativo sobre o cálculo -->
+            <div class="alert alert-info">
+                <h6 class="alert-heading">
+                    <i class="bi bi-calculator me-2"></i>
+                    Base de Cálculo dos Rateios
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless mb-0">
+                            <tbody>
+                                <tr>
+                                    <td><i class="bi bi-cash text-warning me-2"></i>Balanço Físico:</td>
+                                    <td class="text-end"><strong>@Model.BalancoFisico.ToString("C")</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><i class="bi bi-bank text-info me-2"></i>Balanço Digital:</td>
+                                    <td class="text-end"><strong>+ @Model.BalancoDigital.ToString("C")</strong></td>
+                                </tr>
+                                <tr class="border-top">
+                                    <td><strong><i class="bi bi-calculator-fill text-primary me-2"></i>BALANÇO TOTAL:</strong></td>
+                                    <td class="text-end"><strong class="text-primary fs-5">@balancoTotal.ToString("C")</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-0 small">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Os rateios são aplicados sobre o <strong>Balanço Total</strong>
+                            (soma do físico + digital), garantindo que todas as entradas
+                            contribuam para o fundo de empréstimos e outros destinos.
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <div class="table-responsive">
@@ -245,25 +277,108 @@
                         @foreach (var rateio in Model.ItensRateio.OrderBy(r => r.RegraRateio.Nome))
                         {
                             <tr>
-                                <td><i class="bi bi-arrow-right-circle me-1 text-primary"></i>@rateio.RegraRateio.Nome</td>
-                                <td><strong>@rateio.RegraRateio.CentroCustoDestino.Nome</strong></td>
-                                <td class="text-end">@rateio.Percentual.ToString("F2")%</td>
+                                <td>
+                                    <i class="bi bi-arrow-right-circle me-1 text-primary"></i>
+                                    @rateio.RegraRateio.Nome
+                                </td>
+                                <td>
+                                    <strong>@rateio.RegraRateio.CentroCustoDestino.Nome</strong>
+                                    @if (rateio.RegraRateio.CentroCustoDestino.Nome.ToUpper().Contains("FUNDO"))
+                                    {
+                                        <span class="badge bg-success ms-1">
+                                            <i class="bi bi-piggy-bank"></i> FUNDO
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge bg-info">@rateio.Percentual.ToString("F2")%</span>
+                                </td>
                                 <td class="text-end">@rateio.ValorBase.ToString("C")</td>
                                 <td class="text-end fw-bold text-primary">@rateio.ValorRateio.ToString("C")</td>
                             </tr>
                         }
                     </tbody>
-                    <tfoot class="table-secondary">
+                    <tfoot class="table-light">
                         <tr>
-                            <td colspan="4" class="text-end"><strong>TOTAL DE RATEIOS:</strong></td>
-                            <td class="text-end fw-bold fs-5">@Model.TotalRateios.ToString("C")</td>
+                            <td colspan="4" class="text-end">
+                                <strong>
+                                    <i class="bi bi-calculator me-2"></i>
+                                    TOTAL DE RATEIOS:
+                                </strong>
+                            </td>
+                            <td class="text-end fw-bold fs-5 text-danger">
+                                @Model.TotalRateios.ToString("C")
+                            </td>
                         </tr>
-                        <tr class="table-info">
-                            <td colspan="4" class="text-end"><strong>SALDO FINAL (após rateios):</strong></td>
-                            <td class="text-end fw-bold fs-5 text-primary">@Model.SaldoFinal.ToString("C")</td>
+                        <tr class="table-success">
+                            <td colspan="4" class="text-end">
+                                <strong>
+                                    <i class="bi bi-piggy-bank me-2"></i>
+                                    SALDO FINAL (após rateios):
+                                </strong>
+                            </td>
+                            <td class="text-end fw-bold fs-4 text-success">
+                                @Model.SaldoFinal.ToString("C")
+                            </td>
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+
+            <!-- NOVO: Explicação detalhada do cálculo -->
+            <div class="alert alert-light mt-3">
+                <h6 class="mb-2">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Como o Saldo Final foi Calculado:
+                </h6>
+                <div class="small">
+                    <p class="mb-2">
+                        <strong>1.</strong> Balanço Total = Balanço Físico + Balanço Digital =
+                        <strong>@Model.BalancoFisico.ToString("C") + @Model.BalancoDigital.ToString("C") = @balancoTotal.ToString("C")</strong>
+                    </p>
+                    <p class="mb-2">
+                        <strong>2.</strong> Rateios Aplicados =
+                        <strong>@Model.TotalRateios.ToString("C")</strong>
+                    </p>
+                    <p class="mb-0">
+                        <strong>3.</strong> Saldo Final = Balanço Total - Total de Rateios =
+                        <strong>@balancoTotal.ToString("C") - @Model.TotalRateios.ToString("C") = @Model.SaldoFinal.ToString("C")</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <!-- NOVO: Mensagem quando não há rateios -->
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning text-dark">
+            <h6 class="card-title mb-0">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Sem Rateios Aplicados
+            </h6>
+        </div>
+        <div class="card-body">
+            <p class="mb-2">Este fechamento não possui rateios aplicados.</p>
+            <p class="mb-0 small text-muted">
+                <strong>Possíveis motivos:</strong>
+            </p>
+            <ul class="small text-muted mb-0">
+                <li>O centro de custo não é reconhecido como SEDE/GERAL</li>
+                <li>Não há regras de rateio ativas configuradas</li>
+                <li>O balanço total era zero ou negativo</li>
+            </ul>
+            <hr>
+            <div class="d-grid gap-2 d-md-flex">
+                <a asp-controller="RegrasRateio" asp-action="Index" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-gear me-1"></i>
+                    Ver Regras de Rateio
+                </a>
+                <a asp-controller="CentrosCusto" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-building me-1"></i>
+                    Ver Centros de Custo
+                </a>
             </div>
         </div>
     </div>

@@ -1,0 +1,317 @@
+﻿@model SistemaTesourariaEclesiastica.Models.RegraRateio
+
+@{
+    ViewData["Title"] = "Excluir Regra de Rateio";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0 text-danger">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Excluir Regra de Rateio
+        </h1>
+        <p class="text-muted mb-0">Confirme a exclusão da regra</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+<div class="alert alert-danger border-danger">
+    <h5 class="alert-heading">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        Atenção! Esta ação não pode ser desfeita.
+    </h5>
+    <p class="mb-0">
+        Você está prestes a excluir esta regra de rateio. Verifique todas as informações antes de confirmar.
+    </p>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-file-text me-2"></i>
+                    Dados da Regra a ser Excluída
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">Nome da Regra</label>
+                        <p class="h5">@Model.Nome</p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted">Percentual</label>
+                        <p class="h5">
+                            <span class="badge bg-info" style="font-size: 1.1rem;">@Model.Percentual.ToString("F2")%</span>
+                        </p>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted">Status</label>
+                        <p class="h5">
+                            @if (Model.Ativo)
+                            {
+                                <span class="badge bg-success">Ativo</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inativo</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">
+                            <i class="bi bi-arrow-right-circle me-1"></i>
+                            Centro de Custo Origem
+                        </label>
+                        <div class="alert alert-light border mb-0">
+                            <h6 class="mb-0">@Model.CentroCustoOrigem.Nome</h6>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-muted">
+                            <i class="bi bi-bullseye me-1"></i>
+                            Centro de Custo Destino
+                        </label>
+                        <div class="alert alert-light border mb-0">
+                            <h6 class="mb-0">@Model.CentroCustoDestino.Nome</h6>
+                        </div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Descricao))
+                {
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Descrição</label>
+                        <p class="text-muted">@Model.Descricao</p>
+                    </div>
+                }
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">ID</label>
+                        <p><i class="bi bi-hash me-1"></i> @Model.Id</p>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label text-muted">Data de Criação</label>
+                        <p><i class="bi bi-calendar-event me-1"></i> @Model.DataCriacao.ToString("dd/MM/yyyy HH:mm")</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Confirmação de Exclusão
+                </h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" asp-for="Id" />
+
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-question-circle me-2"></i>
+                            Tem certeza que deseja excluir esta regra?
+                        </h6>
+                        <p class="mb-2">Ao confirmar a exclusão:</p>
+                        <ul class="mb-0">
+                            <li>A regra será <strong>removida permanentemente</strong> do sistema</li>
+                            <li>Não será mais aplicada em <strong>novos fechamentos</strong></li>
+                            <li>Fechamentos já existentes <strong>não serão afetados</strong></li>
+                            <li>Esta ação <strong>NÃO PODE SER DESFEITA</strong></li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between gap-2">
+                        <div>
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-info">
+                                <i class="bi bi-eye me-2"></i>
+                                Ver Detalhes
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-warning">
+                                <i class="bi bi-pencil me-2"></i>
+                                Editar ao Invés de Excluir
+                            </a>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-danger" id="btnConfirmarExclusao">
+                                <i class="bi bi-trash me-2"></i>
+                                Sim, Excluir Regra
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-shield-exclamation me-2"></i>
+                    Verificação de Segurança
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-light">
+                    <h6 class="mb-2">
+                        <i class="bi bi-check-circle me-1"></i>
+                        O que NÃO será afetado:
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>Fechamentos já aprovados</li>
+                        <li>Rateios já aplicados</li>
+                        <li>Histórico financeiro</li>
+                        <li>Saldo do fundo</li>
+                        <li>Logs de auditoria</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-danger">
+                    <h6 class="mb-2">
+                        <i class="bi bi-x-circle me-1"></i>
+                        O que será removido:
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>A regra de rateio</li>
+                        <li>Suas configurações</li>
+                        <li>Aplicação automática futura</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>
+                    Alternativas
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6>Em vez de excluir, você pode:</h6>
+
+                <div class="d-grid gap-2 mt-3">
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-warning">
+                        <i class="bi bi-pause-circle me-2"></i>
+                        Desativar Temporariamente
+                    </a>
+
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-info">
+                        <i class="bi bi-pencil me-2"></i>
+                        Alterar Percentual
+                    </a>
+                </div>
+
+                <hr>
+
+                <div class="alert alert-info small mb-0">
+                    <strong>Dica:</strong> Se você não precisa mais desta regra mas quer manter o histórico, é melhor <strong>desativá-la</strong> em vez de excluir.
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3 border-danger">
+            <div class="card-header bg-danger text-white">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-exclamation-octagon me-2"></i>
+                    Aviso Final
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-danger mb-0">
+                    <strong>Esta ação é permanente e irreversível.</strong>
+                    Após confirmar, não será possível recuperar esta regra.
+                    Certifique-se de que realmente deseja prosseguir com a exclusão.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            let confirmacaoHabilitada = false;
+
+            // Desabilitar o botão de exclusão inicialmente
+            $('#btnConfirmarExclusao').prop('disabled', true);
+
+            // Após 3 segundos, habilitar o botão
+            setTimeout(function() {
+                confirmacaoHabilitada = true;
+                $('#btnConfirmarExclusao').prop('disabled', false);
+                $('#btnConfirmarExclusao').removeClass('btn-danger').addClass('btn-danger pulse');
+            }, 3000);
+
+            // Confirmação adicional ao clicar
+            $('form').on('submit', function(e) {
+                if (!confirmacaoHabilitada) {
+                    e.preventDefault();
+                    alert('Aguarde alguns segundos antes de confirmar a exclusão.');
+                    return false;
+                }
+
+                const confirmacao = confirm(
+                    '⚠️ ÚLTIMA CONFIRMAÇÃO ⚠️\n\n' +
+                    'Você está prestes a EXCLUIR PERMANENTEMENTE esta regra de rateio.\n\n' +
+                    'Regra: @Model.Nome\n' +
+                    'Origem: @Model.CentroCustoOrigem.Nome\n' +
+                    'Destino: @Model.CentroCustoDestino.Nome\n' +
+                    'Percentual: @Model.Percentual.ToString("F2")%\n\n' +
+                    'Esta ação NÃO PODE SER DESFEITA!\n\n' +
+                    'Deseja realmente continuar?'
+                );
+
+                if (!confirmacao) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Desabilitar o botão após confirmação para evitar duplo clique
+                $('#btnConfirmarExclusao').prop('disabled', true).html(
+                    '<span class="spinner-border spinner-border-sm me-2"></span>Excluindo...'
+                );
+            });
+        });
+    </script>
+
+    <style>
+        .pulse {
+            animation: pulse-animation 2s infinite;
+        }
+
+        @@keyframes pulse-animation {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+    </style>
+}

@@ -1,0 +1,174 @@
+﻿@{
+    ViewData["Title"] = "Diagnóstico do Sistema de Rateios";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-clipboard-check me-2"></i>
+                Diagnóstico do Sistema de Rateios
+            </h1>
+            <p class="text-muted mb-0">Análise completa da configuração e funcionamento dos rateios</p>
+        </div>
+        <div class="btn-group">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>
+                Voltar
+            </a>
+            <a asp-action="DiagnosticoRateios" class="btn btn-primary">
+                <i class="bi bi-arrow-clockwise me-2"></i>
+                Atualizar
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-terminal me-2"></i>
+                        Resultado do Diagnóstico
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="bg-dark text-light p-4 rounded" style="font-family: 'Courier New', monospace; white-space: pre-wrap; overflow-x: auto;">@ViewBag.Diagnostico</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Como Interpretar o Diagnóstico
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6>Símbolos:</h6>
+                    <ul class="list-unstyled">
+                        <li><span class="badge bg-success">✓</span> Item configurado corretamente</li>
+                        <li><span class="badge bg-warning">⚠</span> Aviso - verificar configuração</li>
+                        <li><span class="badge bg-danger">❌</span> Erro - ação necessária</li>
+                    </ul>
+
+                    <hr>
+
+                    <h6>Passos para Corrigir Problemas:</h6>
+                    <ol>
+                        <li>Verifique se o Centro de Custo <strong>"FUNDO"</strong> existe e está ativo</li>
+                        <li>Verifique se o Centro de Custo <strong>"SEDE"</strong> existe e está ativo</li>
+                        <li>Crie uma <strong>Regra de Rateio</strong> de SEDE para FUNDO</li>
+                        <li>Realize um <strong>Fechamento</strong> pela SEDE</li>
+                        <li><strong>Aprove</strong> o fechamento</li>
+                        <li>Verifique o <strong>Saldo do Fundo</strong> em Empréstimos</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Ações Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a asp-controller="CentrosCusto" asp-action="Create" class="btn btn-outline-primary">
+                            <i class="bi bi-building me-2"></i>
+                            Criar Centro de Custo
+                        </a>
+
+                        <a asp-controller="RegrasRateio" asp-action="Create" class="btn btn-outline-primary">
+                            <i class="bi bi-share me-2"></i>
+                            Criar Regra de Rateio
+                        </a>
+
+                        <a asp-controller="FechamentoPeriodo" asp-action="Create" class="btn btn-outline-primary">
+                            <i class="bi bi-calendar-check me-2"></i>
+                            Criar Fechamento
+                        </a>
+
+                        <a asp-controller="FechamentoPeriodo" asp-action="Index" class="btn btn-outline-primary">
+                            <i class="bi bi-list-check me-2"></i>
+                            Listar Fechamentos
+                        </a>
+
+                        <a asp-controller="Emprestimos" asp-action="Index" class="btn btn-outline-success">
+                            <i class="bi bi-cash-coin me-2"></i>
+                            Verificar Saldo do Fundo
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        Dicas Importantes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small">
+                        <li>O rateio só é aplicado em fechamentos da <strong>SEDE</strong></li>
+                        <li>O saldo do fundo só conta rateios de fechamentos <strong>APROVADOS</strong></li>
+                        <li>O nome do Centro de Custo deve conter: FUNDO, REPASSE ou DÍZIMO</li>
+                        <li>Apenas regras de rateio <strong>ATIVAS</strong> são aplicadas</li>
+                        <li>O percentual pode ser de 0,01% até 100%</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-light border">
+                <h6 class="alert-heading">
+                    <i class="bi bi-question-circle me-2"></i>
+                    Precisa de Ajuda?
+                </h6>
+                <p class="mb-0">
+                    Se após seguir todas as recomendações o problema persistir, verifique:
+                </p>
+                <ul class="mb-0">
+                    <li>Os logs de auditoria do sistema</li>
+                    <li>Se há erros no banco de dados</li>
+                    <li>Se as migrações foram aplicadas corretamente</li>
+                    <li>Execute o <strong>Script SQL de Diagnóstico</strong> no banco de dados</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Destacar problemas no texto
+            var diagnosticoText = $('.bg-dark').text();
+
+            if (diagnosticoText.includes('❌')) {
+                $('.card-header.bg-primary')
+                    .removeClass('bg-primary')
+                    .addClass('bg-danger');
+            } else if (diagnosticoText.includes('⚠')) {
+                $('.card-header.bg-primary')
+                    .removeClass('bg-primary')
+                    .addClass('bg-warning text-dark');
+            } else {
+                $('.card-header.bg-primary')
+                    .removeClass('bg-primary')
+                    .addClass('bg-success');
+            }
+        });
+    </script>
+}

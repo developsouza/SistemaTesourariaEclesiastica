@@ -1,0 +1,306 @@
+﻿@model SistemaTesourariaEclesiastica.Models.RegraRateio
+
+@{
+    ViewData["Title"] = "Editar Regra de Rateio";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-pencil me-2"></i>
+            Editar Regra de Rateio
+        </h1>
+        <p class="text-muted mb-0">Atualizar configurações da regra</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>
+        Voltar
+    </a>
+</div>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-gear me-2"></i>
+                    Dados da Regra
+                </h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="DataCriacao" />
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label asp-for="Nome" class="form-label required"></label>
+                            <input asp-for="Nome" class="form-control" placeholder="Ex: Rateio para Departamento A">
+                            <span asp-validation-for="Nome" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Percentual" class="form-label required"></label>
+                            <div class="input-group">
+                                <input asp-for="Percentual" class="form-control" type="number" step="0.01" min="0.01" max="100">
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <span asp-validation-for="Percentual" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="CentroCustoOrigemId" class="form-label required"></label>
+                            <select asp-for="CentroCustoOrigemId" class="form-select" asp-items="ViewBag.CentroCustoOrigemId">
+                                <option value="">Selecione o centro de custo origem</option>
+                            </select>
+                            <span asp-validation-for="CentroCustoOrigemId" class="text-danger"></span>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Centro de custo que fará o rateio
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="CentroCustoDestinoId" class="form-label required"></label>
+                            <select asp-for="CentroCustoDestinoId" class="form-select" asp-items="ViewBag.CentroCustoDestinoId">
+                                <option value="">Selecione o centro de custo destino</option>
+                            </select>
+                            <span asp-validation-for="CentroCustoDestinoId" class="text-danger"></span>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Centro de custo que receberá o rateio
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Descricao" class="form-label"></label>
+                            <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Descrição detalhada da regra (opcional)"></textarea>
+                            <span asp-validation-for="Descricao" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input asp-for="Ativo" class="form-check-input" type="checkbox" role="switch" id="ativoSwitch">
+                                <label class="form-check-label" for="ativoSwitch">
+                                    <strong>Regra Ativa</strong>
+                                    <span class="text-muted d-block small">Quando desativada, a regra não será aplicada em novos fechamentos</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Importante
+                        </h6>
+                        <ul class="mb-0 small">
+                            <li>As alterações <strong>não afetam</strong> fechamentos já aprovados</li>
+                            <li>Apenas <strong>novos fechamentos</strong> usarão as configurações atualizadas</li>
+                            <li>Se desativar a regra, ela não será mais aplicada automaticamente</li>
+                            <li>Fechamentos já criados (pendentes) manterão os rateios originais</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between gap-2">
+                        <div>
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-info">
+                                <i class="bi bi-eye me-2"></i>
+                                Ver Detalhes
+                            </a>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-check-circle me-2"></i>
+                                Salvar Alterações
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Histórico da Regra
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">ID da Regra</label>
+                        <p><i class="bi bi-hash me-1"></i> @Model.Id</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">Data de Criação</label>
+                        <p><i class="bi bi-calendar-event me-1"></i> @Model.DataCriacao.ToString("dd/MM/yyyy HH:mm")</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label text-muted">Status Atual</label>
+                        <p>
+                            @if (Model.Ativo)
+                            {
+                                <span class="badge bg-success">Ativo</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inativo</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-calculator me-2"></i>
+                    Simulador Atualizado
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Valor Base (R$):</label>
+                    <input type="number" id="valorBase" class="form-control" placeholder="10000" step="0.01" value="10000">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Novo Percentual (%):</label>
+                    <input type="number" id="percentualSim" class="form-control" placeholder="10" step="0.01" value="@Model.Percentual">
+                    <small class="text-muted">Sincronizado com o campo acima</small>
+                </div>
+                <div class="alert alert-light">
+                    <strong>Valor do Rateio:</strong>
+                    <div id="valorRateio" class="h5 text-primary">R$ 0,00</div>
+                    <strong>Saldo Restante:</strong>
+                    <div id="saldoRestante" class="h6 text-secondary">R$ 0,00</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Dicas de Edição
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Atenção
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>Alterar o percentual afeta apenas <strong>novos fechamentos</strong></li>
+                        <li>Desativar a regra não remove rateios já aplicados</li>
+                        <li>Origem e destino devem ser diferentes</li>
+                        <li>Não pode ter duas regras ativas com a mesma combinação</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        Quando Editar?
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>Ajustar o percentual de rateio</li>
+                        <li>Ativar/desativar temporariamente</li>
+                        <li>Atualizar descrição para documentação</li>
+                        <li>Corrigir nome da regra</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        $(document).ready(function() {
+            // Validação para evitar origem = destino
+            $('#CentroCustoOrigemId, #CentroCustoDestinoId').on('change', function() {
+                var origem = $('#CentroCustoOrigemId').val();
+                var destino = $('#CentroCustoDestinoId').val();
+
+                if (origem && destino && origem === destino) {
+                    alert('O centro de custo destino deve ser diferente do origem.');
+                    $(this).val('');
+                }
+            });
+
+            // Simulador de cálculo sincronizado
+            function calcularSimulacao() {
+                var valorBase = parseFloat($('#valorBase').val()) || 0;
+                var percentual = parseFloat($('#percentualSim').val()) || parseFloat($('#Percentual').val()) || 0;
+
+                var valorRateio = valorBase * (percentual / 100);
+                var saldoRestante = valorBase - valorRateio;
+
+                $('#valorRateio').text(valorRateio.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }));
+
+                $('#saldoRestante').text(saldoRestante.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }));
+            }
+
+            $('#valorBase, #percentualSim, #Percentual').on('input', function() {
+                // Sincronizar percentual
+                if ($(this).attr('id') === 'Percentual') {
+                    $('#percentualSim').val($(this).val());
+                } else if ($(this).attr('id') === 'percentualSim') {
+                    $('#Percentual').val($(this).val());
+                }
+
+                calcularSimulacao();
+            });
+
+            // Calcular inicialmente
+            calcularSimulacao();
+
+            // Foco no primeiro campo
+            $('#Nome').focus();
+
+            // Confirmação antes de desativar
+            $('form').on('submit', function(e) {
+                var ativo = $('#ativoSwitch').is(':checked');
+                if (!ativo) {
+                    if (!confirm('Você está desativando esta regra. Ela não será mais aplicada em novos fechamentos. Deseja continuar?')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            });
+        });
+    </script>
+}
