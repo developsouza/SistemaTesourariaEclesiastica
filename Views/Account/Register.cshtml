@@ -1,154 +1,239 @@
 @model SistemaTesourariaEclesiastica.ViewModels.RegisterViewModel
 
 @{
-    ViewData["Title"] = "Registrar";
-    Layout = "_Layout";
+    ViewData["Title"] = "Registrar Novo Usuário";
 }
 
 <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-        <div class="card shadow">
-            <div class="card-body p-4">
-                <div class="text-center mb-4">
-                    <i class="bi bi-person-plus display-4 text-primary"></i>
-                    <h2 class="h4 mt-2">Criar Nova Conta</h2>
-                    <p class="text-muted">Preencha os dados para criar sua conta</p>
+    <div class="col-md-10 col-lg-8 col-xl-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4 p-md-5">
+                <!-- Header -->
+                <div class="text-center mb-5">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10"
+                             style="width: 80px; height: 80px;">
+                            <i class="bi bi-person-plus text-primary" style="font-size: 2.5rem;"></i>
+                        </div>
+                    </div>
+                    <h2 class="h3 fw-bold">Criar Nova Conta</h2>
+                    <p class="text-muted mb-0">Preencha os dados para criar seu acesso ao sistema</p>
                 </div>
 
                 <form asp-action="Register" method="post">
-                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-                    
-                    <div class="row g-3">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger border-0" role="alert"></div>
+
+                    <div class="row g-4">
+                        <!-- Nome Completo -->
                         <div class="col-12">
-                            <label asp-for="NomeCompleto" class="form-label required"></label>
-                            <input asp-for="NomeCompleto" class="form-control" placeholder="Nome completo" />
-                            <span asp-validation-for="NomeCompleto" class="text-danger"></span>
+                            <label asp-for="NomeCompleto" class="form-label fw-semibold">
+                                <i class="bi bi-person text-muted me-2"></i>Nome Completo
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="NomeCompleto" class="form-control form-control-lg"
+                                   placeholder="Digite seu nome completo" autofocus />
+                            <span asp-validation-for="NomeCompleto" class="text-danger small"></span>
                         </div>
-                        
+
+                        <!-- Email -->
                         <div class="col-12">
-                            <label asp-for="Email" class="form-label required"></label>
+                            <label asp-for="Email" class="form-label fw-semibold">
+                                <i class="bi bi-envelope text-muted me-2"></i>E-mail
+                                <span class="text-danger">*</span>
+                            </label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="bi bi-envelope"></i>
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-at"></i>
                                 </span>
-                                <input asp-for="Email" class="form-control" placeholder="seu@email.com" />
+                                <input asp-for="Email" class="form-control form-control-lg"
+                                       placeholder="seu@email.com" />
                             </div>
-                            <span asp-validation-for="Email" class="text-danger"></span>
+                            <span asp-validation-for="Email" class="text-danger small"></span>
                         </div>
-                        
+
+                        <!-- Centro de Custo -->
                         <div class="col-12">
-                            <label asp-for="CentroCustoId" class="form-label required"></label>
-                            <select asp-for="CentroCustoId" class="form-select" asp-items="ViewBag.CentroCustoId">
+                            <label asp-for="CentroCustoId" class="form-label fw-semibold">
+                                <i class="bi bi-building text-muted me-2"></i>Centro de Custo
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="CentroCustoId" class="form-select form-select-lg" asp-items="ViewBag.CentroCustoId">
                                 <option value="">Selecione o centro de custo</option>
                             </select>
-                            <span asp-validation-for="CentroCustoId" class="text-danger"></span>
+                            <span asp-validation-for="CentroCustoId" class="text-danger small"></span>
                             <div class="form-text">
                                 <i class="bi bi-info-circle me-1"></i>
                                 Centro de custo ao qual você está vinculado
                             </div>
                         </div>
-                        
+
+                        <!-- Senha -->
                         <div class="col-md-6">
-                            <label asp-for="Password" class="form-label required"></label>
+                            <label asp-for="Password" class="form-label fw-semibold">
+                                <i class="bi bi-lock text-muted me-2"></i>Senha
+                                <span class="text-danger">*</span>
+                            </label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="bi bi-lock"></i>
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-shield-lock"></i>
                                 </span>
-                                <input asp-for="Password" class="form-control" placeholder="Senha" />
-                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('Password')">
+                                <input asp-for="Password" class="form-control form-control-lg"
+                                       placeholder="Digite sua senha" />
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('Password', 'toggleIcon1')">
                                     <i class="bi bi-eye" id="toggleIcon1"></i>
                                 </button>
                             </div>
-                            <span asp-validation-for="Password" class="text-danger"></span>
+                            <span asp-validation-for="Password" class="text-danger small"></span>
                         </div>
-                        
+
+                        <!-- Confirmar Senha -->
                         <div class="col-md-6">
-                            <label asp-for="ConfirmPassword" class="form-label required"></label>
+                            <label asp-for="ConfirmPassword" class="form-label fw-semibold">
+                                <i class="bi bi-shield-check text-muted me-2"></i>Confirmar Senha
+                                <span class="text-danger">*</span>
+                            </label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="bi bi-lock-fill"></i>
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-shield-check"></i>
                                 </span>
-                                <input asp-for="ConfirmPassword" class="form-control" placeholder="Confirmar senha" />
-                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('ConfirmPassword')">
+                                <input asp-for="ConfirmPassword" class="form-control form-control-lg"
+                                       placeholder="Confirme sua senha" />
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('ConfirmPassword', 'toggleIcon2')">
                                     <i class="bi bi-eye" id="toggleIcon2"></i>
                                 </button>
                             </div>
-                            <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
                         </div>
                     </div>
-                    
-                    <div class="mt-4">
-                        <div class="alert alert-info">
-                            <h6 class="alert-heading">
-                                <i class="bi bi-shield-check me-2"></i>
-                                Requisitos da Senha
-                            </h6>
-                            <ul class="mb-0 small">
-                                <li>Mínimo de 6 caracteres</li>
-                                <li>Pelo menos uma letra maiúscula</li>
-                                <li>Pelo menos uma letra minúscula</li>
-                                <li>Pelo menos um número</li>
-                                <li>Pelo menos um caractere especial</li>
-                            </ul>
+
+                    <!-- Requisitos da Senha -->
+                    <div class="mt-4 p-3 rounded-3" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0.02) 100%); border-left: 4px solid var(--bs-primary);">
+                        <h6 class="fw-semibold mb-3">
+                            <i class="bi bi-info-circle text-primary me-2"></i>
+                            Requisitos da Senha
+                        </h6>
+                        <div class="row g-2 small">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <span>Mínimo de 6 caracteres</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <span>Uma letra maiúscula</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <span>Uma letra minúscula</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <span>Um número</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-person-plus me-2"></i>
+
+                    <!-- Botões -->
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-lg me-2"></i>
                             Criar Conta
                         </button>
                     </div>
                 </form>
-                
+
                 <hr class="my-4">
-                
+
+                <!-- Link para Login -->
                 <div class="text-center">
-                    <p class="mb-0">
+                    <p class="mb-0 text-muted">
                         Já tem uma conta?
-                        <a asp-action="Login" class="text-decoration-none">
+                        <a asp-action="Login" class="text-decoration-none fw-semibold">
                             <i class="bi bi-box-arrow-in-right me-1"></i>
-                            Entrar
+                            Fazer Login
                         </a>
                     </p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Card de Ajuda -->
+        <div class="card border-0 bg-light mt-4">
+            <div class="card-body">
+                <h6 class="card-title fw-semibold mb-3">
+                    <i class="bi bi-question-circle text-info me-2"></i>
+                    Precisa de Ajuda?
+                </h6>
+                <p class="mb-0 small text-muted">
+                    Se você está com dificuldades para criar sua conta ou precisa de permissões especiais,
+                    entre em contato com o administrador do sistema.
+                </p>
             </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
     <script>
-        function togglePassword(fieldId) {
+        function togglePassword(fieldId, iconId) {
             const passwordInput = document.getElementById(fieldId);
-            const toggleIcon = document.getElementById(fieldId === 'Password' ? 'toggleIcon1' : 'toggleIcon2');
-            
+            const toggleIcon = document.getElementById(iconId);
+
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
-                toggleIcon.className = 'bi bi-eye-slash';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
             } else {
                 passwordInput.type = 'password';
-                toggleIcon.className = 'bi bi-eye';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
             }
         }
-        
-        // Validação de senha em tempo real
+
+        // Validação em tempo real
         document.getElementById('Password').addEventListener('input', function() {
             const password = this.value;
-            const requirements = [
-                { regex: /.{6,}/, text: 'Mínimo de 6 caracteres' },
-                { regex: /[A-Z]/, text: 'Letra maiúscula' },
-                { regex: /[a-z]/, text: 'Letra minúscula' },
-                { regex: /\d/, text: 'Número' },
-                { regex: /[^A-Za-z0-9]/, text: 'Caractere especial' }
-            ];
-            
-            // Aqui você pode adicionar indicadores visuais dos requisitos
+            // Aqui você pode adicionar validação visual dos requisitos
         });
-        
-        // Foco no primeiro campo
+
+        // Foco automático
         document.getElementById('NomeCompleto').focus();
     </script>
 }
+
+<style>
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    .input-group-text {
+        border-right: none;
+    }
+
+    .input-group .form-control {
+        border-left: none;
+    }
+
+    .input-group:focus-within .input-group-text {
+        border-color: #86b7fe;
+        background-color: #eff6ff;
+        color: #2563eb;
+    }
+
+    .input-group:focus-within .form-control {
+        border-color: #86b7fe;
+    }
+</style>

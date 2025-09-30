@@ -3,100 +3,115 @@
     Layout = "_LoginLayout";
 }
 
-<div class="min-vh-100 d-flex align-items-center justify-content-center bg-gradient-danger">
+<div class="min-vh-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-xl-8 col-lg-10 col-md-12">
-                <div class="card border-0 shadow-lg">
-                    <div class="card-body p-0">
-                        <div class="row">
-                            <div class="col-lg-6 d-none d-lg-block bg-access-denied-image">
-                                <div class="access-denied-panel d-flex flex-column justify-content-center align-items-center h-100 text-white p-5">
-                                    <div class="text-center">
-                                        <div class="access-denied-icon mb-4">
-                                            <i class="fas fa-shield-alt fa-5x text-white-50"></i>
+            <div class="col-xl-10 col-lg-11">
+                <div class="card border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
+                    <div class="row g-0">
+                        <!-- Painel Esquerdo -->
+                        <div class="col-lg-5 d-none d-lg-flex"
+                             style="background: linear-gradient(135deg, rgba(220, 53, 69, 0.95) 0%, rgba(200, 35, 51, 0.95) 100%),
+                             url('data:image /svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 1000 1000&quot;><defs><pattern id=&quot;security-pattern&quot; x=&quot;0&quot; y=&quot;0&quot; width=&quot;50&quot; height=&quot;50&quot; patternUnits=&quot;userSpaceOnUse&quot;><circle cx=&quot;25&quot; cy=&quot;25&quot; r=&quot;2&quot; fill=&quot;rgba(255,255,255,0.1)&quot;/></pattern></defs><rect width=&quot;1000&quot; height=&quot;1000&quot; fill=&quot;url(%23security-pattern)&quot;/></svg>');
+                                    background-size: cover; background-position: center;">
+                            <div class="d-flex flex-column justify-content-center align-items-center h-100 text-white p-5">
+                                <div class="text-center">
+                                    <div class="mb-4" style="animation: pulse 2s infinite;">
+                                        <i class="bi bi-shield-exclamation" style="font-size: 5rem; opacity: 0.9;"></i>
+                                    </div>
+                                    <h2 class="h3 mb-4 fw-bold">Área Protegida</h2>
+                                    <p class="lead mb-4 opacity-90">
+                                        Esta seção do sistema requer permissões específicas para acesso.
+                                    </p>
+
+                                    <div class="security-info mt-5">
+                                        <div class="d-flex align-items-center mb-3 opacity-90">
+                                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-15"
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="bi bi-lock-fill"></i>
+                                            </div>
+                                            <span>Controle de Acesso Ativo</span>
                                         </div>
-                                        <h2 class="h3 mb-4">Área Protegida</h2>
-                                        <p class="lead">
-                                            Esta seção do sistema requer permissões específicas para acesso.
-                                        </p>
-                                        <div class="security-info mt-4">
-                                            <div class="info-item mb-3">
-                                                <i class="fas fa-lock me-3"></i>
-                                                <span>Controle de Acesso Ativo</span>
+                                        <div class="d-flex align-items-center mb-3 opacity-90">
+                                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-15"
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="bi bi-person-badge"></i>
                                             </div>
-                                            <div class="info-item mb-3">
-                                                <i class="fas fa-user-shield me-3"></i>
-                                                <span>Auditoria de Segurança</span>
+                                            <span>Auditoria de Segurança</span>
+                                        </div>
+                                        <div class="d-flex align-items-center opacity-90">
+                                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-15"
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="bi bi-eye-fill"></i>
                                             </div>
-                                            <div class="info-item mb-3">
-                                                <i class="fas fa-eye me-3"></i>
-                                                <span>Monitoramento Contínuo</span>
-                                            </div>
+                                            <span>Monitoramento Contínuo</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="col-lg-6">
-                                <div class="access-denied-content p-5">
-                                    <div class="text-center">
-                                        <div class="d-lg-none mb-4">
-                                            <i class="fas fa-ban fa-4x text-danger"></i>
-                                        </div>
-                                        <h1 class="display-1 text-danger fw-bold">403</h1>
-                                        <h2 class="h4 text-gray-900 mb-4">Acesso Negado</h2>
-                                        <p class="text-muted mb-4">
-                                            Você não possui permissão para acessar esta página ou recurso.
-                                        </p>
+                        <!-- Painel Direito -->
+                        <div class="col-lg-7">
+                            <div class="p-5">
+                                <div class="text-center mb-5">
+                                    <!-- Ícone Mobile -->
+                                    <div class="d-lg-none mb-4">
+                                        <i class="bi bi-exclamation-triangle" style="font-size: 4rem; color: #dc3545;"></i>
                                     </div>
 
-                                    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
-                                        <i class="fas fa-exclamation-triangle me-3"></i>
-                                        <div>
-                                            <strong>Permissão Insuficiente:</strong>
+                                    <h1 class="display-1 fw-bold mb-2" style="color: #dc3545; font-size: 6rem; line-height: 1;">403</h1>
+                                    <h2 class="h4 fw-bold mb-3">Acesso Negado</h2>
+                                    <p class="text-muted mb-4">
+                                        Você não possui permissão para acessar esta página ou recurso.
+                                    </p>
+                                </div>
+
+                                <div class="alert border-0 d-flex align-items-start mb-4"
+                                     style="background: linear-gradient(135deg, rgba(255, 193, 7, 0.15) 0%, rgba(255, 193, 7, 0.05) 100%);">
+                                    <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0 me-3 mt-1 fs-5"></i>
+                                    <div>
+                                        <strong>Permissão Insuficiente:</strong>
+                                        <div class="mt-1 small text-muted">
                                             Sua conta não possui o nível de acesso necessário para esta operação.
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="possible-actions mb-4">
-                                        <h6 class="text-muted mb-3">O que você pode fazer:</h6>
-                                        <ul class="list-unstyled">
-                                            <li class="mb-2">
-                                                <i class="fas fa-arrow-left text-primary me-2"></i>
-                                                Voltar para a página anterior
-                                            </li>
-                                            <li class="mb-2">
-                                                <i class="fas fa-home text-primary me-2"></i>
-                                                Ir para o Dashboard principal
-                                            </li>
-                                            <li class="mb-2">
-                                                <i class="fas fa-user-cog text-primary me-2"></i>
-                                                Entrar em contato com o administrador
-                                            </li>
-                                            <li class="mb-2">
-                                                <i class="fas fa-sign-out-alt text-primary me-2"></i>
-                                                Fazer logout e entrar com outra conta
-                                            </li>
-                                        </ul>
+                                <div class="mb-4">
+                                    <h6 class="text-muted mb-3 fw-semibold">O que você pode fazer:</h6>
+                                    <div class="list-group list-group-flush">
+                                        <div class="list-group-item border-0 bg-transparent px-0 py-2">
+                                            <i class="bi bi-arrow-left text-primary me-2"></i>
+                                            <span>Voltar para a página anterior</span>
+                                        </div>
+                                        <div class="list-group-item border-0 bg-transparent px-0 py-2">
+                                            <i class="bi bi-house text-primary me-2"></i>
+                                            <span>Ir para o Dashboard principal</span>
+                                        </div>
+                                        <div class="list-group-item border-0 bg-transparent px-0 py-2">
+                                            <i class="bi bi-person-gear text-primary me-2"></i>
+                                            <span>Entrar em contato com o administrador</span>
+                                        </div>
+                                        <div class="list-group-item border-0 bg-transparent px-0 py-2">
+                                            <i class="bi bi-box-arrow-right text-primary me-2"></i>
+                                            <span>Fazer logout e entrar com outra conta</span>
+                                        </div>
                                     </div>
+                                </div>
 
-                                    <div class="action-buttons">
-                                        <a href="javascript:history.back()" class="btn btn-secondary btn-lg me-2">
-                                            <i class="fas fa-arrow-left me-2"></i>
-                                            Voltar
-                                        </a>
-                                        <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-lg me-2">
-                                            <i class="fas fa-home me-2"></i>
-                                            Dashboard
-                                        </a>
-                                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                            <button type="submit" class="btn btn-outline-danger btn-lg">
-                                                <i class="fas fa-sign-out-alt me-2"></i>
-                                                Logout
-                                            </button>
-                                        </form>
-                                    </div>
+                                <div class="d-flex flex-column flex-sm-row gap-2">
+                                    <button onclick="history.back()" class="btn btn-outline-secondary flex-fill">
+                                        <i class="bi bi-arrow-left me-2"></i>Voltar
+                                    </button>
+                                    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary flex-fill">
+                                        <i class="bi bi-house me-2"></i>Dashboard
+                                    </a>
+                                    <form asp-controller="Account" asp-action="Logout" method="post" class="flex-fill">
+                                        <button type="submit" class="btn btn-danger w-100">
+                                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -108,78 +123,43 @@
 </div>
 
 <style>
-    .bg-gradient-danger {
-        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-        min-height: 100vh;
-    }
-
-    .bg-access-denied-image {
-        background: linear-gradient(135deg, rgba(220, 53, 69, 0.9) 0%, rgba(200, 35, 51, 0.9) 100%), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="security-pattern" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M25,5 L45,25 L25,45 L5,25 Z" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="1000" height="1000" fill="url(%23security-pattern)"/></svg>');
-        background-size: cover;
-        background-position: center;
-    }
-
-    .access-denied-panel {
-        background: rgba(0,0,0,0.2);
-        backdrop-filter: blur(10px);
-    }
-
-    .info-item {
-        font-size: 0.95rem;
-        opacity: 0.9;
-    }
-
-    .access-denied-content {
-        position: relative;
-    }
-
-    .display-1 {
-        font-size: 6rem;
-        line-height: 1;
-    }
-
-    .possible-actions ul li {
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #eee;
-    }
-
-        .possible-actions ul li:last-child {
-            border-bottom: none;
+    @@keyframes pulse {
+        0%, 100% {
+            opacity: 0.9;
+            transform: scale(1);
         }
 
-    .action-buttons .btn {
-        min-width: 120px;
-    }
-
-    @@media (max-width: 991.98px) {
-        .display-1
-
-    {
-        font-size: 4rem;
-    }
-
-    .action-buttons .btn {
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-
+        50% {
+            opacity: 1;
+            transform: scale(1.05);
+        }
     }
 
     .card {
-        animation: slideInUp 0.8s ease-out;
+        animation: slideInUp 0.6s ease-out;
     }
 
     @@keyframes slideInUp {
-        from
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
 
-    {
-        opacity: 0;
-        transform: translate3d(0, 50px, 0);
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
-    to {
-        opacity: 1;
-        transform: translate3d(0, 0, 0);
+    .list-group-item:hover {
+        background: rgba(37, 99, 235, 0.05) !important;
+        transform: translateX(4px);
+        transition: all 0.3s ease;
     }
 
-    }</style>
+    @@media (max-width: 991.98px) {
+        .display-1 {
+            font-size: 4rem !important;
+        }
+    }
+</style>

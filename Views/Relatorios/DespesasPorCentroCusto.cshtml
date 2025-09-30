@@ -77,16 +77,15 @@
     </div>
 }
 
-<!-- Tabela de Detalhamento -->
-<div class="card">
+<!-- Tabela DESKTOP -->
+<div class="card d-none d-md-block">
     <div class="card-header bg-white border-0 p-3">
         <h5 class="mb-0 small">Detalhamento das Despesas</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0" id="despesasTable">
-                <!-- Desktop -->
-                <thead class="table-light d-none d-md-table-header-group">
+                <thead class="table-light">
                     <tr>
                         <th>Data</th>
                         <th>Descrição</th>
@@ -104,9 +103,7 @@
                     @foreach (var item in Model)
                     {
                         totalDespesas += item.Valor;
-
-                        <!-- Desktop -->
-                        <tr class="d-none d-md-table-row">
+                        <tr>
                             <td>@item.Data.ToString("dd/MM/yyyy")</td>
                             <td class="fw-semibold">@item.Descricao</td>
                             <td>@item.Fornecedor?.Nome</td>
@@ -121,49 +118,9 @@
                             </td>
                             <td class="text-end text-danger fw-bold">@item.Valor.ToString("C")</td>
                         </tr>
-
-                        <!-- Mobile -->
-                        <tr class="d-md-none">
-                            <td class="p-2">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div class="flex-grow-1">
-                                        <div class="fw-semibold small mb-1">@item.Descricao</div>
-                                        <small class="text-muted d-block mb-1">
-                                            <i class="bi bi-calendar3 me-1"></i>
-                                            @item.Data.ToString("dd/MM/yy")
-                                        </small>
-                                        @if (item.Fornecedor != null)
-                                        {
-                                            <small class="text-muted d-block">
-                                                <i class="bi bi-person me-1"></i>
-                                                @item.Fornecedor.Nome
-                                            </small>
-                                        }
-                                    </div>
-                                    <div class="text-end ms-2">
-                                        <div class="text-danger fw-bold">
-                                            @item.Valor.ToString("C")
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="d-flex flex-wrap gap-1">
-                                    <span class="badge bg-info" style="font-size: 0.65rem;">
-                                        @item.CentroCusto?.Nome
-                                    </span>
-                                    <span class="badge bg-primary" style="font-size: 0.65rem;">
-                                        @item.PlanoDeContas?.Nome
-                                    </span>
-                                    <span class="badge bg-secondary" style="font-size: 0.65rem;">
-                                        @item.MeioDePagamento?.Nome
-                                    </span>
-                                </div>
-                            </td>
-                        </tr>
                     }
                 </tbody>
-
-                <!-- Totais Desktop -->
-                <tfoot class="d-none d-md-table-footer-group">
+                <tfoot>
                     <tr class="table-dark">
                         <th colspan="6">TOTAL GERAL</th>
                         <th class="text-end text-danger">@totalDespesas.ToString("C")</th>
@@ -171,13 +128,65 @@
                 </tfoot>
             </table>
         </div>
+    </div>
+</div>
+
+<!-- Tabela MOBILE -->
+<div class="card d-md-none">
+    <div class="card-header bg-white border-0 p-3">
+        <h5 class="mb-0 small">Detalhamento das Despesas</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            @{
+                decimal totalDespesasMobile = 0;
+            }
+            @foreach (var item in Model)
+            {
+                totalDespesasMobile += item.Valor;
+                <div class="list-group-item p-2">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold small mb-1">@item.Descricao</div>
+                            <small class="text-muted d-block mb-1">
+                                <i class="bi bi-calendar3 me-1"></i>
+                                @item.Data.ToString("dd/MM/yy")
+                            </small>
+                            @if (item.Fornecedor != null)
+                            {
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-person me-1"></i>
+                                    @item.Fornecedor.Nome
+                                </small>
+                            }
+                        </div>
+                        <div class="text-end ms-2">
+                            <div class="text-danger fw-bold">
+                                @item.Valor.ToString("C")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1">
+                        <span class="badge bg-info" style="font-size: 0.65rem;">
+                            @item.CentroCusto?.Nome
+                        </span>
+                        <span class="badge bg-primary" style="font-size: 0.65rem;">
+                            @item.PlanoDeContas?.Nome
+                        </span>
+                        <span class="badge bg-secondary" style="font-size: 0.65rem;">
+                            @item.MeioDePagamento?.Nome
+                        </span>
+                    </div>
+                </div>
+            }
+        </div>
 
         <!-- Total Mobile -->
-        <div class="d-md-none p-3 bg-dark text-white">
+        <div class="p-3 bg-dark text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="fw-bold">TOTAL GERAL</div>
                 <div class="text-danger fw-bold h5 mb-0">
-                    @totalDespesas.ToString("C")
+                    @totalDespesasMobile.ToString("C")
                 </div>
             </div>
         </div>
@@ -186,21 +195,16 @@
 
 @section Scripts {
     <script>
-                $(document).ready(function() {
-            if (window.innerWidth > 768) {
-                var table = $('#despesasTable').DataTable({
-                    language: {
-                        url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
-                    },
-                    responsive: false, // Mudei para false
-                    order: [[0, 'desc']],
-                    pageLength: 25,
-                    // Adicione:
-                    columnDefs: [
-                        { targets: '_all', orderable: true }
-                    ]
-                });
-            }
+        $(document).ready(function() {
+            // Inicializar DataTables apenas na tabela desktop
+            $('#despesasTable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+                },
+                responsive: false,
+                order: [[0, 'desc']],
+                pageLength: 25
+            });
         });
     </script>
 }

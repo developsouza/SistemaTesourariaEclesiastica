@@ -1,3 +1,5 @@
+@model SistemaTesourariaEclesiastica.ViewModels.LoginViewModel
+
 @{
     ViewData["Title"] = "Login";
     Layout = "_LoginLayout";
@@ -6,52 +8,69 @@
 <div class="container-fluid h-100">
     <div class="row h-100 g-0">
         <!-- Painel Esquerdo - Informações -->
-        <div class="col-lg-6 d-none d-lg-flex bg-login-image">
-            <div class="login-info-panel d-flex flex-column justify-content-center align-items-center w-100 p-5">
-                <div class="text-center text-white mb-5">
-                    <i class="bi bi-bank2 display-1 mb-4"></i>
+        <div class="col-lg-6 d-none d-lg-flex"
+             style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(30, 64, 175, 0.95) 100%),
+             url('data:image /svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 1000 1000&quot;><defs><pattern id=&quot;church-pattern&quot; x=&quot;0&quot; y=&quot;0&quot; width=&quot;80&quot; height=&quot;80&quot; patternUnits=&quot;userSpaceOnUse&quot;><circle cx=&quot;40&quot; cy=&quot;40&quot; r=&quot;2&quot; fill=&quot;rgba(255,255,255,0.1)&quot;/></pattern></defs><rect width=&quot;1000&quot; height=&quot;1000&quot; fill=&quot;url(%23church-pattern)&quot;/></svg>');
+                    background-size: cover; background-position: center;">
+            <div class="d-flex flex-column justify-content-center align-items-center w-100 p-5 text-white">
+                <div class="text-center mb-5" style="animation: fadeInDown 0.8s ease-out;">
+                    <div class="mb-4" style="animation: pulse 2s infinite;">
+                        <i class="bi bi-bank2" style="font-size: 5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));"></i>
+                    </div>
                     <h1 class="display-4 fw-bold mb-3">Sistema de Tesouraria</h1>
-                    <p class="lead mb-5">Gestão completa e profissional para sua igreja</p>
+                    <p class="lead mb-0 opacity-90">Gestão completa e profissional para sua igreja</p>
                 </div>
 
-                <div class="features-list text-white w-100" style="max-width: 400px;">
-                    <div class="feature-item d-flex align-items-start mb-4">
-                        <div class="feature-icon me-3">
-                            <i class="bi bi-shield-check fs-3"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-semibold mb-1">Seguro e Confiável</h5>
-                            <p class="mb-0 opacity-75">Seus dados protegidos com criptografia de ponta</p>
-                        </div>
-                    </div>
-
-                    <div class="feature-item d-flex align-items-start mb-4">
-                        <div class="feature-icon me-3">
-                            <i class="bi bi-graph-up fs-3"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-semibold mb-1">Relatórios Completos</h5>
-                            <p class="mb-0 opacity-75">Análises detalhadas do fluxo financeiro</p>
+                <div class="w-100" style="max-width: 400px; animation: fadeInUp 0.8s ease-out 0.2s backwards;">
+                    <div class="feature-item mb-4 p-3 rounded-3" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); transition: all 0.3s;">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 48px; height: 48px; background: rgba(255,255,255,0.15); flex-shrink: 0;">
+                                <i class="bi bi-shield-check" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-semibold mb-1">Seguro e Confiável</h5>
+                                <p class="mb-0 small opacity-90">Seus dados protegidos com criptografia de ponta</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="feature-item d-flex align-items-start mb-4">
-                        <div class="feature-icon me-3">
-                            <i class="bi bi-people fs-3"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-semibold mb-1">Gestão de Membros</h5>
-                            <p class="mb-0 opacity-75">Controle completo de contribuições e dízimos</p>
+                    <div class="feature-item mb-4 p-3 rounded-3" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); transition: all 0.3s;">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 48px; height: 48px; background: rgba(255,255,255,0.15); flex-shrink: 0;">
+                                <i class="bi bi-graph-up-arrow" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-semibold mb-1">Relatórios Completos</h5>
+                                <p class="mb-0 small opacity-90">Análises detalhadas do fluxo financeiro</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="feature-item d-flex align-items-start">
-                        <div class="feature-icon me-3">
-                            <i class="bi bi-cloud-check fs-3"></i>
+                    <div class="feature-item mb-4 p-3 rounded-3" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); transition: all 0.3s;">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 48px; height: 48px; background: rgba(255,255,255,0.15); flex-shrink: 0;">
+                                <i class="bi bi-people-fill" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-semibold mb-1">Gestão de Membros</h5>
+                                <p class="mb-0 small opacity-90">Controle completo de contribuições e dízimos</p>
+                            </div>
                         </div>
-                        <div>
-                            <h5 class="fw-semibold mb-1">Acesso em Qualquer Lugar</h5>
-                            <p class="mb-0 opacity-75">Sistema web responsivo e moderno</p>
+                    </div>
+
+                    <div class="feature-item p-3 rounded-3" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); transition: all 0.3s;">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 48px; height: 48px; background: rgba(255,255,255,0.15); flex-shrink: 0;">
+                                <i class="bi bi-cloud-check-fill" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-semibold mb-1">Acesso em Qualquer Lugar</h5>
+                                <p class="mb-0 small opacity-90">Sistema web responsivo e moderno</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -59,12 +78,14 @@
         </div>
 
         <!-- Painel Direito - Formulário -->
-        <div class="col-lg-6 d-flex align-items-center justify-content-center login-form-panel">
-            <div class="w-100 p-4" style="max-width: 450px;">
+        <div class="col-lg-6 d-flex align-items-center justify-content-center bg-white position-relative">
+            <div class="w-100 p-4 p-md-5" style="max-width: 450px; animation: fadeInRight 0.8s ease-out;">
                 <!-- Logo Mobile -->
                 <div class="text-center mb-5 d-lg-none">
-                    <i class="bi bi-bank2 display-3 text-primary"></i>
-                    <h2 class="fw-bold mt-3">Tesouraria</h2>
+                    <div class="mb-3">
+                        <i class="bi bi-bank2" style="font-size: 4rem; color: #2563eb;"></i>
+                    </div>
+                    <h2 class="fw-bold">Tesouraria</h2>
                 </div>
 
                 <!-- Título -->
@@ -74,55 +95,54 @@
                 </div>
 
                 <!-- Formulário -->
-                <form id="loginForm" method="post">
+                <form asp-action="Login" method="post" id="loginForm">
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger border-0" role="alert"></div>
+
                     <!-- E-mail -->
                     <div class="mb-3">
-                        <label for="email" class="form-label fw-semibold">
-                            <i class="bi bi-envelope me-2"></i>E-mail
+                        <label asp-for="Email" class="form-label fw-semibold">
+                            <i class="bi bi-envelope text-muted me-2"></i>E-mail
                         </label>
                         <div class="input-group">
-                            <span class="input-group-text border-end-0 bg-transparent">
+                            <span class="input-group-text bg-light border-end-0">
                                 <i class="bi bi-person"></i>
                             </span>
-                            <input type="email"
-                                   class="form-control form-control-user border-start-0 ps-0"
-                                   id="email"
-                                   name="email"
+                            <input asp-for="Email" type="email"
+                                   class="form-control form-control-lg border-start-0"
                                    placeholder="seu@email.com"
                                    required
-                                   autocomplete="username">
+                                   autocomplete="username" />
                         </div>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
                     </div>
 
                     <!-- Senha -->
                     <div class="mb-3">
-                        <label for="password" class="form-label fw-semibold">
-                            <i class="bi bi-lock me-2"></i>Senha
+                        <label asp-for="Password" class="form-label fw-semibold">
+                            <i class="bi bi-lock text-muted me-2"></i>Senha
                         </label>
                         <div class="input-group">
-                            <span class="input-group-text border-end-0 bg-transparent">
+                            <span class="input-group-text bg-light border-end-0">
                                 <i class="bi bi-key"></i>
                             </span>
-                            <input type="password"
-                                   class="form-control form-control-user border-start-0 ps-0"
-                                   id="password"
-                                   name="password"
+                            <input asp-for="Password" type="password"
+                                   class="form-control form-control-lg border-start-0"
                                    placeholder="Digite sua senha"
                                    required
-                                   autocomplete="current-password">
-                            <button class="btn btn-outline-secondary border-start-0"
-                                    type="button"
-                                    id="togglePassword">
+                                   autocomplete="current-password" />
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
                                 <i class="bi bi-eye" id="toggleIcon"></i>
                             </button>
                         </div>
+                        <span asp-validation-for="Password" class="text-danger small"></span>
                     </div>
 
                     <!-- Lembrar-me e Esqueci Senha -->
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="rememberMe" name="rememberMe">
-                            <label class="form-check-label" for="rememberMe">
+                            <input asp-for="RememberMe" class="form-check-input" type="checkbox" />
+                            <label asp-for="RememberMe" class="form-check-label">
                                 Lembrar-me
                             </label>
                         </div>
@@ -132,19 +152,20 @@
                     </div>
 
                     <!-- Botão Login -->
-                    <button type="submit" class="btn btn-user btn-primary w-100 mb-3 py-3">
+                    <button type="submit" class="btn btn-primary w-100 btn-lg mb-3 py-3">
                         <i class="bi bi-box-arrow-in-right me-2"></i>
                         Entrar
                     </button>
 
                     <!-- Divider -->
-                    <div class="divider my-4">
-                        <span class="divider-text text-muted small">ou</span>
+                    <div class="position-relative my-4">
+                        <hr class="text-muted">
+                        <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small">ou</span>
                     </div>
 
                     <!-- Primeiro Acesso -->
                     <div class="text-center">
-                        <p class="text-muted mb-0">
+                        <p class="mb-0 text-muted">
                             Primeiro acesso?
                             <a href="#" class="text-primary fw-semibold text-decoration-none">
                                 Entre em contato com o administrador
@@ -166,11 +187,15 @@
 </div>
 
 @section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Toggle password visibility
             const togglePassword = document.getElementById('togglePassword');
-            const passwordInput = document.getElementById('password');
+            const passwordInput = document.getElementById('Password');
             const toggleIcon = document.getElementById('toggleIcon');
 
             if (togglePassword) {
@@ -187,70 +212,79 @@
             const inputs = document.querySelectorAll('.form-control');
             inputs.forEach(input => {
                 input.addEventListener('focus', function() {
-                    this.parentElement.classList.add('focused');
+                    this.parentElement.style.transform = 'translateY(-2px)';
+                    this.parentElement.style.transition = 'all 0.3s ease';
                 });
 
                 input.addEventListener('blur', function() {
-                    if (!this.value) {
-                        this.parentElement.classList.remove('focused');
-                    }
+                    this.parentElement.style.transform = 'translateY(0)';
                 });
+            });
+
+            // Efeito hover nos feature items
+            const features = document.querySelectorAll('.feature-item');
+            features.forEach(feature => {
+                feature.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateX(8px)';
+                    this.style.background = 'rgba(255,255,255,0.15)';
+                });
+
+                feature.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateX(0)';
+                    this.style.background = 'rgba(255,255,255,0.1)';
+                });
+            });
+
+            // Animação do botão
+            const loginBtn = document.querySelector('button[type="submit"]');
+            loginBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 8px 16px rgba(37, 99, 235, 0.3)';
+            });
+
+            loginBtn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = '';
+            });
+
+            // Loading no submit
+            const form = document.getElementById('loginForm');
+            form.addEventListener('submit', function() {
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Entrando...';
             });
         });
     </script>
+}
 
-    <style>
-        /* Estilos adicionais específicos da página de login */
-        .divider {
-            position: relative;
-            text-align: center;
+<style>
+    /* Animações */
+    @@keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
         }
 
-            .divider::before {
-                content: '';
-                position: absolute;
-                top: 50%;
-                left: 0;
-                right: 0;
-                height: 1px;
-                background: var(--border-color);
-            }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-        .divider-text {
-            position: relative;
-            background: var(--bg-primary);
-            padding: 0 1rem;
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
         }
 
-        .input-group.focused {
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-            border-radius: 0.5rem;
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
+    }
 
-        .form-control-user {
-            font-size: 0.95rem;
-        }
-
-        .btn-user {
-            font-size: 1rem;
-            letter-spacing: 0.5px;
-            transition: all 0.3s ease;
-        }
-
-            .btn-user:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
-            }
-
-        /* Animação de entrada */
-        .login-form-panel > div {
-            animation: slideInRight 0.6s ease-out;
-        }
-
-        @@keyframes slideInRight {
-            from
-
-        {
+    @@keyframes fadeInRight {
+        from {
             opacity: 0;
             transform: translateX(30px);
         }
@@ -259,26 +293,98 @@
             opacity: 1;
             transform: translateX(0);
         }
+    }
 
+    @@keyframes pulse {
+        0%, 100% {
+            opacity: 0.9;
+            transform: scale(1);
         }
 
-        .login-info-panel {
-            animation: slideInLeft 0.6s ease-out;
-        }
-
-        @@keyframes slideInLeft {
-            from
-
-        {
-            opacity: 0;
-            transform: translateX(-30px);
-        }
-
-        to {
+        50% {
             opacity: 1;
-            transform: translateX(0);
+            transform: scale(1.05);
+        }
+    }
+
+    /* Form Controls */
+    .form-control-lg {
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-right: none;
+    }
+
+    .input-group .form-control {
+        border-left: none;
+    }
+
+    .input-group:focus-within .input-group-text {
+        border-color: #86b7fe;
+        background-color: #eff6ff;
+        color: #2563eb;
+    }
+
+    .input-group:focus-within .form-control {
+        border-color: #86b7fe;
+    }
+
+    /* Botões */
+    .btn-primary {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        border: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+    }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
         }
 
+    .btn-outline-secondary:focus {
+        box-shadow: none;
+    }
+
+    /* Checkbox */
+    .form-check-input {
+        border: 2px solid #e2e8f0;
+        border-radius: 0.25rem;
+        transition: all 0.3s ease;
+    }
+
+        .form-check-input:checked {
+            background-color: #2563eb;
+            border-color: #2563eb;
         }
-    </style>
-}
+
+        .form-check-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25);
+        }
+
+    /* Links */
+    a {
+        transition: all 0.3s ease;
+    }
+
+        a:hover {
+            color: #1d4ed8 !important;
+        }
+
+    /* Responsividade */
+    @@media (max-width: 991.98px) {
+        .feature-item {
+            animation: none !important;
+        }
+    }
+</style>

@@ -14,16 +14,21 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- CSS Customizado -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
 
     <!-- Meta tags -->
     <meta name="description" content="Sistema de Gestão de Tesouraria Eclesiástica - Faça login para acessar">
     <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#2563eb">
 
     <link rel="icon" type="image/x-icon" href="~/favicon.ico">
+
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 
-<body class="h-100 bg-gradient-primary">
+<body class="h-100">
     <!-- Preloader -->
     <div class="preloader" id="preloader">
         <div class="preloader-content">
@@ -46,6 +51,55 @@
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
     <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        // Remover preloader quando a página carregar
+        window.addEventListener('load', function() {
+            const preloader = document.getElementById('preloader');
+            if (preloader) {
+                setTimeout(() => {
+                    preloader.classList.add('fade-out');
+                    setTimeout(() => {
+                        preloader.style.display = 'none';
+                    }, 500);
+                }, 800);
+            }
+        });
+
+        // Prevenir múltiplos submits
+        document.addEventListener('DOMContentLoaded', function() {
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function() {
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn && !submitBtn.disabled) {
+                        submitBtn.disabled = true;
+                        submitBtn.classList.add('btn-loading');
+
+                        // Re-habilitar após 5 segundos (fallback)
+                        setTimeout(() => {
+                            submitBtn.disabled = false;
+                            submitBtn.classList.remove('btn-loading');
+                        }, 5000);
+                    }
+                });
+            });
+
+            // Auto-dismiss alerts
+            const alerts = document.querySelectorAll('.alert-dismissible');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+        });
+
+        // Tratamento de erros global
+        window.addEventListener('error', function(e) {
+            console.error('Erro capturado:', e.error);
+        });
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

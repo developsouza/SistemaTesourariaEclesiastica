@@ -88,18 +88,17 @@
     </div>
 </div>
 
-<!-- Tabela -->
-<div class="card">
+<!-- Tabela DESKTOP -->
+<div class="card d-none d-md-block">
     <div class="card-header bg-white border-0 p-3 p-md-4">
-        <h5 class="mb-0 small mb-md-0">
+        <h5 class="mb-0">
             Período: @DateTime.Parse(ViewBag.DataInicio).ToString("dd/MM/yyyy") a @DateTime.Parse(ViewBag.DataFim).ToString("dd/MM/yyyy")
         </h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0" id="balanceteTable">
-                <!-- Desktop -->
-                <thead class="table-light d-none d-md-table-header-group">
+                <thead class="table-light">
                     <tr>
                         <th>Plano de Contas</th>
                         <th>Tipo</th>
@@ -111,8 +110,7 @@
                 <tbody>
                     @foreach (var item in Model)
                     {
-                        <!-- Desktop -->
-                        <tr class="d-none d-md-table-row">
+                        <tr>
                             <td class="fw-semibold">@item.PlanoContasNome</td>
                             <td>
                                 <span class="badge bg-info">
@@ -125,39 +123,9 @@
                                 @item.Saldo.ToString("C")
                             </td>
                         </tr>
-
-                        <!-- Mobile -->
-                        <tr class="d-md-none">
-                            <td class="p-2">
-                                <div class="mb-2">
-                                    <div class="fw-semibold small mb-1">@item.PlanoContasNome</div>
-                                    <span class="badge bg-info" style="font-size: 0.7rem;">
-                                        @item.Tipo.ToString()
-                                    </span>
-                                </div>
-                                <div class="row g-2 small">
-                                    <div class="col-4">
-                                        <div class="text-muted" style="font-size: 0.7rem;">Entradas</div>
-                                        <div class="text-success fw-bold">@item.TotalEntradas.ToString("C")</div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="text-muted" style="font-size: 0.7rem;">Saídas</div>
-                                        <div class="text-danger fw-bold">@item.TotalSaidas.ToString("C")</div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="text-muted" style="font-size: 0.7rem;">Saldo</div>
-                                        <div class="fw-bold @(item.Saldo >= 0 ? "text-success" : "text-danger")">
-                                            @item.Saldo.ToString("C")
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
                     }
                 </tbody>
-
-                <!-- Totais Desktop -->
-                <tfoot class="d-none d-md-table-footer-group">
+                <tfoot>
                     <tr class="table-dark">
                         <th colspan="2">TOTAIS</th>
                         <th class="text-end text-success">@totalEntradas.ToString("C")</th>
@@ -169,9 +137,49 @@
                 </tfoot>
             </table>
         </div>
+    </div>
+</div>
+
+<!-- Tabela MOBILE -->
+<div class="card d-md-none">
+    <div class="card-header bg-white border-0 p-3">
+        <h5 class="mb-0 small">
+            Período: @DateTime.Parse(ViewBag.DataInicio).ToString("dd/MM/yyyy") a @DateTime.Parse(ViewBag.DataFim).ToString("dd/MM/yyyy")
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+            @foreach (var item in Model)
+            {
+                <div class="list-group-item p-2">
+                    <div class="mb-2">
+                        <div class="fw-semibold small mb-1">@item.PlanoContasNome</div>
+                        <span class="badge bg-info" style="font-size: 0.7rem;">
+                            @item.Tipo.ToString()
+                        </span>
+                    </div>
+                    <div class="row g-2 small">
+                        <div class="col-4">
+                            <div class="text-muted" style="font-size: 0.7rem;">Entradas</div>
+                            <div class="text-success fw-bold">@item.TotalEntradas.ToString("C")</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted" style="font-size: 0.7rem;">Saídas</div>
+                            <div class="text-danger fw-bold">@item.TotalSaidas.ToString("C")</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted" style="font-size: 0.7rem;">Saldo</div>
+                            <div class="fw-bold @(item.Saldo >= 0 ? "text-success" : "text-danger")">
+                                @item.Saldo.ToString("C")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
 
         <!-- Totais Mobile -->
-        <div class="d-md-none p-3 bg-dark text-white">
+        <div class="p-3 bg-dark text-white">
             <div class="fw-bold mb-2">TOTAIS</div>
             <div class="row g-2 small">
                 <div class="col-4">
@@ -195,24 +203,18 @@
 
 @section Scripts {
     <script>
-                $(document).ready(function() {
-            if (window.innerWidth > 768) {
-                // Inicializar apenas nas linhas desktop visíveis
-                var table = $('#balanceteTable').DataTable({
-                    language: {
-                        url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
-                    },
-                    responsive: false, // Mudei para false
-                    order: [[0, 'asc']],
-                    paging: false,
-                    searching: false,
-                    info: false,
-                    // Adicione estas opções importantes:
-                    columnDefs: [
-                        { targets: '_all', orderable: true }
-                    ]
-                });
-            }
+        $(document).ready(function() {
+            // Inicializar DataTables apenas na tabela desktop
+            $('#balanceteTable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+                },
+                responsive: false,
+                order: [[0, 'asc']],
+                paging: false,
+                searching: false,
+                info: false
+            });
         });
 
         function exportarPDF() {

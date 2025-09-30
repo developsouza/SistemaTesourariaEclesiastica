@@ -1,14 +1,22 @@
-﻿/* ===== ESTILOS DA PÁGINA DE LOGIN (OTIMIZADO) ===== */
+﻿/* ==========================================
+   SISTEMA DE TESOURARIA ECLESIÁSTICA
+   Estilos de Autenticação - login.css
+   ========================================== */
 
-/* Container de autenticação */
-.auth-container {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* ===== RESET E BASE ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* Gradiente de fundo */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ===== BACKGROUND E CONTAINERS ===== */
 .bg-gradient-primary {
     background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
     min-height: 100vh;
@@ -23,21 +31,73 @@
         height: 300%;
         background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
         animation: gradientRotate 20s linear infinite;
+        pointer-events: none;
     }
 
-@keyframes gradientRotate {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
 }
 
-/* Painel esquerdo com informações */
+/* ===== PRELOADER ===== */
+.preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+    .preloader.fade-out {
+        opacity: 0;
+        visibility: hidden;
+    }
+
+.preloader-content {
+    text-align: center;
+    color: white;
+}
+
+.preloader-logo {
+    margin-bottom: 1.5rem;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+    .preloader-logo i {
+        font-size: 4rem;
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+    }
+
+.preloader-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.5px;
+}
+
+.preloader-spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* ===== PAINEL ESQUERDO (LOGIN/REGISTER) ===== */
 .bg-login-image {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(29, 78, 216, 0.95) 100%), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="church-pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M20,80 L50,50 L80,80 L80,90 L20,90 Z" fill="rgba(255,255,255,0.08)"/><circle cx="50" cy="30" r="8" fill="rgba(255,255,255,0.08)"/></pattern></defs><rect width="1000" height="1000" fill="url(%23church-pattern)"/></svg>');
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(29, 78, 216, 0.95) 100%), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="church-pattern" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse"><circle cx="40" cy="40" r="2" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="1000" height="1000" fill="url(%23church-pattern)"/></svg>');
     background-size: cover;
     background-position: center;
     position: relative;
@@ -55,11 +115,11 @@
 .login-info-panel {
     background: rgba(0, 0, 0, 0.12);
     backdrop-filter: blur(16px);
-    border-radius: 0 0 0 1.5rem;
     position: relative;
     z-index: 1;
 }
 
+/* ===== FEATURE ITEMS ===== */
 .feature-item {
     font-size: 1rem;
     opacity: 0.95;
@@ -69,7 +129,7 @@
 
     .feature-item:hover {
         opacity: 1;
-        transform: translateX(4px);
+        transform: translateX(8px);
     }
 
 .feature-icon {
@@ -90,7 +150,7 @@
     transform: scale(1.1);
 }
 
-/* Painel do formulário */
+/* ===== PAINEL DO FORMULÁRIO ===== */
 .login-form-panel {
     background: white;
     position: relative;
@@ -108,10 +168,41 @@
         pointer-events: none;
     }
 
-/* Estilização do formulário */
+/* ===== CARDS ===== */
+.card {
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* ===== FORM CONTROLS ===== */
+.form-control,
+.form-select {
+    border-radius: 0.5rem;
+    border: 2px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        outline: none;
+    }
+
+    .form-control::placeholder {
+        color: #94a3b8;
+    }
+
+.form-control-lg {
+    padding: 0.875rem 1.125rem;
+    font-size: 1rem;
+}
+
 .form-control-user {
     border: 2px solid #e2e8f0;
-    border-radius: 8px;
+    border-radius: 0.5rem;
     padding: 0.875rem 1.125rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 1rem;
@@ -123,10 +214,7 @@
         background-color: #ffffff;
     }
 
-    .form-control-user::placeholder {
-        color: #94a3b8;
-    }
-
+/* ===== INPUT GROUPS ===== */
 .input-group {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -143,16 +231,48 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.input-group .form-control {
+    border-left: none;
+}
+
 .input-group:focus-within .input-group-text {
-    border-color: #2563eb;
+    border-color: #86b7fe;
     background-color: #eff6ff;
     color: #2563eb;
 }
 
+.input-group:focus-within .form-control {
+    border-color: #86b7fe;
+}
+
+/* ===== BOTÕES ===== */
+.btn {
+    border-radius: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    border: none;
+    color: white;
+}
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-primary:active {
+        transform: translateY(0);
+    }
+
 .btn-user {
     background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
     border: none;
-    border-radius: 8px;
+    border-radius: 0.5rem;
     padding: 0.875rem 1.25rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -190,47 +310,102 @@
         transform: translateY(0);
     }
 
-/* Loading overlay para login */
-.loading-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.97);
-    backdrop-filter: blur(12px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    z-index: 1000;
-    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
 }
 
-    .loading-overlay.d-none {
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
+    .btn-loading::before {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        top: 50%;
+        left: 50%;
+        margin-left: -8px;
+        margin-top: -8px;
+        border: 2px solid white;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
     }
 
-/* Animação de entrada suave */
-.fade-in {
-    animation: fadeIn 0.6s ease-in-out;
+/* ===== CHECKBOX ===== */
+.form-check-input {
+    border: 2px solid #e2e8f0;
+    border-radius: 0.25rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
+    .form-check-input:checked {
+        background-color: #2563eb;
+        border-color: #2563eb;
     }
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    .form-check-input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        outline: none;
     }
+
+.form-check-label {
+    color: #64748b;
+    font-weight: 500;
+    user-select: none;
+    cursor: pointer;
 }
 
-/* Links do formulário */
+/* ===== VALIDAÇÃO ===== */
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.is-valid {
+    border-color: #198754 !important;
+}
+
+.form-control-user.is-invalid {
+    border-color: #ef4444;
+    background-image: none;
+}
+
+    .form-control-user.is-invalid:focus {
+        border-color: #ef4444;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+    }
+
+.form-control-user.is-valid {
+    border-color: #10b981;
+    background-image: none;
+}
+
+    .form-control-user.is-valid:focus {
+        border-color: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+    }
+
+.invalid-feedback,
+.valid-feedback {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+}
+
+/* ===== ALERTAS ===== */
+.alert {
+    border-radius: 0.5rem;
+    border: none;
+    padding: 1rem 1.25rem;
+    font-weight: 500;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+}
+
+/* ===== LINKS ===== */
+a {
+    transition: all 0.3s ease;
+}
+
 .login-form-panel a {
     color: #2563eb;
     text-decoration: none;
@@ -258,99 +433,7 @@
         color: #1e40af;
     }
 
-/* Logo e título */
-.login-logo {
-    font-size: 4rem;
-    color: #2563eb;
-    filter: drop-shadow(0 4px 8px rgba(37, 99, 235, 0.2));
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-    50% {
-        opacity: 0.85;
-        transform: scale(1.03);
-    }
-}
-
-/* Checkbox personalizado */
-.form-check-input {
-    border: 2px solid #e2e8f0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-    .form-check-input:checked {
-        background-color: #2563eb;
-        border-color: #2563eb;
-    }
-
-    .form-check-input:focus {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-    }
-
-.form-check-label {
-    color: #64748b;
-    font-weight: 500;
-    user-select: none;
-    cursor: pointer;
-}
-
-/* Mensagens de erro/sucesso */
-.alert {
-    border-radius: 8px;
-    border: none;
-    padding: 1rem 1.25rem;
-    font-weight: 500;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-}
-
-/* Responsividade */
-@media (max-width: 991.98px) {
-    .bg-login-image {
-        display: none;
-    }
-
-    .login-form-panel {
-        border-radius: 1.5rem;
-        margin: 1rem;
-    }
-}
-
-/* Melhorias de acessibilidade */
-.form-control-user:focus,
-.btn-user:focus,
-.form-check-input:focus {
-    outline: none;
-}
-
-/* Estados de validação */
-.form-control-user.is-invalid {
-    border-color: #ef4444;
-    background-image: none;
-}
-
-    .form-control-user.is-invalid:focus {
-        border-color: #ef4444;
-        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
-    }
-
-.form-control-user.is-valid {
-    border-color: #10b981;
-    background-image: none;
-}
-
-    .form-control-user.is-valid:focus {
-        border-color: #10b981;
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
-    }
-
-/* Divider */
+/* ===== DIVIDER ===== */
 .login-divider {
     display: flex;
     align-items: center;
@@ -376,13 +459,242 @@
         margin-left: 1rem;
     }
 
-/* Animação de carregamento do spinner */
+/* ===== BADGES ===== */
+.badge {
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-weight: 600;
+}
+
+/* ===== LOADING OVERLAY ===== */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 1000;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+    .loading-overlay.d-none {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+/* ===== UTILITIES ===== */
+.fade-in {
+    animation: fadeIn 0.6s ease-in-out;
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.shadow-sm {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.shadow {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+}
+
+.shadow-lg {
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== ANIMAÇÕES ===== */
+@keyframes gradientRotate {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.9;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);
     }
 }
 
-.spinner-border {
-    animation: spin 0.8s linear infinite;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== RESPONSIVIDADE ===== */
+@media (max-width: 991.98px) {
+    .bg-login-image {
+        display: none !important;
+    }
+
+    .login-form-panel {
+        border-radius: 1rem;
+        margin: 1rem;
+    }
+
+    .auth-container {
+        padding: 1rem;
+    }
+
+    .card {
+        margin: 1rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .feature-item {
+        animation: none !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    body {
+        font-size: 14px;
+    }
+
+    .btn-lg {
+        padding: 0.75rem 1.25rem;
+        font-size: 1rem;
+    }
+
+    .preloader-logo i {
+        font-size: 3rem;
+    }
+
+    .preloader-text {
+        font-size: 1rem;
+    }
+
+    .form-control-lg {
+        padding: 0.75rem 1rem;
+        font-size: 0.9375rem;
+    }
+
+    .card {
+        border-radius: 0.75rem;
+    }
+}
+
+/* ===== MELHORIAS DE ACESSIBILIDADE ===== */
+.form-control-user:focus,
+.btn-user:focus,
+.form-check-input:focus,
+.btn:focus {
+    outline: none;
+}
+
+/* Remove outline padrão mas mantém acessibilidade */
+*:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    .preloader,
+    .btn,
+    .form-control,
+    .input-group-text {
+        display: none !important;
+    }
 }
