@@ -48,6 +48,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 .ThenByDescending(f => f.Mes)
                 .ToListAsync();
 
+            await PopulateDropdowns();
+
             await _auditService.LogAsync("Visualização", "FechamentoPeriodo", "Listagem de fechamentos visualizada");
             return View(fechamentos);
         }

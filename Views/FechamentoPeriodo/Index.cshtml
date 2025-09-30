@@ -1,169 +1,160 @@
 @model IEnumerable<SistemaTesourariaEclesiastica.Models.FechamentoPeriodo>
 
 @{
-    ViewData["Title"] = "Prestação de Contas";
+    ViewData["Title"] = "Fechamento de Período";
 }
 
 <!-- Cabeçalho -->
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 mb-md-4 gap-2">
-    <h2 class="h3 mb-0">
-        <i class="bi bi-calendar-check me-2"></i>
-        Prestação de Contas
-    </h2>
-    <a asp-action="Create" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-circle me-1"></i>Novo Fechamento
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <div>
+        <h1 class="h3 mb-1">
+            <i class="bi bi-calendar-check me-2 text-primary"></i>Fechamento de Período
+        </h1>
+        <p class="text-muted mb-0 small">Prestação de contas e repasses financeiros</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>Novo Fechamento
     </a>
 </div>
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+<!-- Filtros -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-12 col-md-3">
+                <label class="form-label small fw-semibold">Centro de Custo</label>
+                @Html.DropDownList("centroCustoId", ViewBag.CentrosCusto as SelectList, "Todos",
+                new { @class = "form-select" })
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label small fw-semibold">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Aprovado">Aprovado</option>
+                    <option value="Rejeitado">Rejeitado</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label small fw-semibold">Tipo</label>
+                <select name="tipo" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="Diario">Diário</option>
+                    <option value="Semanal">Semanal</option>
+                    <option value="Mensal">Mensal</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-outline-primary flex-fill">
+                    <i class="bi bi-search"></i>
+                    <span class="d-none d-md-inline ms-1">Filtrar</span>
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </a>
+            </div>
+        </form>
     </div>
-}
+</div>
 
-<!-- Tabela -->
-<div class="card">
+<!-- Resultados -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-list-ul me-2 text-primary"></i>
+            @(Model != null ? Model.Count() : 0) fechamento(s) encontrado(s)
+        </h5>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Imprimir
+        </button>
+    </div>
+
     <div class="card-body p-0">
-        @if (Model.Any())
+        @if (Model != null && Model.Any())
         {
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <!-- Desktop -->
-                    <thead class="table-dark d-none d-md-table-header-group">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <th>Período</th>
-                            <th>Centro</th>
-                            <th>Balanço Digital</th>
-                            <th>Balanço Físico</th>
-                            <th>Diferença</th>
+                            <th class="ps-3">Período</th>
+                            <th class="d-none d-lg-table-cell">Centro de Custo</th>
+                            <th class="d-none d-xl-table-cell text-end">Total Entradas</th>
+                            <th class="d-none d-xl-table-cell text-end">Total Saídas</th>
+                            <th class="text-end">Balanço Físico</th>
+                            <th class="d-none d-md-table-cell">Tipo</th>
                             <th>Status</th>
-                            <th>Submetido</th>
-                            <th>Data</th>
-                            <th width="180">Ações</th>
+                            <th class="text-center" style="width: 140px;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            var diferenca = item.BalancoFisico - item.BalancoDigital;
-
-                            <!-- Desktop -->
-                            <tr class="d-none d-md-table-row">
-                                <td class="fw-semibold">@item.Mes.ToString().PadLeft(2, '0')/@item.Ano</td>
-                                <td>@item.CentroCusto.Nome</td>
-                                <td class="text-end">@item.BalancoDigital.ToString("C")</td>
-                                <td class="text-end">@item.BalancoFisico.ToString("C")</td>
+                            <tr>
+                                <td class="ps-3">
+                                    <div class="fw-semibold">
+                                        @item.DataInicio.ToString("dd/MM/yy")
+                                        @if (item.DataInicio != item.DataFim)
+                                        {
+                                            <span> - @item.DataFim.ToString("dd/MM/yy")</span>
+                                        }
+                                    </div>
+                                    <small class="text-muted d-lg-none">@item.CentroCusto?.Nome</small>
+                                </td>
+                                <td class="d-none d-lg-table-cell">
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                                        @item.CentroCusto?.Nome
+                                    </span>
+                                </td>
+                                <td class="d-none d-xl-table-cell text-end">
+                                    <span class="text-success fw-semibold">@item.TotalEntradas.ToString("C2")</span>
+                                </td>
+                                <td class="d-none d-xl-table-cell text-end">
+                                    <span class="text-danger fw-semibold">@item.TotalSaidas.ToString("C2")</span>
+                                </td>
                                 <td class="text-end">
-                                    <span class="@(diferenca == 0 ? "text-success" : "text-warning") fw-bold">
-                                        @diferenca.ToString("C")
+                                    <span class="fw-bold @(item.BalancoFisico >= 0 ? "text-success" : "text-danger")">
+                                        @item.BalancoFisico.ToString("C2")
+                                    </span>
+                                </td>
+                                <td class="d-none d-md-table-cell">
+                                    <span class="badge @(item.TipoFechamento.ToString() == "Diario" ? "bg-primary" : item.TipoFechamento.ToString() == "Semanal" ? "bg-info" : "bg-warning text-dark")">
+                                        @item.TipoFechamento.ToString()
                                     </span>
                                 </td>
                                 <td>
-                                    @switch (item.Status)
+                                    @if (item.Status.ToString() == "Pendente")
                                     {
-                                        case SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Pendente:
-                                            <span class="badge bg-warning">Pendente</span>
-                                            break;
-                                        case SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Aprovado:
-                                            <span class="badge bg-success">Aprovado</span>
-                                            break;
-                                        case SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Rejeitado:
-                                            <span class="badge bg-danger">Rejeitado</span>
-                                            break;
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-clock me-1"></i>Pendente
+                                        </span>
+                                    }
+                                    else if (item.Status.ToString() == "Aprovado")
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Aprovado
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle me-1"></i>Rejeitado
+                                        </span>
                                     }
                                 </td>
-                                <td>@item.UsuarioSubmissao.NomeCompleto</td>
-                                <td>@item.DataSubmissao.ToString("dd/MM/yyyy")</td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info" title="Detalhes">
+                                        <a asp-action="Details" asp-route-id="@item.Id"
+                                           class="btn btn-outline-info" title="Detalhes">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        @if (item.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Pendente)
+                                        @if (item.Status.ToString() == "Pendente")
                                         {
-                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning" title="Editar">
+                                            <a asp-action="Edit" asp-route-id="@item.Id"
+                                               class="btn btn-outline-primary" title="Editar">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
-                                            <form asp-action="Aprovar" asp-route-id="@item.Id" method="post" style="display: inline;">
-                                                <button type="submit" class="btn btn-outline-success btn-sm" title="Aprovar"
-                                                        onclick="return confirm('Confirma a aprovação?')">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </button>
-                                            </form>
-                                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Excluir">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
-                                        }
-                                    </div>
-                                </td>
-                            </tr>
-
-                            <!-- Mobile -->
-                            <tr class="d-md-none">
-                                <td class="p-3">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div>
-                                            <div class="fw-bold mb-1">
-                                                @item.Mes.ToString().PadLeft(2, '0')/@item.Ano
-                                            </div>
-                                            <span class="badge bg-info" style="font-size: 0.7rem;">
-                                                @item.CentroCusto.Nome
-                                            </span>
-                                            @switch (item.Status)
-                                            {
-                                                case SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Pendente:
-                                                    <span class="badge bg-warning ms-1" style="font-size: 0.7rem;">Pendente</span>
-                                                    break;
-                                                case SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Aprovado:
-                                                    <span class="badge bg-success ms-1" style="font-size: 0.7rem;">Aprovado</span>
-                                                    break;
-                                                case SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Rejeitado:
-                                                    <span class="badge bg-danger ms-1" style="font-size: 0.7rem;">Rejeitado</span>
-                                                    break;
-                                            }
-                                        </div>
-                                    </div>
-
-                                    <div class="row g-2 mb-2 small">
-                                        <div class="col-4">
-                                            <div class="text-muted" style="font-size: 0.7rem;">Digital</div>
-                                            <div class="fw-bold">@item.BalancoDigital.ToString("C")</div>
-                                        </div>
-                                        <div class="col-4">
-                                            <div class="text-muted" style="font-size: 0.7rem;">Físico</div>
-                                            <div class="fw-bold">@item.BalancoFisico.ToString("C")</div>
-                                        </div>
-                                        <div class="col-4">
-                                            <div class="text-muted" style="font-size: 0.7rem;">Diferença</div>
-                                            <div class="fw-bold @(diferenca == 0 ? "text-success" : "text-warning")">
-                                                @diferenca.ToString("C")
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="small text-muted mb-2">
-                                        <i class="bi bi-person me-1"></i>@item.UsuarioSubmissao.NomeCompleto
-                                        <i class="bi bi-calendar3 ms-2 me-1"></i>@item.DataSubmissao.ToString("dd/MM/yy")
-                                    </div>
-
-                                    <div class="btn-group btn-group-sm w-100" role="group">
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        @if (item.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Pendente)
-                                        {
-                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-warning">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <form asp-action="Aprovar" asp-route-id="@item.Id" method="post" class="d-inline">
-                                                <button type="submit" class="btn btn-outline-success btn-sm"
-                                                        onclick="return confirm('Aprovar?')">
-                                                    <i class="bi bi-check-circle"></i>
-                                                </button>
-                                            </form>
-                                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger">
+                                            <a asp-action="Delete" asp-route-id="@item.Id"
+                                               class="btn btn-outline-danger" title="Excluir">
                                                 <i class="bi bi-trash"></i>
                                             </a>
                                         }
@@ -178,12 +169,28 @@
         else
         {
             <div class="text-center py-5">
-                <i class="bi bi-calendar-x display-4 text-muted"></i>
-                <p class="text-muted mt-2">Nenhum fechamento de período cadastrado.</p>
-                <a asp-action="Create" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-1"></i>Criar Primeiro Fechamento
+                <i class="bi bi-calendar-check text-muted" style="font-size: 4rem;"></i>
+                <h5 class="mt-3 text-muted">Nenhum fechamento encontrado</h5>
+                <p class="text-muted">Não há fechamentos de período cadastrados com os filtros aplicados.</p>
+                <a asp-action="Create" class="btn btn-primary mt-2">
+                    <i class="bi bi-plus-circle me-2"></i>Criar Primeiro Fechamento
                 </a>
             </div>
         }
+    </div>
+</div>
+
+<!-- Alert informativo -->
+<div class="alert alert-info mt-4 d-flex align-items-start">
+    <i class="bi bi-info-circle me-3 fs-5"></i>
+    <div>
+        <h6 class="alert-heading mb-2">Como funciona o Fechamento de Período</h6>
+        <p class="mb-1 small">
+            O fechamento separa automaticamente as movimentações em:
+        </p>
+        <ul class="small mb-0">
+            <li><strong>Balanço Físico:</strong> Dinheiro em espécie que deve ser repassado fisicamente à Sede</li>
+            <li><strong>Balanço Digital:</strong> Valores já depositados (PIX, transferências) - apenas informativo</li>
+        </ul>
     </div>
 </div>

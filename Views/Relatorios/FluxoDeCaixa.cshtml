@@ -1,76 +1,145 @@
 @model IEnumerable<SistemaTesourariaEclesiastica.ViewModels.FluxoDeCaixaItem>
 
 @{
-    ViewData["Title"] = "Relatório de Fluxo de Caixa";
+    ViewData["Title"] = "Fluxo de Caixa";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- Cabeçalho -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
     <div>
-        <h1 class="h3 mb-0">
-            <i class="bi bi-cash-coin me-2"></i>
-            Relatório de Fluxo de Caixa
+        <h1 class="h3 mb-1">
+            <i class="bi bi-graph-up me-2 text-info"></i>Fluxo de Caixa
         </h1>
-        <p class="text-muted mb-0">Visualize o fluxo de caixa detalhado por período</p>
+        <p class="text-muted mb-0 small">Análise diária de entradas e saídas</p>
     </div>
-    <a asp-action="Index" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-2"></i>
-        Voltar para Relatórios
-    </a>
+    <div class="d-flex gap-2">
+        <button class="btn btn-success btn-sm" onclick="exportToExcel()">
+            <i class="bi bi-file-excel me-1"></i>Excel
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="exportToPdf()">
+            <i class="bi bi-file-pdf me-1"></i>PDF
+        </button>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Voltar
+        </a>
+    </div>
 </div>
 
+<!-- Filtros -->
 <div class="card shadow-sm mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0"><i class="bi bi-funnel me-2"></i>Filtros</h5>
-    </div>
     <div class="card-body">
-        <form asp-action="FluxoDeCaixa" method="get">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label for="dataInicio" class="form-label">Data Início</label>
-                    <input type="date" class="form-control" id="dataInicio" name="dataInicio" value="@ViewBag.DataInicio">
-                </div>
-                <div class="col-md-4">
-                    <label for="dataFim" class="form-label">Data Fim</label>
-                    <input type="date" class="form-control" id="dataFim" name="dataFim" value="@ViewBag.DataFim">
-                </div>
-                <div class="col-md-4">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-filter me-2"></i>
-                        Aplicar Filtros
-                    </button>
-                </div>
+        <form method="get" class="row g-3">
+            <div class="col-12 col-md-5">
+                <label class="form-label small fw-semibold">Data Início</label>
+                <input type="date" class="form-control" name="dataInicio" value="@ViewBag.DataInicio">
+            </div>
+            <div class="col-12 col-md-5">
+                <label class="form-label small fw-semibold">Data Fim</label>
+                <input type="date" class="form-control" name="dataFim" value="@ViewBag.DataFim">
+            </div>
+            <div class="col-12 col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search me-1"></i>Filtrar
+                </button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- Resultados -->
 @if (Model == null || !Model.Any())
 {
-    <div class="alert alert-info text-center" role="alert">
-        <h4 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Nenhum Dado Encontrado</h4>
-        <p>Não há registros de fluxo de caixa para o período selecionado.</p>
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+            <h5 class="mt-3 text-muted">Nenhum dado encontrado</h5>
+            <p class="text-muted">Não há movimentações para o período selecionado.</p>
+        </div>
     </div>
 }
 else
 {
-    <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0"><i class="bi bi-table me-2"></i>Detalhes do Fluxo de Caixa</h5>
-            <div>
-                <button class="btn btn-outline-success btn-sm me-2" onclick="exportToExcel()">
-                    <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
-                </button>
-                <button class="btn btn-outline-danger btn-sm" onclick="exportToPdf()">
-                    <i class="bi bi-file-earmark-pdf me-2"></i>Exportar PDF
-                </button>
+    <!-- Cards de Resumo -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-3">
+            <div class="card shadow-sm border-0 bg-success bg-opacity-10 border-start border-success border-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <small class="text-muted d-block">Total Entradas</small>
+                            <h4 class="mb-0 fw-bold text-success">@Model.Sum(x => x.Entradas).ToString("C2")</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-arrow-down text-success" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="card-body">
+        <div class="col-12 col-md-3">
+            <div class="card shadow-sm border-0 bg-danger bg-opacity-10 border-start border-danger border-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <small class="text-muted d-block">Total Saídas</small>
+                            <h4 class="mb-0 fw-bold text-danger">@Model.Sum(x => x.Saidas).ToString("C2")</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-arrow-up text-danger" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-3">
+            <div class="card shadow-sm border-0 bg-info bg-opacity-10 border-start border-info border-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <small class="text-muted d-block">Saldo do Período</small>
+                            <h4 class="mb-0 fw-bold text-info">@Model.Sum(x => x.SaldoDia).ToString("C2")</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-calculator text-info" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-3">
+            <div class="card shadow-sm border-0 bg-primary bg-opacity-10 border-start border-primary border-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <small class="text-muted d-block">Saldo Acumulado</small>
+                            <h4 class="mb-0 fw-bold text-primary">@Model.Last().SaldoAcumulado.ToString("C2")</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-wallet2 text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-table me-2 text-info"></i>
+                Movimentação Diária
+            </h5>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i>Imprimir
+            </button>
+        </div>
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover table-striped mb-0" id="fluxoDeCaixaTable">
-                    <thead>
+                <table class="table table-hover align-middle mb-0" id="fluxoDeCaixaTable">
+                    <thead class="table-light">
                         <tr>
-                            <th>Data</th>
+                            <th class="ps-3">Data</th>
                             <th class="text-end">Entradas</th>
                             <th class="text-end">Saídas</th>
                             <th class="text-end">Saldo do Dia</th>
@@ -81,21 +150,44 @@ else
                         @foreach (var item in Model)
                         {
                             <tr>
-                                <td>@item.Data.ToString("dd/MM/yyyy")</td>
-                                <td class="text-end text-success">@item.Entradas.ToString("C2")</td>
-                                <td class="text-end text-danger">@item.Saidas.ToString("C2")</td>
-                                <td class="text-end @(item.SaldoDia >= 0 ? "text-success" : "text-danger")">@item.SaldoDia.ToString("C2")</td>
-                                <td class="text-end @(item.SaldoAcumulado >= 0 ? "text-success" : "text-danger")">@item.SaldoAcumulado.ToString("C2")</td>
+                                <td class="ps-3">
+                                    <div class="fw-semibold">@item.Data.ToString("dd/MM/yyyy")</div>
+                                    <small class="text-muted">@item.Data.ToString("dddd")</small>
+                                </td>
+                                <td class="text-end">
+                                    <span class="text-success fw-semibold">@item.Entradas.ToString("C2")</span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="text-danger fw-semibold">@item.Saidas.ToString("C2")</span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="fw-bold @(item.SaldoDia >= 0 ? "text-success" : "text-danger")">
+                                        @item.SaldoDia.ToString("C2")
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="fw-bold @(item.SaldoAcumulado >= 0 ? "text-primary" : "text-danger")">
+                                        @item.SaldoAcumulado.ToString("C2")
+                                    </span>
+                                </td>
                             </tr>
                         }
                     </tbody>
-                    <tfoot>
+                    <tfoot class="table-light">
                         <tr>
-                            <th colspan="1">Total</th>
-                            <th class="text-end text-success">@Model.Sum(x => x.Entradas).ToString("C2")</th>
-                            <th class="text-end text-danger">@Model.Sum(x => x.Saidas).ToString("C2")</th>
-                            <th class="text-end">@Model.Sum(x => x.SaldoDia).ToString("C2")</th>
-                            <th class="text-end">@Model.Last().SaldoAcumulado.ToString("C2")</th>
+                            <th class="ps-3">TOTAL</th>
+                            <th class="text-end">
+                                <span class="fw-bold text-success">@Model.Sum(x => x.Entradas).ToString("C2")</span>
+                            </th>
+                            <th class="text-end">
+                                <span class="fw-bold text-danger">@Model.Sum(x => x.Saidas).ToString("C2")</span>
+                            </th>
+                            <th class="text-end">
+                                <span class="fw-bold text-info">@Model.Sum(x => x.SaldoDia).ToString("C2")</span>
+                            </th>
+                            <th class="text-end">
+                                <span class="fw-bold text-primary">@Model.Last().SaldoAcumulado.ToString("C2")</span>
+                            </th>
                         </tr>
                     </tfoot>
                 </table>
@@ -107,7 +199,7 @@ else
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
     <script>
         function exportToExcel() {
             const table = document.getElementById("fluxoDeCaixaTable");
@@ -120,24 +212,14 @@ else
         function exportToPdf() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
+            doc.text("Relatório de Fluxo de Caixa", 14, 15);
             doc.autoTable({
                 html: '#fluxoDeCaixaTable',
-                startY: 20,
-                headStyles: { fillColor: [23, 162, 184] }, // Bootstrap info color
-                styles: { fontSize: 8, cellPadding: 2 },
-                columnStyles: {
-                    1: { halign: 'right' },
-                    2: { halign: 'right' },
-                    3: { halign: 'right' },
-                    4: { halign: 'right' }
-                },
-                didDrawPage: function (data) {
-                    doc.text("Relatório de Fluxo de Caixa", data.settings.margin.left, 10);
-                }
+                startY: 25,
+                headStyles: { fillColor: [23, 162, 184] },
+                styles: { fontSize: 8 }
             });
             doc.save("FluxoDeCaixa.pdf");
         }
     </script>
 }
-
-

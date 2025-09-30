@@ -10,7 +10,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="@Html.AntiForgeryToken()" />
-    <title>@ViewData["Title"] - Sistema de Tesouraria Eclesiástica</title>
+    <title>@ViewData["Title"] - Tesouraria AD Jacumã</title>
 
     <!-- Bootstrap 5.3 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -27,6 +27,8 @@
 
     <!-- CSS Customizado -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    @await RenderSectionAsync("Styles", required: false)
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -50,7 +52,7 @@
                 <div class="sidebar-header">
                     <a href="/" class="sidebar-brand">
                         <i class="bi bi-bank2"></i>
-                        <span class="brand-text">Tesouraria</span>
+                        <span class="brand-text">AD JACUMÃ</span>
                     </a>
                     <button class="sidebar-toggle" id="sidebarCollapse">
                         <i class="bi bi-list"></i>
@@ -200,6 +202,11 @@
                                     <li>
                                         <a class="nav-link" asp-controller="MeiosPagamento" asp-action="Index">
                                             <span class="nav-text">Meios de Pagamento</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" asp-controller="RegrasRateio" asp-action="Index">
+                                            <span class="nav-text">Regras de Rateio</span>
                                         </a>
                                     </li>
                                     <li>

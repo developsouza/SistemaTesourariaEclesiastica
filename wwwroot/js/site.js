@@ -1,29 +1,35 @@
-// ===== FUNÇÕES UTILITÁRIAS GLOBAIS =====
-window.showLoading = (message = 'Processando...') => {
+// ===== FUNÇÕES GLOBAIS =====
+
+// Loading Overlay
+window.showLoading = (text = 'Processando...') => {
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) {
-        const text = overlay.querySelector('.loading-text');
-        if (text) text.textContent = message;
+        const loadingText = overlay.querySelector('.loading-text');
+        if (loadingText) loadingText.textContent = text;
         overlay.classList.remove('d-none');
     }
 };
 
 window.hideLoading = () => {
-    document.getElementById('loadingOverlay')?.classList.add('d-none');
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.add('d-none');
+    }
 };
 
-window.showToast = (message, type = 'info', duration = 5000) => {
+// Toast Notifications
+window.showToast = (message, type = 'info', duration = 3000) => {
     const container = document.querySelector('.toast-container');
     if (!container) return;
 
-    const icons = {
-        success: 'bi-check-circle-fill',
-        error: 'bi-x-circle-fill',
-        warning: 'bi-exclamation-triangle-fill',
-        info: 'bi-info-circle-fill'
+    const iconMap = {
+        success: 'bi-check-circle',
+        error: 'bi-x-circle',
+        warning: 'bi-exclamation-triangle',
+        info: 'bi-info-circle'
     };
 
-    const bgClasses = {
+    const bgMap = {
         success: 'bg-success',
         error: 'bg-danger',
         warning: 'bg-warning',
@@ -31,41 +37,57 @@ window.showToast = (message, type = 'info', duration = 5000) => {
     };
 
     const toastId = `toast-${Date.now()}`;
-    const toastHTML = `
-        <div id="${toastId}" class="toast align-items-center text-white ${bgClasses[type]} border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi ${icons[type]} me-2"></i>${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>`;
+    const toast = document.createElement('div');
+    toast.className = 'toast align-items-center text-white border-0';
+    toast.classList.add(bgMap[type] || 'bg-info');
+    toast.id = toastId;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
 
-    container.insertAdjacentHTML('beforeend', toastHTML);
-    const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement, { delay: duration });
-    toast.show();
-    toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center">
+                <i class="bi ${iconMap[type] || 'bi-info-circle'} me-2 fs-5"></i>
+                <span>${message}</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    container.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast, { delay: duration });
+    bsToast.show();
+
+    toast.addEventListener('hidden.bs.toast', () => toast.remove());
 };
 
-window.formatCurrency = (value) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+// Confirm Dialog
+window.confirmAction = async (title, message, type = 'warning') => {
+    return Swal.fire({
+        title: title,
+        text: message,
+        icon: type,
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sim, confirmar!',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true
+    });
+};
 
-window.formatDate = (date) =>
-    new Intl.DateTimeFormat('pt-BR').format(new Date(date));
-
-window.formatDateTime = (date) =>
-    new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(date));
-
+// Copiar para Clipboard
 window.copyToClipboard = async (text) => {
     try {
         await navigator.clipboard.writeText(text);
-        showToast('Copiado!', 'success', 2000);
+        showToast('Copiado para área de transferência', 'success', 2000);
     } catch {
         showToast('Erro ao copiar', 'error', 2000);
     }
 };
 
+// Debounce
 window.debounce = (func, wait) => {
     let timeout;
     return (...args) => {
@@ -138,7 +160,7 @@ class ThemeManager {
     }
 }
 
-// ===== GERENCIADOR DE SIDEBAR MOBILE CORRIGIDO =====
+// ===== GERENCIADOR DE SIDEBAR =====
 class SidebarManager {
     constructor() {
         this.sidebar = document.getElementById('sidebar');
@@ -263,8 +285,9 @@ class SidebarManager {
                 if (submenu) {
                     submenu.classList.add('show');
                     const parent = submenu.closest('.has-submenu');
-                    const arrow = parent?.querySelector('.submenu-arrow');
-                    if (arrow) arrow.style.transform = 'rotate(90deg)';
+                    if (parent) {
+                        parent.classList.add('show');
+                    }
                 }
             }
         });
@@ -281,25 +304,30 @@ class SubmenuManager {
         document.querySelectorAll('.has-submenu > .nav-link').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                const submenu = document.getElementById(item.getAttribute('href').substring(1));
-                const arrow = item.querySelector('.submenu-arrow');
+                const parent = item.closest('.has-submenu');
+                const submenu = parent.querySelector('.submenu');
 
                 if (submenu) {
-                    const isShowing = submenu.classList.contains('show');
+                    const isShowing = parent.classList.contains('show');
 
                     // Fechar outros submenus
-                    document.querySelectorAll('.submenu.show').forEach(other => {
-                        if (other !== submenu) {
+                    document.querySelectorAll('.has-submenu.show').forEach(other => {
+                        if (other !== parent) {
                             other.classList.remove('show');
-                            const otherArrow = other.closest('.has-submenu')?.querySelector('.submenu-arrow');
-                            if (otherArrow) otherArrow.style.transform = 'rotate(0deg)';
+                            const otherSubmenu = other.querySelector('.submenu');
+                            if (otherSubmenu) {
+                                otherSubmenu.classList.remove('show');
+                            }
                         }
                     });
 
                     // Toggle atual
-                    submenu.classList.toggle('show');
-                    if (arrow) {
-                        arrow.style.transform = isShowing ? 'rotate(0deg)' : 'rotate(90deg)';
+                    if (isShowing) {
+                        parent.classList.remove('show');
+                        submenu.classList.remove('show');
+                    } else {
+                        parent.classList.add('show');
+                        submenu.classList.add('show');
                     }
                 }
             });
@@ -323,7 +351,11 @@ class FormManager {
 
     setupFormSubmit() {
         document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', () => showLoading('Enviando...'));
+            form.addEventListener('submit', (e) => {
+                if (form.checkValidity()) {
+                    showLoading('Enviando...');
+                }
+            });
         });
     }
 
@@ -334,7 +366,7 @@ class FormManager {
                 value = value.replace(/(\d{3})(\d)/, '$1.$2');
                 value = value.replace(/(\d{3})(\d)/, '$1.$2');
                 value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-                e.target.value = value;
+                e.target.value = value.substring(0, 14);
             });
         });
     }
@@ -348,7 +380,7 @@ class FormManager {
                 } else {
                     value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
                 }
-                e.target.value = value;
+                e.target.value = value.substring(0, 15);
             });
         });
     }
@@ -358,7 +390,7 @@ class FormManager {
             input.addEventListener('input', (e) => {
                 let value = e.target.value.replace(/\D/g, '');
                 value = value.replace(/(\d{5})(\d)/, '$1-$2');
-                e.target.value = value;
+                e.target.value = value.substring(0, 9);
             });
 
             input.addEventListener('blur', async (e) => {
@@ -388,16 +420,17 @@ class FormManager {
             const data = await response.json();
 
             if (!data.erro) {
-                document.getElementById('Logradouro')?.setAttribute('value', data.logradouro);
-                document.getElementById('Bairro')?.setAttribute('value', data.bairro);
-                document.getElementById('Cidade')?.setAttribute('value', data.localidade);
-                document.getElementById('Estado')?.setAttribute('value', data.uf);
+                document.querySelector('[name="Endereco"]')?.setAttribute('value', data.logradouro);
+                document.querySelector('[name="Bairro"]')?.setAttribute('value', data.bairro);
+                document.querySelector('[name="Cidade"]')?.setAttribute('value', data.localidade);
+                document.querySelector('[name="Estado"]')?.setAttribute('value', data.uf);
                 showToast('CEP encontrado!', 'success', 2000);
             } else {
-                showToast('CEP não encontrado', 'error', 3000);
+                showToast('CEP não encontrado', 'warning', 2000);
             }
-        } catch {
-            showToast('Erro ao buscar CEP', 'error', 3000);
+        } catch (error) {
+            showToast('Erro ao buscar CEP', 'error', 2000);
+            console.error('Erro ao buscar CEP:', error);
         } finally {
             hideLoading();
         }
@@ -411,61 +444,28 @@ class ValidationManager {
     }
 
     init() {
-        document.querySelectorAll('input[data-validate="email"]').forEach(input => {
-            input.addEventListener('blur', () => this.validateEmail(input));
+        this.setupRealTimeValidation();
+    }
+
+    setupRealTimeValidation() {
+        document.querySelectorAll('.form-control, .form-select').forEach(input => {
+            input.addEventListener('blur', () => {
+                if (input.hasAttribute('required') && !input.value.trim()) {
+                    input.classList.add('is-invalid');
+                    input.classList.remove('is-valid');
+                } else if (input.value.trim()) {
+                    input.classList.remove('is-invalid');
+                    input.classList.add('is-valid');
+                }
+            });
+
+            input.addEventListener('input', () => {
+                if (input.classList.contains('is-invalid') && input.value.trim()) {
+                    input.classList.remove('is-invalid');
+                    input.classList.add('is-valid');
+                }
+            });
         });
-
-        document.querySelectorAll('input[data-validate="cpf"]').forEach(input => {
-            input.addEventListener('blur', () => this.validateCPF(input));
-        });
-    }
-
-    validateEmail(input) {
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const isValid = regex.test(input.value);
-        this.toggleFeedback(input, isValid, 'Email inválido');
-        return isValid;
-    }
-
-    validateCPF(input) {
-        const cpf = input.value.replace(/\D/g, '');
-        const isValid = this.isValidCPF(cpf);
-        this.toggleFeedback(input, isValid, 'CPF inválido');
-        return isValid;
-    }
-
-    isValidCPF(cpf) {
-        if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
-
-        let sum = 0;
-        for (let i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i)) * (10 - i);
-        let digit = 11 - (sum % 11);
-        if (digit > 9) digit = 0;
-        if (digit !== parseInt(cpf.charAt(9))) return false;
-
-        sum = 0;
-        for (let i = 0; i < 10; i++) sum += parseInt(cpf.charAt(i)) * (11 - i);
-        digit = 11 - (sum % 11);
-        if (digit > 9) digit = 0;
-        return digit === parseInt(cpf.charAt(10));
-    }
-
-    toggleFeedback(input, isValid, message) {
-        input.classList.toggle('is-valid', isValid);
-        input.classList.toggle('is-invalid', !isValid);
-
-        let feedback = input.parentElement.querySelector('.invalid-feedback, .valid-feedback');
-        if (!isValid) {
-            if (!feedback) {
-                feedback = document.createElement('div');
-                feedback.className = 'invalid-feedback';
-                input.parentElement.appendChild(feedback);
-            }
-            feedback.textContent = message;
-            feedback.style.display = 'block';
-        } else if (feedback) {
-            feedback.style.display = 'none';
-        }
     }
 }
 
@@ -476,12 +476,38 @@ class TableManager {
     }
 
     init() {
-        this.setupSorting();
+        this.setupDataTables();
+        this.setupSortableTables();
     }
 
-    setupSorting() {
-        document.querySelectorAll('table.sortable thead th[data-sort]').forEach(header => {
+    setupDataTables() {
+        if (typeof $.fn.dataTable !== 'undefined') {
+            $('.table-datatable').each(function () {
+                if (!$.fn.DataTable.isDataTable(this)) {
+                    $(this).DataTable({
+                        responsive: true,
+                        language: {
+                            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+                        },
+                        pageLength: 25,
+                        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]],
+                        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+                            '<"row"<"col-sm-12"tr>>' +
+                            '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                        drawCallback: function () {
+                            hideLoading();
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    setupSortableTables() {
+        document.querySelectorAll('.table-sortable thead th[data-sort]').forEach(header => {
             header.style.cursor = 'pointer';
+            header.innerHTML += ' <i class="bi bi-arrow-down-up ms-1"></i>';
+
             header.addEventListener('click', () => {
                 const table = header.closest('table');
                 const tbody = table.querySelector('tbody');
@@ -519,7 +545,7 @@ class AlertManager {
     init() {
         document.querySelectorAll('.alert').forEach(alert => {
             setTimeout(() => {
-                const bsAlert = new bootstrap.Alert(alert);
+                const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
                 bsAlert.close();
             }, 8000);
         });
@@ -571,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
-    document.querySelectorAll('.card, .alert').forEach(el => observer.observe(el));
+    document.querySelectorAll('.card, .stat-card').forEach(el => observer.observe(el));
 });
 
 // Tratamento global de erros
@@ -580,4 +606,5 @@ window.addEventListener('error', (e) => {
     hideLoading();
 });
 
-console.log('✨ Sistema carregado com sucesso!');
+// Log de sucesso
+console.log('✨ Sistema de Tesouraria carregado com sucesso!');
