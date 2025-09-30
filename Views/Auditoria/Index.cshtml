@@ -4,63 +4,70 @@
     ViewData["Title"] = "Logs de Auditoria";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fas fa-shield-alt me-2"></i>Logs de Auditoria</h2>
-    <div>
-        <a asp-action="Estatisticas" class="btn btn-info me-2">
-            <i class="fas fa-chart-bar me-2"></i>Estatísticas
+<!-- Cabeçalho -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 mb-md-4 gap-2">
+    <h2 class="h3 mb-0">
+        <i class="bi bi-shield-check me-2"></i>
+        Logs de Auditoria
+    </h2>
+    <div class="d-flex gap-2">
+        <a asp-action="Estatisticas" class="btn btn-info btn-sm">
+            <i class="bi bi-bar-chart me-1"></i>Estatísticas
         </a>
-        <a asp-action="ExportarExcel" asp-route-dataInicio="@ViewBag.DataInicio" asp-route-dataFim="@ViewBag.DataFim" class="btn btn-success">
-            <i class="fas fa-file-excel me-2"></i>Excel
+        <a asp-action="ExportarExcel" asp-route-dataInicio="@ViewBag.DataInicio" asp-route-dataFim="@ViewBag.DataFim" class="btn btn-success btn-sm">
+            <i class="bi bi-file-excel me-1"></i>Excel
         </a>
     </div>
 </div>
 
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-3">
-                <label for="dataInicio" class="form-label">Data Início</label>
-                <input type="date" class="form-control" id="dataInicio" name="dataInicio" value="@ViewBag.DataInicio" />
+<!-- Filtros -->
+<div class="card mb-3 mb-md-4">
+    <div class="card-body p-3 p-md-4">
+        <form method="get" class="row g-2 g-md-3">
+            <div class="col-6 col-md-3">
+                <label for="dataInicio" class="form-label small">Data Início</label>
+                <input type="date" class="form-control form-control-sm" id="dataInicio" name="dataInicio" value="@ViewBag.DataInicio" />
             </div>
-            <div class="col-md-3">
-                <label for="dataFim" class="form-label">Data Fim</label>
-                <input type="date" class="form-control" id="dataFim" name="dataFim" value="@ViewBag.DataFim" />
+            <div class="col-6 col-md-3">
+                <label for="dataFim" class="form-label small">Data Fim</label>
+                <input type="date" class="form-control form-control-sm" id="dataFim" name="dataFim" value="@ViewBag.DataFim" />
             </div>
-            <div class="col-md-3">
-                <label for="usuarioId" class="form-label">Usuário</label>
-                <select class="form-select" id="usuarioId" name="usuarioId" asp-items="ViewBag.Usuarios">
-                    <option value="">Todos os usuários</option>
+            <div class="col-6 col-md-3">
+                <label for="usuarioId" class="form-label small">Usuário</label>
+                <select class="form-select form-select-sm" id="usuarioId" name="usuarioId" asp-items="ViewBag.Usuarios">
+                    <option value="">Todos</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <label for="entidade" class="form-label">Entidade</label>
-                <select class="form-select" id="entidade" name="entidade" asp-items="ViewBag.Entidades">
-                    <option value="">Todas as entidades</option>
+            <div class="col-6 col-md-2">
+                <label for="entidade" class="form-label small">Entidade</label>
+                <select class="form-select form-select-sm" id="entidade" name="entidade" asp-items="ViewBag.Entidades">
+                    <option value="">Todas</option>
                 </select>
             </div>
-            <div class="col-md-1 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-search"></i>
+            <div class="col-12 col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-search"></i>
                 </button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- Resultados -->
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            Registros encontrados: @ViewBag.TotalLogs
+    <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center p-3 gap-2">
+        <h5 class="mb-0 small">
+            Registros: @ViewBag.TotalLogs
         </h5>
         <small class="text-muted">
             Página @ViewBag.CurrentPage de @ViewBag.TotalPages
         </small>
     </div>
-    <div class="card-body">
+    <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
+            <table class="table table-hover mb-0">
+                <!-- Desktop -->
+                <thead class="d-none d-md-table-header-group">
                     <tr>
                         <th>Data/Hora</th>
                         <th>Usuário</th>
@@ -76,8 +83,20 @@
                     {
                         var log = item.Log;
                         var usuario = item.Usuario;
-                        
-                        <tr>
+
+                        string badgeClass = log.Acao switch
+                        {
+                            "CREATE" => "bg-success",
+                            "UPDATE" => "bg-warning",
+                            "DELETE" => "bg-danger",
+                            "LOGIN_SUCCESS" => "bg-info",
+                            "LOGIN_FAILED" => "bg-danger",
+                            "LOGOUT" => "bg-secondary",
+                            _ => "bg-primary"
+                        };
+
+                        <!-- Desktop -->
+                        <tr class="d-none d-md-table-row">
                             <td>@log.DataHora.ToString("dd/MM/yyyy HH:mm:ss")</td>
                             <td>
                                 @if (usuario != null)
@@ -86,22 +105,10 @@
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">Usuário não encontrado</span>
+                                    <span class="badge bg-secondary">-</span>
                                 }
                             </td>
                             <td>
-                                @{
-                                    string badgeClass = log.Acao switch
-                                    {
-                                        "CREATE" => "bg-success",
-                                        "UPDATE" => "bg-warning",
-                                        "DELETE" => "bg-danger",
-                                        "LOGIN_SUCCESS" => "bg-info",
-                                        "LOGIN_FAILED" => "bg-danger",
-                                        "LOGOUT" => "bg-secondary",
-                                        _ => "bg-primary"
-                                    };
-                                }
                                 <span class="badge @badgeClass">@log.Acao</span>
                             </td>
                             <td>@log.Entidade</td>
@@ -117,8 +124,44 @@
                                 }
                             </td>
                             <td>
-                                <a asp-action="Details" asp-route-id="@log.Id" class="btn btn-sm btn-outline-info" title="Detalhes">
-                                    <i class="fas fa-eye"></i>
+                                <a asp-action="Details" asp-route-id="@log.Id" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+
+                        <!-- Mobile -->
+                        <tr class="d-md-none">
+                            <td class="p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="flex-grow-1">
+                                        <span class="badge @badgeClass mb-1" style="font-size: 0.7rem;">
+                                            @log.Acao
+                                        </span>
+                                        <div class="small fw-semibold mb-1">@log.Entidade</div>
+                                        <small class="text-muted d-block">
+                                            <i class="bi bi-calendar3 me-1"></i>
+                                            @log.DataHora.ToString("dd/MM/yy HH:mm")
+                                        </small>
+                                    </div>
+                                </div>
+                                @if (usuario != null)
+                                {
+                                    <div class="small mb-2">
+                                        <span class="badge bg-primary" style="font-size: 0.7rem;">
+                                            @usuario.Email
+                                        </span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(log.EnderecoIP))
+                                {
+                                    <div class="small text-muted mb-2">
+                                        <i class="bi bi-geo-alt me-1"></i>
+                                        @log.EnderecoIP
+                                    </div>
+                                }
+                                <a asp-action="Details" asp-route-id="@log.Id" class="btn btn-sm btn-outline-info w-100">
+                                    <i class="bi bi-eye me-1"></i>Ver Detalhes
                                 </a>
                             </td>
                         </tr>
@@ -129,28 +172,35 @@
     </div>
 </div>
 
+<!-- Paginação -->
 @if (ViewBag.TotalPages > 1)
 {
-    <nav aria-label="Navegação de páginas" class="mt-4">
-        <ul class="pagination justify-content-center">
+    <nav aria-label="Navegação" class="mt-3 mt-md-4">
+        <ul class="pagination pagination-sm justify-content-center">
             @if (ViewBag.CurrentPage > 1)
             {
                 <li class="page-item">
-                    <a class="page-link" asp-route-page="@(ViewBag.CurrentPage - 1)" asp-route-dataInicio="@ViewBag.DataInicio" asp-route-dataFim="@ViewBag.DataFim">Anterior</a>
+                    <a class="page-link" asp-route-page="@(ViewBag.CurrentPage - 1)"
+                       asp-route-dataInicio="@ViewBag.DataInicio"
+                       asp-route-dataFim="@ViewBag.DataFim">Anterior</a>
                 </li>
             }
 
             @for (int i = Math.Max(1, ViewBag.CurrentPage - 2); i <= Math.Min(ViewBag.TotalPages, ViewBag.CurrentPage + 2); i++)
             {
                 <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
-                    <a class="page-link" asp-route-page="@i" asp-route-dataInicio="@ViewBag.DataInicio" asp-route-dataFim="@ViewBag.DataFim">@i</a>
+                    <a class="page-link" asp-route-page="@i"
+                       asp-route-dataInicio="@ViewBag.DataInicio"
+                       asp-route-dataFim="@ViewBag.DataFim">@i</a>
                 </li>
             }
 
             @if (ViewBag.CurrentPage < ViewBag.TotalPages)
             {
                 <li class="page-item">
-                    <a class="page-link" asp-route-page="@(ViewBag.CurrentPage + 1)" asp-route-dataInicio="@ViewBag.DataInicio" asp-route-dataFim="@ViewBag.DataFim">Próxima</a>
+                    <a class="page-link" asp-route-page="@(ViewBag.CurrentPage + 1)"
+                       asp-route-dataInicio="@ViewBag.DataInicio"
+                       asp-route-dataFim="@ViewBag.DataFim">Próxima</a>
                 </li>
             }
         </ul>

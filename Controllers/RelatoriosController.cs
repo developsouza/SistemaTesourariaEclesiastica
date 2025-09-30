@@ -28,19 +28,15 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // Cálculo otimizado dos totais
-            var totaisTask = _context.Entradas
+            // Executar as queries sequencialmente para evitar concorrência
+            var totalEntradas = await _context.Entradas
                 .Select(e => e.Valor)
                 .SumAsync();
 
-            var totalSaidasTask = _context.Saidas
+            var totalSaidas = await _context.Saidas
                 .Select(s => s.Valor)
                 .SumAsync();
 
-            await Task.WhenAll(totaisTask, totalSaidasTask);
-
-            var totalEntradas = await totaisTask;
-            var totalSaidas = await totalSaidasTask;
             var saldoAtual = totalEntradas - totalSaidas;
 
             ViewBag.TotalEntradas = totalEntradas.ToString("C2");

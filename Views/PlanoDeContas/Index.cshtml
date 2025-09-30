@@ -4,42 +4,42 @@
     ViewData["Title"] = "Plano de Contas";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- Cabeçalho -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 mb-md-4 gap-2">
     <div>
-        <h1 class="h3 mb-0">
+        <h1 class="h3 mb-1">
             <i class="bi bi-list-ul me-2"></i>
             Plano de Contas
         </h1>
-        <p class="text-muted mb-0">Estrutura contábil de receitas e despesas</p>
+        <p class="text-muted small mb-0">Estrutura contábil de receitas e despesas</p>
     </div>
-    <a asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-2"></i>
+    <a asp-action="Create" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-circle me-1"></i>
         Nova Conta
     </a>
 </div>
 
 <!-- Filtros -->
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label">Buscar</label>
-                <input type="text" class="form-control" name="searchString" value="@ViewData["CurrentFilter"]"
+<div class="card mb-3 mb-md-4">
+    <div class="card-body p-3 p-md-4">
+        <form method="get" class="row g-2 g-md-3">
+            <div class="col-12 col-md-4">
+                <label class="form-label small">Buscar</label>
+                <input type="text" class="form-control form-control-sm" name="searchString" value="@ViewData["CurrentFilter"]"
                        placeholder="Nome ou descrição...">
             </div>
-            <div class="col-md-4">
-                <label class="form-label">Tipo</label>
+            <div class="col-6 col-md-4">
+                <label class="form-label small">Tipo</label>
                 @Html.DropDownList("tipo", Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.TipoPlanoContas>(), "Todos",
-                new { @class = "form-select" })
+                new { @class = "form-select form-select-sm" })
             </div>
-            <div class="col-md-4 d-flex align-items-end">
-                <button type="submit" class="btn btn-outline-primary me-2">
+            <div class="col-6 col-md-4 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-outline-primary btn-sm flex-grow-1">
                     <i class="bi bi-search me-1"></i>
                     Filtrar
                 </button>
-                <a asp-action="Index" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-clockwise me-1"></i>
-                    Limpar
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-clockwise"></i>
                 </a>
             </div>
         </form>
@@ -48,29 +48,24 @@
 
 <!-- Resultados -->
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">
+    <div class="card-header d-flex justify-content-between align-items-center p-3">
+        <h5 class="card-title mb-0 small">
             @ViewBag.TotalItems conta(s) encontrada(s)
         </h5>
-        <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-outline-secondary">
-                <i class="bi bi-download"></i>
-                Exportar
-            </button>
-        </div>
     </div>
     <div class="card-body p-0">
         @if (Model.Any())
         {
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                    <!-- Desktop -->
+                    <thead class="table-light d-none d-md-table-header-group">
                         <tr>
                             <th>
                                 <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]"
                                    asp-route-currentFilter="@ViewData["CurrentFilter"]"
                                    asp-route-tipo="@ViewData["TipoFilter"]">
-                                    @Html.DisplayNameFor(model => model.First().Nome)
+                                    Nome
                                     @if (ViewData["CurrentSort"]?.ToString() == "")
                                     {
                                         <i class="bi bi-caret-up-fill"></i>
@@ -81,12 +76,12 @@
                                     }
                                 </a>
                             </th>
-                            <th>@Html.DisplayNameFor(model => model.First().Descricao)</th>
+                            <th>Descrição</th>
                             <th>
                                 <a asp-action="Index" asp-route-sortOrder="@ViewData["TipoSortParm"]"
                                    asp-route-currentFilter="@ViewData["CurrentFilter"]"
                                    asp-route-tipo="@ViewData["TipoFilter"]">
-                                    @Html.DisplayNameFor(model => model.First().Tipo)
+                                    Tipo
                                     @if (ViewData["CurrentSort"]?.ToString() == "tipo")
                                     {
                                         <i class="bi bi-caret-up-fill"></i>
@@ -97,44 +92,29 @@
                                     }
                                 </a>
                             </th>
-                            <th>
-                                <a asp-action="Index" asp-route-sortOrder="@ViewData["DateSortParm"]"
-                                   asp-route-currentFilter="@ViewData["CurrentFilter"]"
-                                   asp-route-tipo="@ViewData["TipoFilter"]">
-                                    @Html.DisplayNameFor(model => model.First().DataCriacao)
-                                    @if (ViewData["CurrentSort"]?.ToString() == "date")
-                                    {
-                                        <i class="bi bi-caret-up-fill"></i>
-                                    }
-                                    else if (ViewData["CurrentSort"]?.ToString() == "date_desc")
-                                    {
-                                        <i class="bi bi-caret-down-fill"></i>
-                                    }
-                                </a>
-                            </th>
+                            <th>Data</th>
                             <th>Status</th>
-                            <th width="150">Ações</th>
+                            <th width="140">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            <tr>
-                                <td>
-                                    <strong>@Html.DisplayFor(modelItem => item.Nome)</strong>
-                                </td>
-                                <td>@Html.DisplayFor(modelItem => item.Descricao)</td>
+                            <!-- Desktop -->
+                            <tr class="d-none d-md-table-row">
+                                <td><strong>@item.Nome</strong></td>
+                                <td>@item.Descricao</td>
                                 <td>
                                     @if (item.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita)
                                     {
-                                        <span class="badge bg-success">@Html.DisplayFor(modelItem => item.Tipo)</span>
+                                        <span class="badge bg-success">@item.Tipo</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-danger">@Html.DisplayFor(modelItem => item.Tipo)</span>
+                                        <span class="badge bg-danger">@item.Tipo</span>
                                     }
                                 </td>
-                                <td>@Html.DisplayFor(modelItem => item.DataCriacao)</td>
+                                <td>@item.DataCriacao</td>
                                 <td>
                                     @if (item.Ativo)
                                     {
@@ -147,13 +127,61 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info" title="Detalhes">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Editar">
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary">
                                             <i class="bi bi-pencil"></i>
                                         </a>
-                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Excluir">
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Mobile -->
+                            <tr class="d-md-none">
+                                <td class="p-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold mb-1">@item.Nome</div>
+                                            @if (!string.IsNullOrEmpty(item.Descricao))
+                                            {
+                                                <small class="text-muted d-block mb-1">@item.Descricao</small>
+                                            }
+                                            <div class="d-flex gap-1 flex-wrap">
+                                                @if (item.Tipo == SistemaTesourariaEclesiastica.Enums.TipoPlanoContas.Receita)
+                                                {
+                                                    <span class="badge bg-success" style="font-size: 0.7rem;">@item.Tipo</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger" style="font-size: 0.7rem;">@item.Tipo</span>
+                                                }
+                                                @if (item.Ativo)
+                                                {
+                                                    <span class="badge bg-success" style="font-size: 0.7rem;">Ativo</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary" style="font-size: 0.7rem;">Inativo</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="small text-muted mb-2">
+                                        <i class="bi bi-calendar3 me-1"></i>
+                                        @item.DataCriacao
+                                    </div>
+                                    <div class="btn-group btn-group-sm w-100">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-info">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger">
                                             <i class="bi bi-trash"></i>
                                         </a>
                                     </div>
@@ -167,9 +195,9 @@
             <!-- Paginação -->
             @if (Model.HasPreviousPage || Model.HasNextPage)
             {
-                <div class="card-footer">
-                    <nav aria-label="Navegação de páginas">
-                        <ul class="pagination justify-content-center mb-0">
+                <div class="card-footer p-2 p-md-3">
+                    <nav aria-label="Navegação">
+                        <ul class="pagination pagination-sm justify-content-center mb-0">
                             <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
                                 <a asp-action="Index"
                                    asp-route-sortOrder="@ViewData["CurrentSort"]"
@@ -207,10 +235,9 @@
             <div class="text-center py-4">
                 <i class="bi bi-search display-4 text-muted"></i>
                 <h5 class="mt-2">Nenhuma conta encontrada</h5>
-                <p class="text-muted">Tente ajustar os filtros ou adicione uma nova conta.</p>
+                <p class="text-muted">Ajuste os filtros ou adicione uma nova conta.</p>
                 <a asp-action="Create" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-2"></i>
-                    Adicionar Conta
+                    <i class="bi bi-plus-circle me-2"></i>Adicionar Conta
                 </a>
             </div>
         }

@@ -1,5 +1,5 @@
-// ===== FUNÇÕES GLOBAIS DE LOADING =====
-window.showLoading = function (message = 'Processando...') {
+// ===== FUNÇÕES UTILITÁRIAS GLOBAIS =====
+window.showLoading = (message = 'Processando...') => {
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) {
         const text = overlay.querySelector('.loading-text');
@@ -8,57 +8,73 @@ window.showLoading = function (message = 'Processando...') {
     }
 };
 
-window.hideLoading = function () {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-        overlay.classList.add('d-none');
-    }
+window.hideLoading = () => {
+    document.getElementById('loadingOverlay')?.classList.add('d-none');
 };
 
-// ===== FUNÇÃO GLOBAL DE TOAST =====
-window.showToast = function (message, type = 'info', duration = 5000) {
+window.showToast = (message, type = 'info', duration = 5000) => {
     const container = document.querySelector('.toast-container');
     if (!container) return;
 
-    const toastId = 'toast-' + Date.now();
-    const bgClass = {
-        'success': 'bg-success',
-        'error': 'bg-danger',
-        'warning': 'bg-warning',
-        'info': 'bg-info'
-    }[type] || 'bg-info';
+    const icons = {
+        success: 'bi-check-circle-fill',
+        error: 'bi-x-circle-fill',
+        warning: 'bi-exclamation-triangle-fill',
+        info: 'bi-info-circle-fill'
+    };
 
-    const iconClass = {
-        'success': 'bi-check-circle-fill',
-        'error': 'bi-x-circle-fill',
-        'warning': 'bi-exclamation-triangle-fill',
-        'info': 'bi-info-circle-fill'
-    }[type] || 'bi-info-circle-fill';
+    const bgClasses = {
+        success: 'bg-success',
+        error: 'bg-danger',
+        warning: 'bg-warning',
+        info: 'bg-info'
+    };
 
+    const toastId = `toast-${Date.now()}`;
     const toastHTML = `
-        <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div id="${toastId}" class="toast align-items-center text-white ${bgClasses[type]} border-0" role="alert">
             <div class="d-flex">
                 <div class="toast-body">
-                    <i class="bi ${iconClass} me-2"></i>
-                    ${message}
+                    <i class="bi ${icons[type]} me-2"></i>${message}
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
-        </div>
-    `;
+        </div>`;
 
     container.insertAdjacentHTML('beforeend', toastHTML);
-
     const toastElement = document.getElementById(toastId);
     const toast = new bootstrap.Toast(toastElement, { delay: duration });
     toast.show();
-
-    toastElement.addEventListener('hidden.bs.toast', () => {
-        toastElement.remove();
-    });
+    toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
 };
 
-// ===== SISTEMA DE TEMA DARK/LIGHT =====
+window.formatCurrency = (value) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+window.formatDate = (date) =>
+    new Intl.DateTimeFormat('pt-BR').format(new Date(date));
+
+window.formatDateTime = (date) =>
+    new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(date));
+
+window.copyToClipboard = async (text) => {
+    try {
+        await navigator.clipboard.writeText(text);
+        showToast('Copiado!', 'success', 2000);
+    } catch {
+        showToast('Erro ao copiar', 'error', 2000);
+    }
+};
+
+window.debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), wait);
+    };
+};
+
+// ===== GERENCIADOR DE TEMA =====
 class ThemeManager {
     constructor() {
         this.init();
@@ -67,18 +83,20 @@ class ThemeManager {
     init() {
         const savedTheme = localStorage.getItem('theme') || 'light';
         this.setTheme(savedTheme);
+        this.bindEvents();
+    }
 
-        document.querySelectorAll('[data-theme]').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const theme = e.currentTarget.getAttribute('data-theme');
+    bindEvents() {
+        document.querySelectorAll('[data-theme]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const theme = btn.getAttribute('data-theme');
                 this.setTheme(theme);
-                this.showThemeChangeToast(theme);
+                showToast(this.getThemeMessage(theme), 'info', 2000);
             });
         });
 
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'auto') {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (localStorage.getItem('theme') === 'auto') {
                 this.setTheme('auto');
             }
         });
@@ -87,8 +105,6 @@ class ThemeManager {
     setTheme(theme) {
         const html = document.documentElement;
         const themeIcon = document.getElementById('themeIcon');
-
-        html.removeAttribute('data-bs-theme');
 
         if (theme === 'dark') {
             html.setAttribute('data-bs-theme', 'dark');
@@ -103,69 +119,94 @@ class ThemeManager {
         }
 
         localStorage.setItem('theme', theme);
-        this.updateThemeIndicators(theme);
+        this.updateIndicators(theme);
     }
 
-    updateThemeIndicators(activeTheme) {
-        document.querySelectorAll('[data-theme]').forEach(button => {
-            const theme = button.getAttribute('data-theme');
-            if (theme === activeTheme) {
-                button.classList.add('active');
-            } else {
-                button.classList.remove('active');
-            }
+    updateIndicators(activeTheme) {
+        document.querySelectorAll('[data-theme]').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-theme') === activeTheme);
         });
     }
 
-    showThemeChangeToast(theme) {
+    getThemeMessage(theme) {
         const messages = {
-            'light': 'Tema claro ativado',
-            'dark': 'Tema escuro ativado',
-            'auto': 'Tema automático ativado'
+            light: 'Tema claro ativado',
+            dark: 'Tema escuro ativado',
+            auto: 'Tema automático ativado'
         };
-        showToast(messages[theme] || 'Tema alterado', 'info', 2000);
+        return messages[theme];
     }
 }
 
-// ===== GERENCIADOR DE SIDEBAR =====
+// ===== GERENCIADOR DE SIDEBAR MOBILE CORRIGIDO =====
 class SidebarManager {
     constructor() {
         this.sidebar = document.getElementById('sidebar');
         this.content = document.getElementById('content');
+        this.backdrop = null;
         this.init();
     }
 
     init() {
-        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-        if (isCollapsed && this.sidebar) {
-            this.collapse();
+        if (!this.sidebar) return;
+
+        // Criar backdrop
+        this.createBackdrop();
+
+        // Restaurar estado no desktop
+        if (window.innerWidth > 991) {
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) this.collapse();
         }
 
-        const toggleButtons = document.querySelectorAll('#sidebarCollapse, #sidebarCollapseTop');
-        toggleButtons.forEach(button => {
-            button.addEventListener('click', () => this.toggle());
+        // Eventos de toggle
+        document.querySelectorAll('#sidebarCollapse, #sidebarCollapseTop').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggle();
+            });
         });
 
-        if (window.innerWidth <= 991) {
-            const navLinks = document.querySelectorAll('.sidebar .nav-link');
-            navLinks.forEach(link => {
-                link.addEventListener('click', () => {
-                    if (this.sidebar.classList.contains('show')) {
-                        this.sidebar.classList.remove('show');
-                    }
-                });
+        // Fechar sidebar ao clicar em links no mobile
+        document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 991 && this.sidebar.classList.contains('show')) {
+                    this.closeMobile();
+                }
             });
-        }
+        });
 
+        // Responsividade
         this.handleResponsive();
         window.addEventListener('resize', () => this.handleResponsive());
+
+        // Marcar link ativo
         this.setActiveLink();
+    }
+
+    createBackdrop() {
+        this.backdrop = document.createElement('div');
+        this.backdrop.className = 'sidebar-backdrop';
+        document.body.appendChild(this.backdrop);
+
+        // Fechar ao clicar no backdrop
+        this.backdrop.addEventListener('click', () => {
+            if (window.innerWidth <= 991) {
+                this.closeMobile();
+            }
+        });
     }
 
     toggle() {
         if (window.innerWidth <= 991) {
-            this.sidebar.classList.toggle('show');
+            // Mobile: toggle show/hide
+            if (this.sidebar.classList.contains('show')) {
+                this.closeMobile();
+            } else {
+                this.openMobile();
+            }
         } else {
+            // Desktop: toggle collapse
             if (this.sidebar.classList.contains('collapsed')) {
                 this.expand();
             } else {
@@ -174,37 +215,50 @@ class SidebarManager {
         }
     }
 
+    openMobile() {
+        this.sidebar.classList.add('show');
+        this.backdrop.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeMobile() {
+        this.sidebar.classList.remove('show');
+        this.backdrop.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
     collapse() {
-        if (this.sidebar) {
-            this.sidebar.classList.add('collapsed');
-            if (this.content) this.content.classList.add('expanded');
-            localStorage.setItem('sidebarCollapsed', 'true');
-        }
+        this.sidebar.classList.add('collapsed');
+        this.content?.classList.add('expanded');
+        localStorage.setItem('sidebarCollapsed', 'true');
     }
 
     expand() {
-        if (this.sidebar) {
-            this.sidebar.classList.remove('collapsed');
-            if (this.content) this.content.classList.remove('expanded');
-            localStorage.setItem('sidebarCollapsed', 'false');
-        }
+        this.sidebar.classList.remove('collapsed');
+        this.content?.classList.remove('expanded');
+        localStorage.setItem('sidebarCollapsed', 'false');
     }
 
     handleResponsive() {
         if (window.innerWidth <= 991) {
-            if (this.sidebar) this.sidebar.classList.add('collapsed');
+            // Mobile: sempre fechado por padrão
+            this.closeMobile();
+        } else {
+            // Desktop: remover classes mobile
+            this.sidebar.classList.remove('show');
+            this.backdrop.classList.remove('show');
+            document.body.style.overflow = '';
         }
     }
 
     setActiveLink() {
         const currentPath = window.location.pathname.toLowerCase();
-        const menuLinks = document.querySelectorAll('.nav-menu .nav-link');
-
-        menuLinks.forEach(link => {
+        document.querySelectorAll('.nav-menu .nav-link').forEach(link => {
             const href = link.getAttribute('href')?.toLowerCase();
             if (href && currentPath.includes(href) && href !== '/') {
                 link.classList.add('active');
 
+                // Abrir submenu se o link estiver dentro dele
                 const submenu = link.closest('.submenu');
                 if (submenu) {
                     submenu.classList.add('show');
@@ -224,38 +278,232 @@ class SubmenuManager {
     }
 
     init() {
-        const submenuItems = document.querySelectorAll('.has-submenu > .nav-link');
-        submenuItems.forEach(item => {
+        document.querySelectorAll('.has-submenu > .nav-link').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                const parent = item.parentElement;
-                const submenu = parent.querySelector('.submenu');
+                const submenu = document.getElementById(item.getAttribute('href').substring(1));
                 const arrow = item.querySelector('.submenu-arrow');
 
-                const isOpen = submenu.classList.contains('show');
+                if (submenu) {
+                    const isShowing = submenu.classList.contains('show');
 
-                document.querySelectorAll('.submenu.show').forEach(sub => {
-                    if (sub !== submenu) {
-                        sub.classList.remove('show');
-                        const parentArrow = sub.parentElement.querySelector('.submenu-arrow');
-                        if (parentArrow) {
-                            parentArrow.style.transform = 'rotate(0deg)';
+                    // Fechar outros submenus
+                    document.querySelectorAll('.submenu.show').forEach(other => {
+                        if (other !== submenu) {
+                            other.classList.remove('show');
+                            const otherArrow = other.closest('.has-submenu')?.querySelector('.submenu-arrow');
+                            if (otherArrow) otherArrow.style.transform = 'rotate(0deg)';
                         }
+                    });
+
+                    // Toggle atual
+                    submenu.classList.toggle('show');
+                    if (arrow) {
+                        arrow.style.transform = isShowing ? 'rotate(0deg)' : 'rotate(90deg)';
                     }
+                }
+            });
+        });
+    }
+}
+
+// ===== GERENCIADOR DE FORMULÁRIOS =====
+class FormManager {
+    constructor() {
+        this.init();
+    }
+
+    init() {
+        this.setupFormSubmit();
+        this.setupCPFMask();
+        this.setupPhoneMask();
+        this.setupCEPMask();
+        this.setupMoneyMask();
+    }
+
+    setupFormSubmit() {
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', () => showLoading('Enviando...'));
+        });
+    }
+
+    setupCPFMask() {
+        document.querySelectorAll('input[data-mask="cpf"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                e.target.value = value;
+            });
+        });
+    }
+
+    setupPhoneMask() {
+        document.querySelectorAll('input[data-mask="phone"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 10) {
+                    value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                } else {
+                    value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                }
+                e.target.value = value;
+            });
+        });
+    }
+
+    setupCEPMask() {
+        document.querySelectorAll('input[data-mask="cep"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                value = value.replace(/(\d{5})(\d)/, '$1-$2');
+                e.target.value = value;
+            });
+
+            input.addEventListener('blur', async (e) => {
+                const cep = e.target.value.replace(/\D/g, '');
+                if (cep.length === 8) {
+                    await this.fetchCEP(cep);
+                }
+            });
+        });
+    }
+
+    setupMoneyMask() {
+        document.querySelectorAll('input[data-mask="money"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                value = (value / 100).toFixed(2).replace('.', ',');
+                value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+                e.target.value = 'R$ ' + value;
+            });
+        });
+    }
+
+    async fetchCEP(cep) {
+        try {
+            showLoading('Buscando CEP...');
+            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const data = await response.json();
+
+            if (!data.erro) {
+                document.getElementById('Logradouro')?.setAttribute('value', data.logradouro);
+                document.getElementById('Bairro')?.setAttribute('value', data.bairro);
+                document.getElementById('Cidade')?.setAttribute('value', data.localidade);
+                document.getElementById('Estado')?.setAttribute('value', data.uf);
+                showToast('CEP encontrado!', 'success', 2000);
+            } else {
+                showToast('CEP não encontrado', 'error', 3000);
+            }
+        } catch {
+            showToast('Erro ao buscar CEP', 'error', 3000);
+        } finally {
+            hideLoading();
+        }
+    }
+}
+
+// ===== GERENCIADOR DE VALIDAÇÃO =====
+class ValidationManager {
+    constructor() {
+        this.init();
+    }
+
+    init() {
+        document.querySelectorAll('input[data-validate="email"]').forEach(input => {
+            input.addEventListener('blur', () => this.validateEmail(input));
+        });
+
+        document.querySelectorAll('input[data-validate="cpf"]').forEach(input => {
+            input.addEventListener('blur', () => this.validateCPF(input));
+        });
+    }
+
+    validateEmail(input) {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const isValid = regex.test(input.value);
+        this.toggleFeedback(input, isValid, 'Email inválido');
+        return isValid;
+    }
+
+    validateCPF(input) {
+        const cpf = input.value.replace(/\D/g, '');
+        const isValid = this.isValidCPF(cpf);
+        this.toggleFeedback(input, isValid, 'CPF inválido');
+        return isValid;
+    }
+
+    isValidCPF(cpf) {
+        if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+
+        let sum = 0;
+        for (let i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i)) * (10 - i);
+        let digit = 11 - (sum % 11);
+        if (digit > 9) digit = 0;
+        if (digit !== parseInt(cpf.charAt(9))) return false;
+
+        sum = 0;
+        for (let i = 0; i < 10; i++) sum += parseInt(cpf.charAt(i)) * (11 - i);
+        digit = 11 - (sum % 11);
+        if (digit > 9) digit = 0;
+        return digit === parseInt(cpf.charAt(10));
+    }
+
+    toggleFeedback(input, isValid, message) {
+        input.classList.toggle('is-valid', isValid);
+        input.classList.toggle('is-invalid', !isValid);
+
+        let feedback = input.parentElement.querySelector('.invalid-feedback, .valid-feedback');
+        if (!isValid) {
+            if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'invalid-feedback';
+                input.parentElement.appendChild(feedback);
+            }
+            feedback.textContent = message;
+            feedback.style.display = 'block';
+        } else if (feedback) {
+            feedback.style.display = 'none';
+        }
+    }
+}
+
+// ===== GERENCIADOR DE TABELAS =====
+class TableManager {
+    constructor() {
+        this.init();
+    }
+
+    init() {
+        this.setupSorting();
+    }
+
+    setupSorting() {
+        document.querySelectorAll('table.sortable thead th[data-sort]').forEach(header => {
+            header.style.cursor = 'pointer';
+            header.addEventListener('click', () => {
+                const table = header.closest('table');
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                const columnIndex = Array.from(header.parentElement.children).indexOf(header);
+                const currentDirection = header.getAttribute('data-sort-direction') || 'asc';
+                const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+
+                rows.sort((a, b) => {
+                    const aValue = a.children[columnIndex].textContent.trim();
+                    const bValue = b.children[columnIndex].textContent.trim();
+                    return newDirection === 'asc'
+                        ? aValue.localeCompare(bValue, 'pt-BR', { numeric: true })
+                        : bValue.localeCompare(aValue, 'pt-BR', { numeric: true });
                 });
 
-                if (isOpen) {
-                    submenu.classList.remove('show');
-                    if (arrow) {
-                        arrow.style.transform = 'rotate(0deg)';
-                    }
-                } else {
-                    setTimeout(() => {
-                        submenu.classList.add('show');
-                        if (arrow) {
-                            arrow.style.transform = 'rotate(90deg)';
-                        }
-                    }, 50);
+                rows.forEach(row => tbody.appendChild(row));
+                header.setAttribute('data-sort-direction', newDirection);
+
+                const icon = header.querySelector('i');
+                if (icon) {
+                    icon.className = newDirection === 'asc' ? 'bi bi-arrow-up ms-1' : 'bi bi-arrow-down ms-1';
                 }
             });
         });
@@ -269,460 +517,30 @@ class AlertManager {
     }
 
     init() {
-        const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
-        alerts.forEach(alert => {
+        document.querySelectorAll('.alert').forEach(alert => {
             setTimeout(() => {
-                if (alert.parentElement) {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                }
-            }, 5000);
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }, 8000);
         });
     }
 }
 
-// ===== VALIDAÇÕES EM TEMPO REAL (CONSOLIDADO) =====
-class ValidationManager {
-    constructor() {
-        this.init();
-    }
-
-    init() {
-        this.initCPFValidation();
-        this.initCNPJValidation();
-        this.initMoneyValidation();
-        this.initPhoneValidation();
-        this.initCEPValidation();
-        this.initDateValidation();
-    }
-
-    initCPFValidation() {
-        const cpfInputs = document.querySelectorAll('input[data-val-cpf]');
-        cpfInputs.forEach(input => {
-            input.addEventListener('input', (e) => {
-                const cpf = e.target.value.replace(/\D/g, '');
-
-                if (cpf.length <= 11) {
-                    e.target.value = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                }
-
-                if (cpf.length === 11) {
-                    const isValid = this.validateCPF(cpf);
-                    this.toggleValidationFeedback(e.target, isValid, 'CPF inválido');
-                } else if (cpf.length > 0) {
-                    this.toggleValidationFeedback(e.target, false, 'CPF deve ter 11 dígitos');
-                } else {
-                    this.clearValidationFeedback(e.target);
-                }
-            });
-        });
-    }
-
-    initCNPJValidation() {
-        const cnpjInputs = document.querySelectorAll('input[data-val-cnpj]');
-        cnpjInputs.forEach(input => {
-            input.addEventListener('input', (e) => {
-                const cnpj = e.target.value.replace(/\D/g, '');
-
-                if (cnpj.length <= 14) {
-                    e.target.value = cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-                }
-
-                if (cnpj.length === 14) {
-                    const isValid = this.validateCNPJ(cnpj);
-                    this.toggleValidationFeedback(e.target, isValid, 'CNPJ inválido');
-                } else if (cnpj.length > 0) {
-                    this.toggleValidationFeedback(e.target, false, 'CNPJ deve ter 14 dígitos');
-                } else {
-                    this.clearValidationFeedback(e.target);
-                }
-            });
-        });
-    }
-
-    initMoneyValidation() {
-        const moneyInputs = document.querySelectorAll('input[data-val-money]');
-        moneyInputs.forEach(input => {
-            input.addEventListener('input', (e) => {
-                let value = e.target.value.replace(/\D/g, '');
-
-                if (value.length > 0) {
-                    value = (parseInt(value) / 100).toFixed(2);
-                    e.target.value = 'R$ ' + value.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-                    const numericValue = parseFloat(value);
-                    const min = parseFloat(e.target.getAttribute('data-val-money-min') || '0.01');
-                    const max = parseFloat(e.target.getAttribute('data-val-money-max') || '999999.99');
-
-                    const isValid = numericValue >= min && numericValue <= max;
-                    this.toggleValidationFeedback(e.target, isValid,
-                        `Valor deve estar entre R$ ${min.toFixed(2)} e R$ ${max.toFixed(2)}`);
-                } else {
-                    this.clearValidationFeedback(e.target);
-                }
-            });
-        });
-    }
-
-    initPhoneValidation() {
-        const phoneInputs = document.querySelectorAll('input[data-val-phone]');
-        phoneInputs.forEach(input => {
-            input.addEventListener('input', (e) => {
-                let phone = e.target.value.replace(/\D/g, '');
-
-                if (phone.length <= 11) {
-                    if (phone.length <= 10) {
-                        e.target.value = phone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-                    } else {
-                        e.target.value = phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-                    }
-                }
-
-                if (phone.length >= 10 && phone.length <= 11) {
-                    this.toggleValidationFeedback(e.target, true, '');
-                } else if (phone.length > 0) {
-                    this.toggleValidationFeedback(e.target, false, 'Telefone deve ter 10 ou 11 dígitos');
-                } else {
-                    this.clearValidationFeedback(e.target);
-                }
-            });
-        });
-    }
-
-    initCEPValidation() {
-        const cepInputs = document.querySelectorAll('input[data-val-cep]');
-        cepInputs.forEach(input => {
-            input.addEventListener('input', (e) => {
-                let cep = e.target.value.replace(/\D/g, '');
-
-                if (cep.length <= 8) {
-                    e.target.value = cep.replace(/(\d{5})(\d{3})/, '$1-$2');
-                }
-
-                if (cep.length === 8) {
-                    this.toggleValidationFeedback(e.target, true, '');
-                    this.searchCEP(cep);
-                } else if (cep.length > 0) {
-                    this.toggleValidationFeedback(e.target, false, 'CEP deve ter 8 dígitos');
-                } else {
-                    this.clearValidationFeedback(e.target);
-                }
-            });
-        });
-    }
-
-    initDateValidation() {
-        const dateInputs = document.querySelectorAll('input[type="date"][data-val-date]');
-        dateInputs.forEach(input => {
-            input.addEventListener('change', (e) => {
-                const inputDate = new Date(e.target.value);
-                const today = new Date();
-
-                const allowFuture = e.target.getAttribute('data-val-date-future') === 'true';
-                const allowPast = e.target.getAttribute('data-val-date-past') === 'true';
-                const maxPastDays = parseInt(e.target.getAttribute('data-val-date-max-past') || '3650');
-                const maxFutureDays = parseInt(e.target.getAttribute('data-val-date-max-future') || '365');
-
-                let isValid = true;
-                let message = '';
-
-                if (inputDate > today && !allowFuture) {
-                    isValid = false;
-                    message = 'Data não pode ser futura';
-                } else if (inputDate < today && !allowPast) {
-                    isValid = false;
-                    message = 'Data não pode ser passada';
-                } else if (inputDate < today) {
-                    const daysDiff = Math.floor((today - inputDate) / (1000 * 60 * 60 * 24));
-                    if (daysDiff > maxPastDays) {
-                        isValid = false;
-                        message = `Data não pode ser mais de ${maxPastDays} dias no passado`;
-                    }
-                } else if (inputDate > today) {
-                    const daysDiff = Math.floor((inputDate - today) / (1000 * 60 * 60 * 24));
-                    if (daysDiff > maxFutureDays) {
-                        isValid = false;
-                        message = `Data não pode ser mais de ${maxFutureDays} dias no futuro`;
-                    }
-                }
-
-                this.toggleValidationFeedback(e.target, isValid, message);
-            });
-        });
-    }
-
-    validateCPF(cpf) {
-        if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) {
-            return false;
-        }
-
-        let sum = 0;
-        for (let i = 0; i < 9; i++) {
-            sum += parseInt(cpf.charAt(i)) * (10 - i);
-        }
-        let remainder = sum % 11;
-        let digit1 = remainder < 2 ? 0 : 11 - remainder;
-
-        if (parseInt(cpf.charAt(9)) !== digit1) {
-            return false;
-        }
-
-        sum = 0;
-        for (let i = 0; i < 10; i++) {
-            sum += parseInt(cpf.charAt(i)) * (11 - i);
-        }
-        remainder = sum % 11;
-        let digit2 = remainder < 2 ? 0 : 11 - remainder;
-
-        return parseInt(cpf.charAt(10)) === digit2;
-    }
-
-    validateCNPJ(cnpj) {
-        if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) {
-            return false;
-        }
-
-        const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-        const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-
-        let sum = 0;
-        for (let i = 0; i < 12; i++) {
-            sum += parseInt(cnpj.charAt(i)) * weights1[i];
-        }
-        let remainder = sum % 11;
-        let digit1 = remainder < 2 ? 0 : 11 - remainder;
-
-        if (parseInt(cnpj.charAt(12)) !== digit1) {
-            return false;
-        }
-
-        sum = 0;
-        for (let i = 0; i < 13; i++) {
-            sum += parseInt(cnpj.charAt(i)) * weights2[i];
-        }
-        remainder = sum % 11;
-        let digit2 = remainder < 2 ? 0 : 11 - remainder;
-
-        return parseInt(cnpj.charAt(13)) === digit2;
-    }
-
-    async searchCEP(cep) {
-        try {
-            showLoading('Buscando CEP...');
-            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-            const data = await response.json();
-
-            if (!data.erro) {
-                const logradouroField = document.querySelector('input[name*="Logradouro"], input[name*="Endereco"]');
-                const bairroField = document.querySelector('input[name*="Bairro"]');
-                const cidadeField = document.querySelector('input[name*="Cidade"]');
-                const ufField = document.querySelector('input[name*="UF"], select[name*="UF"]');
-
-                if (logradouroField && data.logradouro) logradouroField.value = data.logradouro;
-                if (bairroField && data.bairro) bairroField.value = data.bairro;
-                if (cidadeField && data.localidade) cidadeField.value = data.localidade;
-                if (ufField && data.uf) ufField.value = data.uf;
-
-                showToast('CEP encontrado com sucesso!', 'success', 2000);
-            } else {
-                showToast('CEP não encontrado', 'error', 3000);
-            }
-        } catch (error) {
-            console.error('Erro ao buscar CEP:', error);
-            showToast('Erro ao buscar CEP', 'error', 3000);
-        } finally {
-            hideLoading();
-        }
-    }
-
-    toggleValidationFeedback(input, isValid, message) {
-        const feedbackElement = input.parentElement.querySelector('.invalid-feedback') ||
-            input.parentElement.querySelector('.valid-feedback');
-
-        if (isValid) {
-            input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-            if (feedbackElement) {
-                feedbackElement.style.display = 'none';
-            }
-        } else {
-            input.classList.remove('is-valid');
-            input.classList.add('is-invalid');
-
-            if (feedbackElement) {
-                feedbackElement.textContent = message;
-                feedbackElement.className = 'invalid-feedback';
-                feedbackElement.style.display = 'block';
-            } else {
-                const newFeedback = document.createElement('div');
-                newFeedback.className = 'invalid-feedback';
-                newFeedback.textContent = message;
-                newFeedback.style.display = 'block';
-                input.parentElement.appendChild(newFeedback);
-            }
-        }
-    }
-
-    clearValidationFeedback(input) {
-        input.classList.remove('is-valid', 'is-invalid');
-        const feedbackElement = input.parentElement.querySelector('.invalid-feedback') ||
-            input.parentElement.querySelector('.valid-feedback');
-        if (feedbackElement) {
-            feedbackElement.style.display = 'none';
-        }
-    }
-}
-
-// ===== GERENCIADOR DE FORMULÁRIOS =====
-class FormManager {
-    constructor() {
-        this.init();
-    }
-
-    init() {
-        this.preventDoubleSubmit();
-        this.trackFormChanges();
-        this.initializeTooltips();
-        this.initializePopovers();
-    }
-
-    preventDoubleSubmit() {
-        document.addEventListener('submit', (e) => {
-            const form = e.target;
-            const submitButton = form.querySelector('[type="submit"]');
-
-            if (submitButton && !submitButton.disabled) {
-                submitButton.disabled = true;
-
-                if (form.checkValidity()) {
-                    showLoading('Enviando dados...');
-                }
-
-                setTimeout(() => {
-                    submitButton.disabled = false;
-                    hideLoading();
-                }, 3000);
-            }
-        });
-    }
-
-    trackFormChanges() {
-        const forms = document.querySelectorAll('form[data-warn-unsaved]');
-        forms.forEach(form => {
-            const inputs = form.querySelectorAll('input, textarea, select');
-            inputs.forEach(input => {
-                input.dataset.originalValue = input.value;
-            });
-        });
-
-        window.addEventListener('beforeunload', (e) => {
-            const forms = document.querySelectorAll('form[data-warn-unsaved]');
-            for (const form of forms) {
-                const inputs = form.querySelectorAll('input, textarea, select');
-                for (const input of inputs) {
-                    if (input.dataset.originalValue !== input.value) {
-                        e.preventDefault();
-                        e.returnValue = '';
-                        return '';
-                    }
-                }
-            }
-        });
-    }
-
-    initializeTooltips() {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-    }
-
-    initializePopovers() {
-        const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-        popoverTriggerList.map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
-    }
-}
-
-// ===== GERENCIADOR DE TABELAS =====
-class TableManager {
-    constructor() {
-        this.init();
-    }
-
-    init() {
-        this.initSearchInTable();
-        this.initTableSort();
-    }
-
-    initSearchInTable() {
-        const searchInputs = document.querySelectorAll('[data-table-search]');
-        searchInputs.forEach(input => {
-            const tableId = input.getAttribute('data-table-search');
-            const table = document.getElementById(tableId);
-
-            if (table) {
-                input.addEventListener('input', (e) => {
-                    const searchTerm = e.target.value.toLowerCase();
-                    const rows = table.querySelectorAll('tbody tr');
-
-                    rows.forEach(row => {
-                        const text = row.textContent.toLowerCase();
-                        row.style.display = text.includes(searchTerm) ? '' : 'none';
-                    });
-                });
-            }
-        });
-    }
-
-    initTableSort() {
-        const sortableHeaders = document.querySelectorAll('th[data-sortable]');
-        sortableHeaders.forEach(header => {
-            header.style.cursor = 'pointer';
-            header.innerHTML += ' <i class="bi bi-arrow-down-up ms-1"></i>';
-
-            header.addEventListener('click', () => {
-                const table = header.closest('table');
-                const tbody = table.querySelector('tbody');
-                const rows = Array.from(tbody.querySelectorAll('tr'));
-                const columnIndex = Array.from(header.parentElement.children).indexOf(header);
-                const currentDirection = header.getAttribute('data-sort-direction') || 'asc';
-                const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-
-                rows.sort((a, b) => {
-                    const aValue = a.children[columnIndex].textContent.trim();
-                    const bValue = b.children[columnIndex].textContent.trim();
-
-                    if (newDirection === 'asc') {
-                        return aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
-                    } else {
-                        return bValue.localeCompare(aValue, 'pt-BR', { numeric: true });
-                    }
-                });
-
-                rows.forEach(row => tbody.appendChild(row));
-                header.setAttribute('data-sort-direction', newDirection);
-
-                const icon = header.querySelector('i');
-                icon.className = newDirection === 'asc' ? 'bi bi-arrow-up ms-1' : 'bi bi-arrow-down ms-1';
-            });
-        });
-    }
-}
-
-// ===== INICIALIZAÇÃO GLOBAL =====
-document.addEventListener('DOMContentLoaded', function () {
+// ===== INICIALIZAÇÃO =====
+document.addEventListener('DOMContentLoaded', () => {
     // Inicializar gerenciadores
     new ThemeManager();
     new FormManager();
     new TableManager();
     new ValidationManager();
+    new AlertManager();
 
     if (document.getElementById('sidebar')) {
         new SidebarManager();
         new SubmenuManager();
     }
 
-    new AlertManager();
-
-    // Remover preloader se existir
+    // Remover preloader
     const preloader = document.getElementById('preloader');
     if (preloader) {
         setTimeout(() => {
@@ -731,26 +549,19 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 1000);
     }
 
-    // Configuração global para requisições AJAX (se jQuery estiver disponível)
+    // Configuração AJAX com CSRF Token
     if (typeof $ !== 'undefined') {
         $.ajaxSetup({
-            beforeSend: function (xhr, settings) {
+            beforeSend: (xhr, settings) => {
                 if (!settings.crossDomain) {
                     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                    if (token) {
-                        xhr.setRequestHeader("X-CSRF-Token", token);
-                    }
+                    if (token) xhr.setRequestHeader("X-CSRF-Token", token);
                 }
             }
         });
     }
 
-    // Animação suave nos elementos
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
+    // Intersection Observer para animações
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -758,58 +569,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 observer.unobserve(entry.target);
             }
         });
-    }, observerOptions);
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
-    document.querySelectorAll('.card, .alert').forEach(el => {
-        observer.observe(el);
-    });
+    document.querySelectorAll('.card, .alert').forEach(el => observer.observe(el));
 });
 
-// ===== TRATAMENTO GLOBAL DE ERROS =====
+// Tratamento global de erros
 window.addEventListener('error', (e) => {
-    console.error('Erro JavaScript:', e.error);
+    console.error('Erro:', e.error);
     hideLoading();
 });
-
-// ===== FUNÇÕES UTILITÁRIAS GLOBAIS =====
-window.formatCurrency = function (value) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(value);
-};
-
-window.formatDate = function (date) {
-    return new Intl.DateTimeFormat('pt-BR').format(new Date(date));
-};
-
-window.formatDateTime = function (date) {
-    return new Intl.DateTimeFormat('pt-BR', {
-        dateStyle: 'short',
-        timeStyle: 'short'
-    }).format(new Date(date));
-};
-
-window.copyToClipboard = function (text) {
-    navigator.clipboard.writeText(text).then(() => {
-        showToast('Copiado para área de transferência', 'success', 2000);
-    }).catch(err => {
-        console.error('Erro ao copiar:', err);
-        showToast('Erro ao copiar', 'error', 2000);
-    });
-};
-
-// ===== DEBOUNCE UTILITY =====
-window.debounce = function (func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-};
 
 console.log('✨ Sistema carregado com sucesso!');

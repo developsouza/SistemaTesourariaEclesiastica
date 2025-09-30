@@ -35,8 +35,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
             catch (Exception ex)
             {
                 // Log de erro
-                _logger.LogError(ex, "Erro durante execução da requisição {Method} {Path}",
-                    context.Request.Method, context.Request.Path);
+                _logger.LogError(ex, $"Erro durante execução da requisição {context.Request.Method} {context.Request.Path}");
 
                 // Log de auditoria para erros
                 if (context.User.Identity?.IsAuthenticated == true)

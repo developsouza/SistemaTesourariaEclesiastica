@@ -16,12 +16,16 @@ namespace SistemaTesourariaEclesiastica.Extensions
             if (enumValue == null)
                 return string.Empty;
 
-            var displayAttribute = enumValue.GetType()
-                .GetMember(enumValue.ToString())
-                .FirstOrDefault()?
-                .GetCustomAttribute<DisplayAttribute>();
-
-            return displayAttribute?.Name ?? enumValue.ToString();
+            var memberInfo = enumValue.GetType().GetMember(enumValue.ToString());
+            if (memberInfo.Length > 0)
+            {
+                var displayAttribute = memberInfo[0].GetCustomAttribute<DisplayAttribute>();
+                if (displayAttribute != null)
+                {
+                    return displayAttribute.Name ?? enumValue.ToString();
+                }
+            }
+            return enumValue.ToString();
         }
 
         /// <summary>
