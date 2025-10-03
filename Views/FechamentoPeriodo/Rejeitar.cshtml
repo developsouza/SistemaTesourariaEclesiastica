@@ -1,0 +1,237 @@
+﻿@model SistemaTesourariaEclesiastica.Models.FechamentoPeriodo
+
+@{
+    ViewData["Title"] = "Rejeitar Fechamento";
+    var balancoTotal = Model.BalancoFisico + Model.BalancoDigital;
+}
+
+<!-- Cabeçalho -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">
+            <i class="bi bi-x-circle text-danger me-2"></i>
+            Rejeitar Fechamento
+        </h1>
+        <p class="text-muted mb-0">
+            Confirme a rejeição do fechamento
+        </p>
+    </div>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<!-- Alerta de Confirmação -->
+<div class="alert alert-danger border-danger" role="alert">
+    <h5 class="alert-heading">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        Atenção: Ação de Rejeição
+    </h5>
+    <p class="mb-0">
+        Você está prestes a <strong>rejeitar</strong> este fechamento.
+        Esta ação irá mudar o status para "Rejeitado" e o tesoureiro local precisará
+        revisar e reenviar o fechamento.
+    </p>
+</div>
+
+<!-- Informações do Fechamento -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-info-circle me-2"></i>
+            Informações do Fechamento
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-sm table-borderless">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted"><strong>Centro de Custo:</strong></td>
+                            <td>@Model.CentroCusto.Nome</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted"><strong>Tipo:</strong></td>
+                            <td>
+                                @(Model.TipoFechamento == SistemaTesourariaEclesiastica.Enums.TipoFechamento.Diario ? "Diário" :
+                                                                Model.TipoFechamento == SistemaTesourariaEclesiastica.Enums.TipoFechamento.Semanal ? "Semanal" : "Mensal")
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted"><strong>Período:</strong></td>
+                            <td>
+                                @if (Model.TipoFechamento == SistemaTesourariaEclesiastica.Enums.TipoFechamento.Diario)
+                                {
+                                    @Model.DataInicio.ToString("dd/MM/yyyy")
+                                }
+                                else if (Model.TipoFechamento == SistemaTesourariaEclesiastica.Enums.TipoFechamento.Semanal)
+                                {
+                                    @($"{Model.DataInicio:dd/MM/yyyy} a {Model.DataFim:dd/MM/yyyy}")
+                                }
+                                else
+                                {
+                                    @($"{Model.Mes:00}/{Model.Ano}")
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted"><strong>Status:</strong></td>
+                            <td>
+                                <span class="badge bg-warning">Pendente</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-sm table-borderless">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted"><strong>Total Entradas:</strong></td>
+                            <td class="text-success fw-bold">@Model.TotalEntradas.ToString("C")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted"><strong>Total Saídas:</strong></td>
+                            <td class="text-danger fw-bold">@Model.TotalSaidas.ToString("C")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted"><strong>Balanço Total:</strong></td>
+                            <td class="fw-bold">@balancoTotal.ToString("C")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted"><strong>Submetido por:</strong></td>
+                            <td>@Model.UsuarioSubmissao?.UserName</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Observacoes))
+        {
+            <hr>
+            <div class="mt-3">
+                <strong class="text-muted">Observações do Fechamento:</strong>
+                <p class="mb-0">@Model.Observacoes</p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Rateios Aplicados -->
+@if (Model.ItensRateio.Any())
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            <h6 class="mb-0">
+                <i class="bi bi-share me-2"></i>
+                Rateios Aplicados (@Model.ItensRateio.Count)
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Regra</th>
+                            <th>Destino</th>
+                            <th class="text-end">Percentual</th>
+                            <th class="text-end">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.ItensRateio)
+                        {
+                            <tr>
+                                <td>@item.RegraRateio?.Nome</td>
+                                <td>@item.RegraRateio?.CentroCustoDestino?.Nome</td>
+                                <td class="text-end">@item.Percentual.ToString("F2")%</td>
+                                <td class="text-end fw-bold">@item.ValorRateio.ToString("C")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-info">
+                            <td colspan="3" class="text-end"><strong>Total de Rateios:</strong></td>
+                            <td class="text-end fw-bold">@Model.TotalRateios.ToString("C")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Formulário de Rejeição -->
+<div class="card shadow-sm border-danger">
+    <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-clipboard-x me-2"></i>
+            Motivo da Rejeição
+        </h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Rejeitar" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+
+            <div class="mb-3">
+                <label for="motivoRejeicao" class="form-label">
+                    <strong>Informe o motivo da rejeição:</strong>
+                    <span class="text-danger">*</span>
+                </label>
+                <textarea class="form-control"
+                          id="motivoRejeicao"
+                          name="motivoRejeicao"
+                          rows="4"
+                          placeholder="Ex: Valores inconsistentes, falta de comprovantes, discrepância entre físico e digital, etc."
+                          required></textarea>
+                <div class="form-text">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Este motivo será registrado nas observações do fechamento e o tesoureiro local será notificado.
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Importante:</strong> Ao rejeitar, o fechamento voltará para o status "Rejeitado"
+                e o tesoureiro local deverá fazer as correções necessárias e reenviar.
+            </div>
+
+            <hr>
+
+            <div class="d-flex justify-content-between">
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
+                    <i class="bi bi-x-circle me-2"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-x-circle-fill me-2"></i>Confirmar Rejeição
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Confirmação adicional antes de submeter
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const motivo = document.getElementById('motivoRejeicao').value.trim();
+
+            if (motivo.length < 10) {
+                e.preventDefault();
+                alert('Por favor, informe um motivo mais detalhado (mínimo 10 caracteres).');
+                return false;
+            }
+
+            if (!confirm('Tem certeza que deseja REJEITAR este fechamento?\n\nMotivo: ' + motivo)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Foco no textarea
+        document.getElementById('motivoRejeicao').focus();
+    </script>
+}

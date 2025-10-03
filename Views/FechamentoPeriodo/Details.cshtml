@@ -222,11 +222,11 @@
         <div class="card-header bg-primary text-white">
             <h5 class="card-title mb-0">
                 <i class="bi bi-share me-2"></i>
-                Rateios Aplicados sobre o Balanço TOTAL
+                Rateios Aplicados sobre o Total de Receitas
             </h5>
         </div>
         <div class="card-body">
-            <!-- NOVO: Card explicativo sobre o cálculo -->
+            <!-- Card explicativo sobre o cálculo -->
             <div class="alert alert-info">
                 <h6 class="alert-heading">
                     <i class="bi bi-calculator me-2"></i>
@@ -237,16 +237,16 @@
                         <table class="table table-sm table-borderless mb-0">
                             <tbody>
                                 <tr>
-                                    <td><i class="bi bi-cash text-warning me-2"></i>Balanço Físico:</td>
-                                    <td class="text-end"><strong>@Model.BalancoFisico.ToString("C")</strong></td>
+                                    <td><i class="bi bi-arrow-down-circle text-success me-2"></i>Entradas Físicas:</td>
+                                    <td class="text-end"><strong>@Model.TotalEntradasFisicas.ToString("C")</strong></td>
                                 </tr>
                                 <tr>
-                                    <td><i class="bi bi-bank text-info me-2"></i>Balanço Digital:</td>
-                                    <td class="text-end"><strong>+ @Model.BalancoDigital.ToString("C")</strong></td>
+                                    <td><i class="bi bi-arrow-down-circle text-success me-2"></i>Entradas Digitais:</td>
+                                    <td class="text-end"><strong>+ @Model.TotalEntradasDigitais.ToString("C")</strong></td>
                                 </tr>
                                 <tr class="border-top">
-                                    <td><strong><i class="bi bi-calculator-fill text-primary me-2"></i>BALANÇO TOTAL:</strong></td>
-                                    <td class="text-end"><strong class="text-primary fs-5">@balancoTotal.ToString("C")</strong></td>
+                                    <td><strong><i class="bi bi-calculator-fill text-primary me-2"></i>TOTAL DE RECEITAS:</strong></td>
+                                    <td class="text-end"><strong class="text-primary fs-5">@Model.TotalEntradas.ToString("C")</strong></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -254,9 +254,9 @@
                     <div class="col-md-6">
                         <p class="mb-0 small">
                             <i class="bi bi-info-circle me-2"></i>
-                            Os rateios são aplicados sobre o <strong>Balanço Total</strong>
-                            (soma do físico + digital), garantindo que todas as entradas
-                            contribuam para o fundo de empréstimos e outros destinos.
+                            Os rateios são aplicados sobre o <strong>Total de Receitas</strong>
+                            (soma de todas as entradas), garantindo que o percentual seja
+                            calculado sobre os valores arrecadados.
                         </p>
                     </div>
                 </div>
@@ -325,7 +325,7 @@
                 </table>
             </div>
 
-            <!-- NOVO: Explicação detalhada do cálculo -->
+            <!-- Explicação detalhada do cálculo -->
             <div class="alert alert-light mt-3">
                 <h6 class="mb-2">
                     <i class="bi bi-info-circle me-2"></i>
@@ -333,8 +333,8 @@
                 </h6>
                 <div class="small">
                     <p class="mb-2">
-                        <strong>1.</strong> Balanço Total = Balanço Físico + Balanço Digital =
-                        <strong>@Model.BalancoFisico.ToString("C") + @Model.BalancoDigital.ToString("C") = @balancoTotal.ToString("C")</strong>
+                        <strong>1.</strong> Total de Receitas = Entradas Físicas + Entradas Digitais =
+                        <strong>@Model.TotalEntradasFisicas.ToString("C") + @Model.TotalEntradasDigitais.ToString("C") = @Model.TotalEntradas.ToString("C")</strong>
                     </p>
                     <p class="mb-2">
                         <strong>2.</strong> Rateios Aplicados =
@@ -351,7 +351,7 @@
 }
 else
 {
-    <!-- NOVO: Mensagem quando não há rateios -->
+    <!-- Mensagem quando não há rateios -->
     <div class="card mb-4 border-warning">
         <div class="card-header bg-warning text-dark">
             <h6 class="card-title mb-0">
@@ -395,40 +395,50 @@ else
             </h6>
         </div>
         <div class="card-body">
-            <p class="mb-0">@Model.Observacoes</p>
+            <p class="mb-0 white-space-pre-line">@Model.Observacoes</p>
         </div>
     </div>
 }
 
-<!-- Ações -->
+<!-- Ações de Aprovação/Rejeição -->
 @if (Model.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Pendente && podeAprovar)
 {
-    <div class="card border-success">
-        <div class="card-header bg-success text-white">
-            <h6 class="mb-0">
-                <i class="bi bi-check-circle me-2"></i>
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-hand-thumbs-up me-2"></i>
                 Ações de Aprovação
-            </h6>
+            </h5>
         </div>
         <div class="card-body">
-            <div class="row">
+            <div class="row g-3">
                 <div class="col-md-6">
-                    <form asp-action="Aprovar" asp-route-id="@Model.Id" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-success w-100" onclick="return confirm('Confirma a aprovação deste fechamento?')">
-                            <i class="bi bi-check-circle me-2"></i>
-                            Aprovar Fechamento
+                    <form asp-action="Aprovar" asp-route-id="@Model.Id" method="post" style="display: inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-success w-100" onclick="return confirm('Tem certeza que deseja APROVAR este fechamento?');">
+                            <i class="bi bi-check-circle-fill me-2"></i>Aprovar Fechamento
                         </button>
                     </form>
                 </div>
                 <div class="col-md-6">
-                    <form asp-action="Rejeitar" asp-route-id="@Model.Id" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Confirma a rejeição deste fechamento?')">
-                            <i class="bi bi-x-circle me-2"></i>
-                            Rejeitar Fechamento
-                        </button>
-                    </form>
+                    <a asp-action="Rejeitar" asp-route-id="@Model.Id" class="btn btn-danger w-100">
+                        <i class="bi bi-x-circle-fill me-2"></i>Rejeitar Fechamento
+                    </a>
                 </div>
+            </div>
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Aprovar:</strong> Confirma o fechamento e aplica os rateios definitivamente.<br>
+                <strong>Rejeitar:</strong> Devolve o fechamento para revisão do tesoureiro local com justificativa.
             </div>
         </div>
     </div>
+}
+
+@section Styles {
+    <style>
+        .white-space-pre-line {
+            white-space: pre-line;
+        }
+    </style>
 }

@@ -414,6 +414,114 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // GET: FechamentoPeriodo/Rejeitar/5
+        [HttpGet]
+        public async Task<IActionResult> Rejeitar(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var fechamento = await _context.FechamentosPeriodo
+                .Include(f => f.CentroCusto)
+                .Include(f => f.UsuarioSubmissao)
+                .Include(f => f.ItensRateio)
+                    .ThenInclude(i => i.RegraRateio)
+                        .ThenInclude(r => r.CentroCustoDestino)
+                .FirstOrDefaultAsync(f => f.Id == id);
+
+            if (fechamento == null)
+            {
+                return NotFound();
+            }
+
+            // Verificar se pode ser rejeitado
+            if (fechamento.Status != StatusFechamentoPeriodo.Pendente)
+            {
+                TempData["ErrorMessage"] = "Apenas fechamentos pendentes podem ser rejeitados.";
+                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+            }
+
+            // Verificar permissões (apenas Administrador e Tesoureiro Geral podem rejeitar)
+            if (!User.IsInRole("Administrador") && !User.IsInRole("TesoureiroGeral"))
+            {
+                TempData["ErrorMessage"] = "Você não tem permissão para rejeitar fechamentos.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            return View(fechamento);
+        }
+
+        // POST: FechamentoPeriodo/Rejeitar/5
+        [HttpPost, ActionName("Rejeitar")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejeitarConfirmed(int id, string? motivoRejeicao)
+        {
+            var fechamento = await _context.FechamentosPeriodo
+                .Include(f => f.CentroCusto)
+                .FirstOrDefaultAsync(f => f.Id == id);
+
+            if (fechamento == null)
+            {
+                return NotFound();
+            }
+
+            // Verificar se pode ser rejeitado
+            if (fechamento.Status != StatusFechamentoPeriodo.Pendente)
+            {
+                TempData["ErrorMessage"] = "Apenas fechamentos pendentes podem ser rejeitados.";
+                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+            }
+
+            // Verificar permissões
+            if (!User.IsInRole("Administrador") && !User.IsInRole("TesoureiroGeral"))
+            {
+                TempData["ErrorMessage"] = "Você não tem permissão para rejeitar fechamentos.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                // Atualizar status para Rejeitado
+                fechamento.Status = StatusFechamentoPeriodo.Rejeitado;
+                fechamento.DataAprovacao = DateTime.Now; // Usar como data de rejeição
+                fechamento.UsuarioAprovacaoId = user.Id; // Usar como usuário que rejeitou
+
+                // Adicionar motivo da rejeição nas observações
+                if (!string.IsNullOrWhiteSpace(motivoRejeicao))
+                {
+                    fechamento.Observacoes = string.IsNullOrWhiteSpace(fechamento.Observacoes)
+                        ? $"REJEITADO: {motivoRejeicao}"
+                        : $"{fechamento.Observacoes}\n\nREJEITADO: {motivoRejeicao}";
+                }
+
+                _context.Update(fechamento);
+                await _context.SaveChangesAsync();
+
+                // Log de auditoria
+                await _auditService.LogAsync("Rejeição", "FechamentoPeriodo",
+                    $"Fechamento {ObterDescricaoFechamento(fechamento)} rejeitado. Motivo: {motivoRejeicao ?? "Não informado"}");
+
+                TempData["SuccessMessage"] = "Fechamento rejeitado com sucesso!";
+                _logger.LogInformation($"Fechamento ID {id} rejeitado por {user.UserName}. Motivo: {motivoRejeicao}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao rejeitar fechamento");
+                TempData["ErrorMessage"] = $"Erro ao rejeitar fechamento: {ex.Message}";
+                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
         // GET: FechamentoPeriodo/GerarPdf/5
         public async Task<IActionResult> GerarPdf(int? id)
         {
@@ -698,20 +806,20 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 // ===================================================================
-                // MUDANÇA PRINCIPAL: Calcular balanço TOTAL (físico + digital)
+                // CORREÇÃO: Calcular sobre TOTAL DE RECEITAS (não sobre o balanço)
                 // ===================================================================
-                var balancoTotal = fechamento.BalancoFisico + fechamento.BalancoDigital;
+                var totalReceitas = fechamento.TotalEntradas;
 
                 log.AppendLine("");
-                log.AppendLine("=== CÁLCULO DO BALANÇO TOTAL ===");
-                log.AppendLine($"✓ Balanço Físico: {fechamento.BalancoFisico:C}");
-                log.AppendLine($"✓ Balanço Digital: {fechamento.BalancoDigital:C}");
-                log.AppendLine($"✓ BALANÇO TOTAL: {balancoTotal:C}");
+                log.AppendLine("=== BASE DE CÁLCULO: TOTAL DE RECEITAS ===");
+                log.AppendLine($"✓ Entradas Físicas: {fechamento.TotalEntradasFisicas:C}");
+                log.AppendLine($"✓ Entradas Digitais: {fechamento.TotalEntradasDigitais:C}");
+                log.AppendLine($"✓ TOTAL DE RECEITAS: {totalReceitas:C}");
                 log.AppendLine("");
 
                 // Aplicar cada regra
                 decimal totalRateios = 0;
-                var valorBase = balancoTotal; // USAR BALANÇO TOTAL
+                var valorBase = totalReceitas; // USAR TOTAL DE RECEITAS
                 int contador = 0;
 
                 log.AppendLine($"✓ Valor Base para Rateio: {valorBase:C}");
@@ -739,7 +847,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         ValorBase = valorBase,
                         Percentual = regra.Percentual,
                         ValorRateio = valorRateio,
-                        Observacoes = $"Rateio automático de {regra.Percentual:F2}% sobre balanço TOTAL de {valorBase:C} = {valorRateio:C} para {regra.CentroCustoDestino.Nome}"
+                        Observacoes = $"Rateio automático de {regra.Percentual:F2}% sobre RECEITAS TOTAIS de {valorBase:C} = {valorRateio:C} para {regra.CentroCustoDestino.Nome}"
                     };
 
                     fechamento.ItensRateio.Add(itemRateio);
@@ -752,17 +860,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 fechamento.TotalRateios = totalRateios;
 
                 // ===================================================================
-                // MUDANÇA: Saldo Final agora considera o balanço total menos rateios
+                // SALDO FINAL: Balanço Total (lucro) - Rateios
                 // ===================================================================
+                var balancoTotal = fechamento.BalancoFisico + fechamento.BalancoDigital;
                 fechamento.SaldoFinal = balancoTotal - totalRateios;
 
                 log.AppendLine("--- RESUMO ---");
-                log.AppendLine($"✓ Balanço Total (Base): {balancoTotal:C}");
+                log.AppendLine($"✓ Total de Receitas (Base): {totalReceitas:C}");
                 log.AppendLine($"✓ Total de Rateios: {totalRateios:C}");
+                log.AppendLine($"✓ Balanço Total (Lucro): {balancoTotal:C}");
                 log.AppendLine($"✓ Saldo Final: {balancoTotal:C} - {totalRateios:C} = {fechamento.SaldoFinal:C}");
                 log.AppendLine($"✓ Itens na coleção: {fechamento.ItensRateio.Count}");
 
-                _logger.LogInformation($"Rateios aplicados com sucesso: {contador} regras, total {totalRateios:C} sobre balanço total de {balancoTotal:C}");
+                _logger.LogInformation($"Rateios aplicados com sucesso: {contador} regras, total {totalRateios:C} sobre receitas de {totalReceitas:C}");
             }
             catch (Exception ex)
             {
