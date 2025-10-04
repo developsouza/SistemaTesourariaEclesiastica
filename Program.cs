@@ -162,6 +162,7 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAccessControl();
 
 // Middleware personalizado de auditoria
 app.UseAuditMiddleware();

@@ -27,33 +27,34 @@ namespace SistemaTesourariaEclesiastica.Middleware
             {
                 using var scope = context.RequestServices.CreateScope();
                 var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-                var auditService = scope.ServiceProvider.GetRequiredService<AuditService>();
+                var signInManager = scope.ServiceProvider.GetRequiredService<SignInManager<ApplicationUser>>();
 
                 var user = await userManager.GetUserAsync(context.User);
-                if (user != null && user.Ativo)
+
+                // ✅ CORREÇÃO: Se usuário não existe ou está inativo, fazer logout forçado
+                if (user == null || !user.Ativo)
                 {
-                    // Adicionar claims adicionais se não existirem
-                    var identity = (ClaimsIdentity)context.User.Identity;
+                    _logger.LogWarning($"Usuário inativo ou inexistente tentou acessar o sistema: {context.User.Identity.Name}");
 
-                    if (!context.User.HasClaim("CentroCustoId", user.CentroCustoId?.ToString() ?? ""))
-                    {
-                        identity.AddClaim(new Claim("CentroCustoId", user.CentroCustoId?.ToString() ?? ""));
-                    }
+                    // Fazer logout forçado
+                    await signInManager.SignOutAsync();
 
-                    if (!context.User.HasClaim("NomeCompleto", user.NomeCompleto ?? ""))
-                    {
-                        identity.AddClaim(new Claim("NomeCompleto", user.NomeCompleto ?? ""));
-                    }
+                    // Redirecionar para login com mensagem
+                    context.Response.Redirect("/Account/Login?message=inactive");
+                    return;
+                }
 
-                    // Log de auditoria para rotas importantes
-                    //if (ShouldAuditPath(context.Request.Path.Value))
-                    //{
-                    //    await auditService.LogAcessoAsync(
-                    //        user.Id,
-                    //        $"{context.Request.Method} {context.Request.Path}",
-                    //        context.Connection.RemoteIpAddress?.ToString()
-                    //    );
-                    //}
+                // Adicionar claims adicionais se não existirem
+                var identity = (ClaimsIdentity)context.User.Identity;
+
+                if (!context.User.HasClaim("CentroCustoId", user.CentroCustoId?.ToString() ?? ""))
+                {
+                    identity.AddClaim(new Claim("CentroCustoId", user.CentroCustoId?.ToString() ?? ""));
+                }
+
+                if (!context.User.HasClaim("NomeCompleto", user.NomeCompleto ?? ""))
+                {
+                    identity.AddClaim(new Claim("NomeCompleto", user.NomeCompleto ?? ""));
                 }
             }
 

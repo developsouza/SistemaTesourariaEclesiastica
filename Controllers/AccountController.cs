@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Models;
@@ -120,6 +121,103 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return View(model);
         }
 
+        // GET: Account/Register
+        [AllowAnonymous]
+        public async Task<IActionResult> Register()
+        {
+            // Se já estiver logado, redirecionar para dashboard
+            if (User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            // Carregar lista de centros de custo para o dropdown
+            ViewData["CentroCustoId"] = new SelectList(
+                await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
+                "Id", "Nome");
+
+            return View(new RegisterViewModel());
+        }
+
+        // POST: Account/Register
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                // Recarregar lista de centros de custo em caso de erro
+                ViewData["CentroCustoId"] = new SelectList(
+                    await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
+                    "Id", "Nome", model.CentroCustoId);
+                return View(model);
+            }
+
+            try
+            {
+                // Verificar se o email já existe
+                var usuarioExistente = await _userManager.FindByEmailAsync(model.Email);
+                if (usuarioExistente != null)
+                {
+                    ModelState.AddModelError("Email", "Este e-mail já está cadastrado no sistema.");
+                    ViewData["CentroCustoId"] = new SelectList(
+                        await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
+                        "Id", "Nome", model.CentroCustoId);
+                    return View(model);
+                }
+
+                // Criar novo usuário
+                var usuario = new ApplicationUser
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    NomeCompleto = model.NomeCompleto,
+                    CentroCustoId = model.CentroCustoId,
+                    Ativo = true,
+                    DataCriacao = DateTime.Now,
+                    EmailConfirmed = true // Confirmação automática - ajuste conforme necessário
+                };
+
+                var result = await _userManager.CreateAsync(usuario, model.Password);
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation($"Novo usuário criado: {usuario.Email}");
+                    await _auditService.LogAsync("USER_REGISTERED", "Account",
+                        $"Novo usuário registrado: {usuario.NomeCompleto} ({usuario.Email})");
+
+                    // Aqui você pode:
+                    // 1. Fazer login automático após o registro
+                    await _signInManager.SignInAsync(usuario, isPersistent: false);
+                    TempData["Sucesso"] = "Conta criada com sucesso! Bem-vindo ao sistema.";
+                    return RedirectToAction("Index", "Home");
+
+                    // OU 2. Redirecionar para a tela de login
+                    // TempData["Sucesso"] = "Conta criada com sucesso! Faça login para acessar o sistema.";
+                    // return RedirectToAction("Login", "Account");
+                }
+
+                // Adicionar erros de validação do Identity
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao criar conta para {model.Email}");
+                ModelState.AddModelError(string.Empty, "Ocorreu um erro ao criar sua conta. Tente novamente.");
+            }
+
+            // Recarregar lista de centros de custo em caso de erro
+            ViewData["CentroCustoId"] = new SelectList(
+                await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
+                "Id", "Nome", model.CentroCustoId);
+
+            return View(model);
+        }
+
         // POST: Account/Logout
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -134,13 +232,25 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     _logger.LogInformation($"Usuário {user.Email} fez logout.");
                 }
 
+                // ✅ Fazer logout completo
                 await _signInManager.SignOutAsync();
-                return RedirectToAction("Login", "Account");
+
+                // ✅ ADICIONE: Limpar cookies manualmente (garantia extra)
+                Response.Cookies.Delete("TesourariaAuth");
+                Response.Cookies.Delete(".AspNetCore.Identity.Application");
+
+                // ✅ Redirecionar com cache-busting
+                return RedirectToAction("Login", "Account", new { t = DateTime.Now.Ticks });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro durante logout");
-                return RedirectToAction("Login", "Account");
+
+                // ✅ Mesmo com erro, tentar fazer logout
+                await _signInManager.SignOutAsync();
+                Response.Cookies.Delete("TesourariaAuth");
+
+                return RedirectToAction("Login", "Account", new { message = "logout" });
             }
         }
 

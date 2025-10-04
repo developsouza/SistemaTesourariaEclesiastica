@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
@@ -7,6 +9,9 @@ using System.Text;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
+    // ==================== ADICIONADA RESTRIÇÃO DE ACESSO ====================
+    [Authorize(Roles = Roles.AdminOuTesoureiroGeral)]
+    // ========================================================================
     public class EmprestimosController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -71,7 +76,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewBag.SaldoFundo = saldoFundo;
             ViewBag.Detalhamento = detalhamento;
 
-            // Adicionar mensagem de aviso se saldo for zero
             if (saldoFundo <= 0)
             {
                 TempData["Aviso"] = "O saldo do fundo está zerado. Verifique se há fechamentos aprovados com rateios para o fundo.";
@@ -87,18 +91,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             var saldoFundo = await CalcularSaldoFundo();
 
-            // Validação: valor não pode ser maior que o saldo disponível
             if (emprestimo.ValorTotal > saldoFundo)
             {
                 ModelState.AddModelError("ValorTotal",
                     $"O valor solicitado (R$ {emprestimo.ValorTotal:N2}) excede o saldo disponível no fundo (R$ {saldoFundo:N2})");
                 ViewBag.SaldoFundo = saldoFundo;
-
-                // Adicionar detalhamento para debug
                 var detalhamento = await ObterDetalhamentoSaldoFundo();
                 ViewBag.Detalhamento = detalhamento;
                 TempData["Erro"] = "Saldo insuficiente. Verifique o detalhamento do fundo abaixo.";
-
                 return View(emprestimo);
             }
 
@@ -193,114 +193,30 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 sucesso = true,
                 mensagem = "Devolução registrada com sucesso!",
-                novoSaldoDevedor = novoSaldoDevedor,
-                percentualDevolvido = emprestimo.PercentualDevolvido,
+                novoSaldo = novoSaldoDevedor,
                 status = emprestimo.Status.ToString()
             });
         }
 
-        // MÉTODO MELHORADO: Calcular Saldo do Fundo com Logs
+        // Calcular Saldo do Fundo
         private async Task<decimal> CalcularSaldoFundo()
         {
             try
             {
-                _logger.LogInformation("=== INICIANDO CÁLCULO DO SALDO DO FUNDO ===");
+                var totalEntradasFundo = await _context.ItensRateioFechamento
+                    .Include(i => i.FechamentoPeriodo)
+                    .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado)
+                    .SumAsync(i => i.ValorRateio);
 
-                // PASSO 1: Buscar o Centro de Custo do Fundo
-                var centroCustoFundo = await _context.CentrosCusto
-                    .FirstOrDefaultAsync(c => c.Nome.ToUpper().Contains("FUNDO") ||
-                                             c.Nome.ToUpper().Contains("REPASSE") ||
-                                             c.Nome.ToUpper().Contains("DÍZIMO DOS DÍZIMOS") ||
-                                             c.Nome.ToUpper().Contains("DIZIMO DOS DIZIMOS"));
-
-                decimal totalEntradasFundo = 0;
-
-                if (centroCustoFundo != null)
-                {
-                    _logger.LogInformation($"Centro de Custo FUNDO encontrado: {centroCustoFundo.Nome} (ID: {centroCustoFundo.Id})");
-
-                    // Buscar itens de rateio aprovados destinados ao fundo
-                    var itensRateio = await _context.ItensRateioFechamento
-                        .Include(i => i.FechamentoPeriodo)
-                        .Include(i => i.RegraRateio)
-                        .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
-                                   i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id)
-                        .ToListAsync();
-
-                    totalEntradasFundo = itensRateio.Sum(i => i.ValorRateio);
-
-                    _logger.LogInformation($"Itens de rateio aprovados encontrados: {itensRateio.Count}");
-                    _logger.LogInformation($"Total de entradas no fundo: {totalEntradasFundo:C}");
-
-                    if (!itensRateio.Any())
-                    {
-                        _logger.LogWarning("AVISO: Nenhum item de rateio aprovado encontrado!");
-                        _logger.LogWarning("Possíveis causas:");
-                        _logger.LogWarning("1. Nenhum fechamento foi aprovado");
-                        _logger.LogWarning("2. Não há regras de rateio para o fundo");
-                        _logger.LogWarning("3. Os fechamentos não geraram rateios");
-                    }
-                }
-                else
-                {
-                    _logger.LogWarning("AVISO: Centro de Custo FUNDO não encontrado!");
-                    _logger.LogWarning("Tentando buscar por regras de rateio...");
-
-                    // Fallback: buscar por regras com nome do fundo
-                    var regrasFundo = await _context.RegrasRateio
-                        .Where(r => r.Ativo &&
-                                   (r.Nome.ToUpper().Contains("FUNDO") ||
-                                    r.Nome.ToUpper().Contains("REPASSE") ||
-                                    r.Nome.ToUpper().Contains("DÍZIMO") ||
-                                    r.Nome.ToUpper().Contains("DIZIMO")))
-                        .ToListAsync();
-
-                    if (regrasFundo.Any())
-                    {
-                        _logger.LogInformation($"Regras de rateio para FUNDO encontradas: {regrasFundo.Count}");
-                        var idsRegras = regrasFundo.Select(r => r.Id).ToList();
-
-                        totalEntradasFundo = await _context.ItensRateioFechamento
-                            .Include(i => i.FechamentoPeriodo)
-                            .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
-                                       idsRegras.Contains(i.RegraRateioId))
-                            .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
-
-                        _logger.LogInformation($"Total através das regras: {totalEntradasFundo:C}");
-                    }
-                    else
-                    {
-                        _logger.LogError("ERRO: Nem Centro de Custo nem Regras de Rateio para FUNDO foram encontrados!");
-                        return 0;
-                    }
-                }
-
-                // PASSO 2: Calcular Total Emprestado (Ativo)
-                var totalEmprestimosAtivos = await _context.Emprestimos
+                var totalEmprestimos = await _context.Emprestimos
                     .Where(e => e.Status == StatusEmprestimo.Ativo)
-                    .SumAsync(e => (decimal?)e.ValorTotal) ?? 0;
+                    .SumAsync(e => e.SaldoDevedor);
 
-                _logger.LogInformation($"Total de empréstimos ativos: {totalEmprestimosAtivos:C}");
+                var saldoDisponivel = totalEntradasFundo - totalEmprestimos;
 
-                // PASSO 3: Calcular Total Devolvido (dos Ativos)
-                var devolucoesEmprestimosAtivos = await _context.DevolucaoEmprestimos
-                    .Include(d => d.Emprestimo)
-                    .Where(d => d.Emprestimo.Status == StatusEmprestimo.Ativo)
-                    .SumAsync(d => (decimal?)d.ValorDevolvido) ?? 0;
+                _logger.LogInformation($"Cálculo Saldo Fundo - Entradas: {totalEntradasFundo:C}, Empréstimos Ativos: {totalEmprestimos:C}, Disponível: {saldoDisponivel:C}");
 
-                _logger.LogInformation($"Total devolvido dos ativos: {devolucoesEmprestimosAtivos:C}");
-
-                // PASSO 4: Calcular Saldo Devedor Atual
-                var saldoDevedorAtivos = totalEmprestimosAtivos - devolucoesEmprestimosAtivos;
-                _logger.LogInformation($"Saldo devedor atual: {saldoDevedorAtivos:C}");
-
-                // PASSO 5: Calcular Saldo Disponível no Fundo
-                var saldoFundo = totalEntradasFundo - saldoDevedorAtivos;
-
-                _logger.LogInformation($"=== SALDO FINAL DO FUNDO: {saldoFundo:C} ===");
-                _logger.LogInformation($"Cálculo: {totalEntradasFundo:C} (entradas) - {saldoDevedorAtivos:C} (saldo devedor) = {saldoFundo:C}");
-
-                return saldoFundo;
+                return saldoDisponivel;
             }
             catch (Exception ex)
             {
@@ -309,81 +225,30 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
         }
 
-        // MÉTODO MELHORADO: Obter Detalhamento do Saldo
-        public async Task<object> ObterDetalhamentoSaldoFundo()
+        // Obter Detalhamento do Saldo do Fundo
+        private async Task<object> ObterDetalhamentoSaldoFundo()
         {
             try
             {
-                var centroCustoFundo = await _context.CentrosCusto
-                    .FirstOrDefaultAsync(c => c.Nome.ToUpper().Contains("FUNDO") ||
-                                             c.Nome.ToUpper().Contains("REPASSE") ||
-                                             c.Nome.ToUpper().Contains("DÍZIMO DOS DÍZIMOS") ||
-                                             c.Nome.ToUpper().Contains("DIZIMO DOS DIZIMOS"));
+                var totalEntradasFundo = await _context.ItensRateioFechamento
+                    .Include(i => i.FechamentoPeriodo)
+                    .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado)
+                    .SumAsync(i => i.ValorRateio);
 
-                decimal totalEntradasFundo = 0;
-                int quantidadeFechamentosAprovados = 0;
-                string nomeCentroCustoFundo = "Não encontrado";
-
-                if (centroCustoFundo != null)
-                {
-                    nomeCentroCustoFundo = centroCustoFundo.Nome;
-
-                    var rateiosFundo = await _context.ItensRateioFechamento
-                        .Include(i => i.FechamentoPeriodo)
-                            .ThenInclude(f => f.CentroCusto)
-                        .Include(i => i.RegraRateio)
-                        .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
-                                   i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id)
-                        .ToListAsync();
-
-                    totalEntradasFundo = rateiosFundo.Sum(i => i.ValorRateio);
-                    quantidadeFechamentosAprovados = rateiosFundo.Select(i => i.FechamentoPeriodoId).Distinct().Count();
-                }
-
-                var totalEmprestimosAtivos = await _context.Emprestimos
+                var emprestimosAtivos = await _context.Emprestimos
                     .Where(e => e.Status == StatusEmprestimo.Ativo)
-                    .SumAsync(e => (decimal?)e.ValorTotal) ?? 0;
+                    .ToListAsync();
 
-                var devolucoesEmprestimosAtivos = await _context.DevolucaoEmprestimos
-                    .Include(d => d.Emprestimo)
-                    .Where(d => d.Emprestimo.Status == StatusEmprestimo.Ativo)
-                    .SumAsync(d => (decimal?)d.ValorDevolvido) ?? 0;
-
-                var saldoDevedorAtivos = totalEmprestimosAtivos - devolucoesEmprestimosAtivos;
-                var saldoFundo = totalEntradasFundo - saldoDevedorAtivos;
-
-                var quantidadeEmprestimosAtivos = await _context.Emprestimos
-                    .CountAsync(e => e.Status == StatusEmprestimo.Ativo);
-
-                var quantidadeEmprestimosQuitados = await _context.Emprestimos
-                    .CountAsync(e => e.Status == StatusEmprestimo.Quitado);
-
-                var totalQuitado = await _context.Emprestimos
-                    .Where(e => e.Status == StatusEmprestimo.Quitado)
-                    .SumAsync(e => (decimal?)e.ValorTotal) ?? 0;
+                var saldoDevedorAtivos = emprestimosAtivos.Sum(e => e.SaldoDevedor);
+                var totalDevolvido = emprestimosAtivos.Sum(e => e.ValorDevolvido);
 
                 return new
                 {
-                    // Informações do Centro de Custo
-                    nomeCentroCustoFundo = nomeCentroCustoFundo,
-                    centroCustoFundoEncontrado = centroCustoFundo != null,
-
-                    // Entradas no Fundo
-                    totalEntradasFundo = totalEntradasFundo,
-                    quantidadeFechamentosAprovados = quantidadeFechamentosAprovados,
-
-                    // Empréstimos Ativos
-                    quantidadeEmprestimosAtivos = quantidadeEmprestimosAtivos,
-                    totalEmprestimosAtivos = totalEmprestimosAtivos,
-                    devolucoesEmprestimosAtivos = devolucoesEmprestimosAtivos,
-                    saldoDevedorAtivos = saldoDevedorAtivos,
-
-                    // Empréstimos Quitados
-                    quantidadeEmprestimosQuitados = quantidadeEmprestimosQuitados,
-                    totalQuitado = totalQuitado,
-
-                    // Saldo Final
-                    saldoDisponivel = saldoFundo,
+                    totalEntradasFundo,
+                    quantidadeEmprestimosAtivos = emprestimosAtivos.Count,
+                    saldoDevedorAtivos,
+                    totalDevolvido,
+                    saldoDisponivel = totalEntradasFundo - saldoDevedorAtivos,
                     percentualComprometido = totalEntradasFundo > 0
                         ? Math.Round((saldoDevedorAtivos / totalEntradasFundo) * 100, 2)
                         : 0
@@ -407,8 +272,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 return Json(new
                 {
-                    saldo = saldo,
-                    detalhamento = detalhamento
+                    saldo,
+                    detalhamento
                 });
             }
             catch (Exception ex)
@@ -418,13 +283,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
         }
 
-        // NOVO: Visualizar Detalhamento Completo
+        // GET: Detalhamento Completo do Fundo
         [HttpGet]
         public async Task<IActionResult> DetalhamentoFundo()
         {
             var detalhamento = await ObterDetalhamentoSaldoFundo();
 
-            // Buscar histórico de rateios aprovados
             var historico = await _context.ItensRateioFechamento
                 .Include(i => i.FechamentoPeriodo)
                     .ThenInclude(f => f.CentroCusto)

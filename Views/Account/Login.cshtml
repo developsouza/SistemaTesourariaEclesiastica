@@ -94,10 +94,81 @@
                     <p class="text-muted">Entre com suas credenciais para acessar o sistema</p>
                 </div>
 
+                <!-- ✅ Mensagens de Sistema (Query String) -->
+                @if (!string.IsNullOrEmpty(Context.Request.Query["message"]))
+                {
+                    var message = Context.Request.Query["message"].ToString();
+
+                    @if (message == "inactive")
+                    {
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert" style="animation: shake 0.5s;">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-exclamation-triangle-fill me-2 mt-1" style="font-size: 1.2rem;"></i>
+                                <div>
+                                    <strong>Conta Desativada!</strong><br />
+                                    <small>Sua conta foi desativada. Entre em contato com o administrador para reativá-la.</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+                    else if (message == "logout")
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <span>Você saiu do sistema com sucesso.</span>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+                    else if (message == "session_expired")
+                    {
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                <span>Sua sessão expirou. Por favor, faça login novamente.</span>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+                }
+
+                <!-- ✅ Mensagens de Sucesso do TempData -->
+                @if (TempData["Sucesso"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            <span>@TempData["Sucesso"]</span>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                <!-- ✅ Erros de Validação do ModelState -->
+                @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ErrorCount > 0)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="animation: shake 0.5s;">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-x-circle-fill me-2 mt-1" style="font-size: 1.2rem;"></i>
+                            <div class="flex-grow-1">
+                                <strong>Erro ao fazer login</strong>
+                                <ul class="mb-0 mt-2 ps-3">
+                                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                                    {
+                                        <li class="small">@error.ErrorMessage</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
                 <!-- Formulário -->
                 <form asp-action="Login" method="post" id="loginForm">
                     <input type="hidden" asp-for="ReturnUrl" />
-                    <div asp-validation-summary="ModelOnly" class="alert alert-danger border-0" role="alert"></div>
 
                     <!-- E-mail -->
                     <div class="mb-3">
@@ -112,7 +183,8 @@
                                    class="form-control form-control-lg border-start-0"
                                    placeholder="seu@email.com"
                                    required
-                                   autocomplete="username" />
+                                   autocomplete="username"
+                                   autofocus />
                         </div>
                         <span asp-validation-for="Email" class="text-danger small"></span>
                     </div>
@@ -146,13 +218,13 @@
                                 Lembrar-me
                             </label>
                         </div>
-                        <a href="#" class="text-decoration-none small">
+                        <a href="#" class="text-decoration-none small" onclick="alert('Entre em contato com o administrador para recuperar sua senha.'); return false;">
                             Esqueceu a senha?
                         </a>
                     </div>
 
                     <!-- Botão Login -->
-                    <button type="submit" class="btn btn-primary w-100 btn-lg mb-3 py-3">
+                    <button type="submit" class="btn btn-primary w-100 btn-lg mb-3 py-3" id="loginBtn">
                         <i class="bi bi-box-arrow-in-right me-2"></i>
                         Entrar
                     </button>
@@ -167,7 +239,7 @@
                     <div class="text-center">
                         <p class="mb-0 text-muted">
                             Primeiro acesso?
-                            <a href="#" class="text-primary fw-semibold text-decoration-none">
+                            <a href="#" class="text-primary fw-semibold text-decoration-none" onclick="alert('Entre em contato com o administrador do sistema para criar sua conta.'); return false;">
                                 Entre em contato com o administrador
                             </a>
                         </p>
@@ -236,7 +308,7 @@
             });
 
             // Animação do botão
-            const loginBtn = document.querySelector('button[type="submit"]');
+            const loginBtn = document.getElementById('loginBtn');
             loginBtn.addEventListener('mouseenter', function() {
                 this.style.transform = 'translateY(-2px)';
                 this.style.boxShadow = '0 8px 16px rgba(37, 99, 235, 0.3)';
@@ -252,6 +324,15 @@
             form.addEventListener('submit', function() {
                 loginBtn.disabled = true;
                 loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Entrando...';
+            });
+
+            // Auto-dismiss alerts após 5 segundos
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
             });
         });
     </script>
@@ -307,6 +388,52 @@
         }
     }
 
+    /* ✅ Animação de Shake para erros */
+    @@keyframes shake {
+        0%, 100% {
+            transform: translateX(0);
+        }
+
+        10%, 30%, 50%, 70%, 90% {
+            transform: translateX(-5px);
+        }
+
+        20%, 40%, 60%, 80% {
+            transform: translateX(5px);
+        }
+    }
+
+    /* Alerts personalizados */
+    .alert {
+        border-radius: 0.5rem;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .alert-danger {
+        background-color: #fef2f2;
+        color: #991b1b;
+    }
+
+    .alert-warning {
+        background-color: #fffbeb;
+        color: #92400e;
+    }
+
+    .alert-success {
+        background-color: #f0fdf4;
+        color: #166534;
+    }
+
+    .alert-info {
+        background-color: #eff6ff;
+        color: #1e40af;
+    }
+
+    .alert i {
+        flex-shrink: 0;
+    }
+
     /* Form Controls */
     .form-control-lg {
         border-radius: 0.5rem;
@@ -349,6 +476,11 @@
 
         .btn-primary:hover {
             background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
         }
 
     .btn-outline-secondary:focus {

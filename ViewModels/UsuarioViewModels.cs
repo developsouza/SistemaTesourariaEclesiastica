@@ -93,7 +93,8 @@ namespace SistemaTesourariaEclesiastica.ViewModels
 
         [Display(Name = "Lembrar de mim")]
         public bool RememberMe { get; set; }
-        public string ReturnUrl { get; set; }
+
+        public string? ReturnUrl { get; set; }
     }
 
     public class RegisterViewModel
@@ -130,5 +131,4 @@ namespace SistemaTesourariaEclesiastica.ViewModels
         [Display(Name = "Email")]
         public string Email { get; set; } = string.Empty;
     }
-
 }

@@ -36,6 +36,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewData["FornecedorId"] = fornecedorId;
             ViewData["TipoDespesa"] = tipoDespesa;
 
+            var user = await _userManager.GetUserAsync(User);
+
             var saidas = _context.Saidas
                 .Include(s => s.MeioDePagamento)
                 .Include(s => s.CentroCusto)
@@ -44,7 +46,23 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 .Include(s => s.Usuario)
                 .AsQueryable();
 
-            // Filtros
+            // ==================== FILTRO POR PERFIL DE USUÁRIO ====================
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                // Tesoureiros Locais e Pastores só veem dados do seu centro de custo
+                if (user.CentroCustoId.HasValue)
+                {
+                    saidas = saidas.Where(s => s.CentroCustoId == user.CentroCustoId.Value);
+                }
+                else
+                {
+                    // Se não tem centro de custo, não vê nada
+                    saidas = saidas.Where(s => false);
+                }
+            }
+            // ======================================================================
+
+            // Filtros de pesquisa
             if (dataInicio.HasValue)
             {
                 saidas = saidas.Where(s => s.Data >= dataInicio.Value);
@@ -85,12 +103,21 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewBag.TotalItems = totalItems;
             ViewBag.TotalValor = totalValor;
 
-            // Dropdowns para filtros
-            ViewBag.CentrosCusto = new SelectList(await _context.CentrosCusto.ToListAsync(), "Id", "Nome", centroCustoId);
+            // Dropdowns para filtros (respeitando permissões)
+            var centrosCustoQuery = _context.CentrosCusto.Where(c => c.Ativo);
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                if (user.CentroCustoId.HasValue)
+                {
+                    centrosCustoQuery = centrosCustoQuery.Where(c => c.Id == user.CentroCustoId.Value);
+                }
+            }
+
+            ViewBag.CentrosCusto = new SelectList(await centrosCustoQuery.ToListAsync(), "Id", "Nome", centroCustoId);
             ViewBag.PlanosContas = new SelectList(
-                await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Despesa).ToListAsync(),
-                "Id", "Descricao", planoContasId);
-            ViewBag.Fornecedores = new SelectList(await _context.Fornecedores.ToListAsync(), "Id", "Nome", fornecedorId);
+                await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Despesa && p.Ativo).ToListAsync(),
+                "Id", "Nome", planoContasId);
+            ViewBag.Fornecedores = new SelectList(await _context.Fornecedores.Where(f => f.Ativo).ToListAsync(), "Id", "Nome", fornecedorId);
 
             var paginatedSaidas = await saidas
                 .OrderByDescending(s => s.Data)
@@ -123,6 +150,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // Verificar permissão de acesso
+            if (!await CanAccessSaida(saida))
+            {
+                return Forbid();
+            }
+
             return View(saida);
         }
 
@@ -131,9 +164,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             await PopulateDropdowns();
 
+            var user = await _userManager.GetUserAsync(User);
             var saida = new Saida
             {
-                Data = DateTime.Today
+                Data = DateTime.Today,
+                CentroCustoId = user.CentroCustoId ?? 0
             };
 
             return View(saida);
@@ -154,6 +189,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ModelState.Remove("Usuario");
                 ModelState.Remove("UsuarioId");
 
+                // Verificar permissão de acesso ao centro de custo
+                if (!await CanAccessCentroCusto(saida.CentroCustoId))
+                {
+                    ModelState.AddModelError("CentroCustoId", "Você não tem permissão para criar saídas neste centro de custo.");
+                }
+
                 if (ModelState.IsValid)
                 {
                     var user = await _userManager.GetUserAsync(User);
@@ -163,7 +204,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     _context.Add(saida);
                     await _context.SaveChangesAsync();
 
-                    // Log de auditoria (já corrigido no AuditService)
+                    // Log de auditoria
                     if (user != null)
                     {
                         await _auditService.LogCreateAsync(user.Id, saida, saida.Id.ToString());
@@ -178,8 +219,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
             catch (Exception ex)
             {
-                // Log do erro
-                // _logger.LogError(ex, "Erro ao criar saída");
                 ModelState.AddModelError(string.Empty, "Erro interno ao salvar saída. Tente novamente.");
                 await PopulateDropdowns(saida);
                 return View(saida);
@@ -198,6 +237,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
             if (saida == null)
             {
                 return NotFound();
+            }
+
+            // Verificar permissão de acesso
+            if (!await CanAccessSaida(saida))
+            {
+                return Forbid();
             }
 
             await PopulateDropdowns(saida);
@@ -228,6 +273,18 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Buscar saída original para manter dados de auditoria
                 var originalSaida = await _context.Saidas.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);
                 if (originalSaida == null) return NotFound();
+
+                // Verificar permissão de acesso à saída original
+                if (!await CanAccessSaida(originalSaida))
+                {
+                    return Forbid();
+                }
+
+                // Verificar permissão de acesso ao novo centro de custo
+                if (!await CanAccessCentroCusto(saida.CentroCustoId))
+                {
+                    ModelState.AddModelError("CentroCustoId", "Você não tem permissão para mover saídas para este centro de custo.");
+                }
 
                 if (ModelState.IsValid)
                 {
@@ -261,8 +318,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
             catch (Exception ex)
             {
-                // Log do erro
-                // _logger.LogError(ex, "Erro ao atualizar saída {SaidaId}", id);
                 ModelState.AddModelError(string.Empty, "Erro interno ao atualizar saída. Tente novamente.");
                 await PopulateDropdowns(saida);
                 return View(saida);
@@ -290,6 +345,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // Verificar permissão de acesso
+            if (!await CanAccessSaida(saida))
+            {
+                return Forbid();
+            }
+
             return View(saida);
         }
 
@@ -301,8 +362,15 @@ namespace SistemaTesourariaEclesiastica.Controllers
             var saida = await _context.Saidas.FindAsync(id);
             if (saida != null)
             {
+                // Verificar permissão de acesso
+                if (!await CanAccessSaida(saida))
+                {
+                    return Forbid();
+                }
+
                 _context.Saidas.Remove(saida);
                 await _context.SaveChangesAsync();
+
                 var user = await _userManager.GetUserAsync(User);
                 if (user != null)
                 {
@@ -335,29 +403,66 @@ namespace SistemaTesourariaEclesiastica.Controllers
             });
         }
 
+        #region Métodos Auxiliares
+
         private async Task PopulateDropdowns(Saida? saida = null)
         {
-            ViewData["MeioDePagamentoId"] = new SelectList(
-                await _context.MeiosDePagamento.ToListAsync(),
-                "Id", "Nome", saida?.MeioDePagamentoId);
+            var user = await _userManager.GetUserAsync(User);
 
-            ViewData["CentroCustoId"] = new SelectList(
-                await _context.CentrosCusto.ToListAsync(),
-                "Id", "Nome", saida?.CentroCustoId);
+            // Centros de custo (baseado em permissões)
+            var centrosCustoQuery = _context.CentrosCusto.Where(c => c.Ativo);
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                if (user.CentroCustoId.HasValue)
+                {
+                    centrosCustoQuery = centrosCustoQuery.Where(c => c.Id == user.CentroCustoId.Value);
+                }
+            }
+
+            ViewData["CentroCustoId"] = new SelectList(await centrosCustoQuery.ToListAsync(), "Id", "Nome", saida?.CentroCustoId);
 
             ViewData["PlanoDeContasId"] = new SelectList(
-                await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Despesa).ToListAsync(),
-                "Id", "Descricao", saida?.PlanoDeContasId);
+                await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Despesa && p.Ativo).ToListAsync(),
+                "Id", "Nome", saida?.PlanoDeContasId);
+
+            ViewData["MeioDePagamentoId"] = new SelectList(
+                await _context.MeiosDePagamento.Where(m => m.Ativo).ToListAsync(),
+                "Id", "Nome", saida?.MeioDePagamentoId);
 
             ViewData["FornecedorId"] = new SelectList(
-                await _context.Fornecedores.ToListAsync(),
+                await _context.Fornecedores.Where(f => f.Ativo).ToListAsync(),
                 "Id", "Nome", saida?.FornecedorId);
+        }
+
+        private async Task<bool> CanAccessSaida(Saida saida)
+        {
+            // Administradores e Tesoureiros Gerais podem acessar tudo
+            if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                return true;
+
+            var user = await _userManager.GetUserAsync(User);
+
+            // Outros usuários só podem acessar saídas do seu centro de custo
+            return user.CentroCustoId.HasValue && saida.CentroCustoId == user.CentroCustoId.Value;
+        }
+
+        private async Task<bool> CanAccessCentroCusto(int centroCustoId)
+        {
+            // Administradores e Tesoureiros Gerais podem acessar qualquer centro de custo
+            if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                return true;
+
+            var user = await _userManager.GetUserAsync(User);
+
+            // Outros usuários só podem acessar seu próprio centro de custo
+            return user.CentroCustoId.HasValue && centroCustoId == user.CentroCustoId.Value;
         }
 
         private bool SaidaExists(int id)
         {
             return _context.Saidas.Any(e => e.Id == id);
         }
+
+        #endregion
     }
 }
-

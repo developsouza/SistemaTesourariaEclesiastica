@@ -10,7 +10,9 @@ using SistemaTesourariaEclesiastica.Services;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
-    [Authorize(Roles = Roles.AdminOuTesoureiro)]
+    // ==================== ADICIONADA RESTRIÇÃO DE ACESSO ====================
+    [Authorize(Roles = Roles.AdminOuTesoureiroGeral)]
+    // ========================================================================
     public class TransferenciasInternasController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -27,13 +29,16 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // GET: TransferenciasInternas
         public async Task<IActionResult> Index()
         {
-            var applicationDbContext = _context.TransferenciasInternas
+            var transferencias = await _context.TransferenciasInternas
                 .Include(t => t.MeioDePagamentoOrigem)
                 .Include(t => t.MeioDePagamentoDestino)
                 .Include(t => t.CentroCustoOrigem)
                 .Include(t => t.CentroCustoDestino)
-                .Include(t => t.Usuario);
-            return View(await applicationDbContext.ToListAsync());
+                .Include(t => t.Usuario)
+                .OrderByDescending(t => t.Data)
+                .ToListAsync();
+
+            return View(transferencias);
         }
 
         // GET: TransferenciasInternas/Details/5
@@ -51,6 +56,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 .Include(t => t.CentroCustoDestino)
                 .Include(t => t.Usuario)
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (transferenciaInterna == null)
             {
                 return NotFound();
@@ -66,6 +72,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome");
             ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome");
             ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome");
+
             return View();
         }
 
@@ -76,17 +83,18 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             try
             {
-                // CRÍTICO: Remover navigation properties do ModelState
+                // Remover validação de navigation properties
                 ModelState.Remove("MeioDePagamentoOrigem");
                 ModelState.Remove("MeioDePagamentoDestino");
                 ModelState.Remove("CentroCustoOrigem");
                 ModelState.Remove("CentroCustoDestino");
                 ModelState.Remove("Usuario");
+                ModelState.Remove("UsuarioId");
 
-                // Validação customizada: origem e destino devem ser diferentes
-                if (transferenciaInterna.MeioDePagamentoOrigemId == transferenciaInterna.MeioDePagamentoDestinoId)
+                // Validações de negócio
+                if (transferenciaInterna.Valor <= 0)
                 {
-                    ModelState.AddModelError("MeioDePagamentoDestinoId", "O meio de pagamento de destino deve ser diferente do origem.");
+                    ModelState.AddModelError("Valor", "O valor deve ser maior que zero.");
                 }
 
                 if (transferenciaInterna.CentroCustoOrigemId == transferenciaInterna.CentroCustoDestinoId)
@@ -100,24 +108,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     transferenciaInterna.UsuarioId = user!.Id;
                     transferenciaInterna.DataCriacao = DateTime.Now;
 
-                    // Buscar nomes dos meios de pagamento para log
-                    var meioDePagamentoOrigem = await _context.MeiosDePagamento.FindAsync(transferenciaInterna.MeioDePagamentoOrigemId);
-                    var meioDePagamentoDestino = await _context.MeiosDePagamento.FindAsync(transferenciaInterna.MeioDePagamentoDestinoId);
-
-                    if (meioDePagamentoOrigem == null || meioDePagamentoDestino == null)
-                    {
-                        ModelState.AddModelError(string.Empty, "Meio de pagamento de origem ou destino não encontrado.");
-                        ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
-                        ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
-                        ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
-                        ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
-                        return View(transferenciaInterna);
-                    }
-
                     _context.Add(transferenciaInterna);
                     await _context.SaveChangesAsync();
 
-                    // Log de auditoria com método tipado
+                    // Log de auditoria
                     if (user != null)
                     {
                         await _auditService.LogCreateAsync(user.Id, transferenciaInterna, transferenciaInterna.Id.ToString());
@@ -131,13 +125,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
                 ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
                 ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
+
                 return View(transferenciaInterna);
             }
             catch (Exception ex)
             {
-                // Log do erro
-                // _logger.LogError(ex, "Erro ao criar transferência interna");
-                ModelState.AddModelError(string.Empty, "Erro interno ao salvar transferência. Tente novamente.");
+                ModelState.AddModelError(string.Empty, "Erro ao registrar transferência. Tente novamente.");
                 ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
                 ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
                 ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
@@ -159,17 +152,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 return NotFound();
             }
+
             ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
             ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
             ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
             ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
+
             return View(transferenciaInterna);
         }
 
         // POST: TransferenciasInternas/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Data,Valor,Descricao,MeioDePagamentoOrigemId,MeioDePagamentoDestinoId,CentroCustoOrigemId,CentroCustoDestinoId,Quitada")] TransferenciaInterna transferenciaInterna)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Data,Valor,Descricao,MeioDePagamentoOrigemId,MeioDePagamentoDestinoId,CentroCustoOrigemId,CentroCustoDestinoId")] TransferenciaInterna transferenciaInterna)
         {
             if (id != transferenciaInterna.Id)
             {
@@ -178,7 +173,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             try
             {
-                // CRÍTICO: Remover navigation properties do ModelState
+                // Remover validação de navigation properties
                 ModelState.Remove("MeioDePagamentoOrigem");
                 ModelState.Remove("MeioDePagamentoDestino");
                 ModelState.Remove("CentroCustoOrigem");
@@ -187,10 +182,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ModelState.Remove("UsuarioId");
                 ModelState.Remove("DataCriacao");
 
-                // Validação customizada: origem e destino devem ser diferentes
-                if (transferenciaInterna.MeioDePagamentoOrigemId == transferenciaInterna.MeioDePagamentoDestinoId)
+                // Buscar transferência original
+                var originalTransferencia = await _context.TransferenciasInternas.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
+                if (originalTransferencia == null) return NotFound();
+
+                // Validações de negócio
+                if (transferenciaInterna.Valor <= 0)
                 {
-                    ModelState.AddModelError("MeioDePagamentoDestinoId", "O meio de pagamento de destino deve ser diferente do origem.");
+                    ModelState.AddModelError("Valor", "O valor deve ser maior que zero.");
                 }
 
                 if (transferenciaInterna.CentroCustoOrigemId == transferenciaInterna.CentroCustoDestinoId)
@@ -198,14 +197,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     ModelState.AddModelError("CentroCustoDestinoId", "O centro de custo de destino deve ser diferente do origem.");
                 }
 
-                // Buscar original para manter dados de auditoria
-                var originalTransferencia = await _context.TransferenciasInternas.AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.Id == id);
-                if (originalTransferencia == null) return NotFound();
-
                 if (ModelState.IsValid)
                 {
-                    // Manter dados originais de auditoria
+                    // Manter dados originais
                     transferenciaInterna.UsuarioId = originalTransferencia.UsuarioId;
                     transferenciaInterna.DataCriacao = originalTransferencia.DataCriacao;
 
@@ -218,7 +212,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         await _auditService.LogUpdateAsync(user.Id, originalTransferencia, transferenciaInterna, transferenciaInterna.Id.ToString());
                     }
 
-                    TempData["SuccessMessage"] = "Transferência interna atualizada com sucesso!";
+                    TempData["SuccessMessage"] = "Transferência atualizada com sucesso!";
                     return RedirectToAction(nameof(Index));
                 }
 
@@ -226,6 +220,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
                 ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
                 ViewData["CentroCustoDestinoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoDestinoId);
+
                 return View(transferenciaInterna);
             }
             catch (DbUpdateConcurrencyException)
@@ -238,9 +233,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
             catch (Exception ex)
             {
-                // Log do erro
-                // _logger.LogError(ex, "Erro ao atualizar transferência {Id}", id);
-                ModelState.AddModelError(string.Empty, "Erro interno ao atualizar transferência. Tente novamente.");
+                ModelState.AddModelError(string.Empty, "Erro ao atualizar transferência. Tente novamente.");
                 ViewData["MeioDePagamentoOrigemId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoOrigemId);
                 ViewData["MeioDePagamentoDestinoId"] = new SelectList(_context.MeiosDePagamento, "Id", "Nome", transferenciaInterna.MeioDePagamentoDestinoId);
                 ViewData["CentroCustoOrigemId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", transferenciaInterna.CentroCustoOrigemId);
@@ -264,6 +257,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 .Include(t => t.CentroCustoDestino)
                 .Include(t => t.Usuario)
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (transferenciaInterna == null)
             {
                 return NotFound();
@@ -282,12 +276,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 _context.TransferenciasInternas.Remove(transferenciaInterna);
                 await _context.SaveChangesAsync();
+
                 var user = await _userManager.GetUserAsync(User);
                 if (user != null)
                 {
                     await _auditService.LogAuditAsync(user.Id, "Excluir", "TransferenciaInterna", transferenciaInterna.Id.ToString(), $"Transferência de {transferenciaInterna.Valor:C2} excluída.");
                 }
-                TempData["SuccessMessage"] = "Transferência interna excluída com sucesso!";
+
+                TempData["SuccessMessage"] = "Transferência excluída com sucesso!";
             }
 
             return RedirectToAction(nameof(Index));
@@ -299,4 +295,3 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
     }
 }
-

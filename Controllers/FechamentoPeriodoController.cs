@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
@@ -38,12 +39,33 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
 
         // GET: FechamentoPeriodo
+        // ==================== CORRIGIDO - FILTRO POR CENTRO DE CUSTO ====================
         public async Task<IActionResult> Index()
         {
-            var fechamentos = await _context.FechamentosPeriodo
+            var user = await _userManager.GetUserAsync(User);
+
+            var query = _context.FechamentosPeriodo
                 .Include(f => f.CentroCusto)
                 .Include(f => f.UsuarioSubmissao)
                 .Include(f => f.UsuarioAprovacao)
+                .AsQueryable();
+
+            // APLICAR FILTRO BASEADO NO PERFIL DO USUÁRIO
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                // Tesoureiros Locais e Pastores só veem fechamentos do seu centro de custo
+                if (user.CentroCustoId.HasValue)
+                {
+                    query = query.Where(f => f.CentroCustoId == user.CentroCustoId.Value);
+                }
+                else
+                {
+                    // Se não tem centro de custo, não vê nada
+                    query = query.Where(f => false);
+                }
+            }
+
+            var fechamentos = await query
                 .OrderByDescending(f => f.Ano)
                 .ThenByDescending(f => f.Mes)
                 .ToListAsync();
@@ -77,6 +99,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // VALIDAR PERMISSÃO DE ACESSO
+            if (!await CanAccessFechamento(fechamento))
+            {
+                return Forbid();
+            }
+
             await _auditService.LogAsync("Visualização", "FechamentoPeriodo", $"Detalhes do fechamento {fechamento.Mes:00}/{fechamento.Ano} visualizados");
             return View(fechamento);
         }
@@ -85,12 +113,15 @@ namespace SistemaTesourariaEclesiastica.Controllers
         [HttpGet]
         public async Task<IActionResult> Create()
         {
+            var user = await _userManager.GetUserAsync(User);
+
             var fechamento = new FechamentoPeriodo
             {
                 TipoFechamento = TipoFechamento.Mensal,
                 DataInicio = DateTime.Now.Date,
                 Mes = DateTime.Now.Month,
-                Ano = DateTime.Now.Year
+                Ano = DateTime.Now.Year,
+                CentroCustoId = user.CentroCustoId ?? 0 // Pré-selecionar o centro de custo do usuário
             };
 
             await PopulateDropdowns(fechamento);
@@ -106,12 +137,18 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ModelState.Remove("CentroCusto");
             ModelState.Remove("UsuarioSubmissao");
             ModelState.Remove("UsuarioSubmissaoId");
-            
+
+            // VALIDAR PERMISSÃO DE ACESSO AO CENTRO DE CUSTO
+            if (!await CanAccessCentroCusto(fechamento.CentroCustoId))
+            {
+                ModelState.AddModelError("CentroCustoId", "Você não tem permissão para criar fechamentos neste centro de custo.");
+            }
+
             if (ModelState.IsValid)
             {
                 // USAR TRANSAÇÃO PARA GARANTIR ATOMICIDADE
                 using var transaction = await _context.Database.BeginTransactionAsync();
-                
+
                 try
                 {
                     var user = await _userManager.GetUserAsync(User);
@@ -130,12 +167,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                     // Calcular totais do período
                     await CalcularTotaisFechamento(fechamento);
-                    
+
                     _logger.LogInformation($"Fechamento criado - Balanço Digital: {fechamento.BalancoDigital:C}");
 
                     // APLICAR RATEIOS COM LOG DETALHADO
                     var resultadoRateio = await AplicarRateiosComLog(fechamento);
-                    
+
                     if (!string.IsNullOrEmpty(resultadoRateio))
                     {
                         _logger.LogInformation($"Resultado do Rateio: {resultadoRateio}");
@@ -148,14 +185,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     // SALVAR FECHAMENTO
                     _context.Add(fechamento);
                     await _context.SaveChangesAsync();
-                    
+
                     _logger.LogInformation($"Fechamento ID {fechamento.Id} salvo com sucesso");
-                    
+
                     // VERIFICAR SE OS ITENS DE RATEIO FORAM SALVOS
                     var itensRateioSalvos = await _context.ItensRateioFechamento
                         .Where(i => i.FechamentoPeriodoId == fechamento.Id)
                         .ToListAsync();
-                    
+
                     _logger.LogInformation($"Itens de rateio salvos: {itensRateioSalvos.Count}");
 
                     // CONFIRMAR TRANSAÇÃO
@@ -165,12 +202,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         $"Fechamento {ObterDescricaoFechamento(fechamento)} criado. Rateios aplicados: {itensRateioSalvos.Count}");
 
                     TempData["SuccessMessage"] = $"Fechamento criado com sucesso! {itensRateioSalvos.Count} rateio(s) aplicado(s).";
-                    
+
                     if (!string.IsNullOrEmpty(resultadoRateio))
                     {
                         TempData["InfoMessage"] = resultadoRateio;
                     }
-                    
+
                     return RedirectToAction(nameof(Details), new { id = fechamento.Id });
                 }
                 catch (Exception ex)
@@ -207,23 +244,17 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // VALIDAR PERMISSÃO DE ACESSO
+            if (!await CanAccessFechamento(fechamento))
+            {
+                return Forbid();
+            }
+
             // Verificar se o fechamento pode ser editado
             if (fechamento.Status != StatusFechamentoPeriodo.Pendente)
             {
                 TempData["ErrorMessage"] = "Apenas fechamentos pendentes podem ser editados.";
                 return RedirectToAction(nameof(Details), new { id = fechamento.Id });
-            }
-
-            // Verificar permissões
-            var user = await _userManager.GetUserAsync(User);
-            if (!User.IsInRole("Administrador") && !User.IsInRole("TesoureiroGeral"))
-            {
-                // Tesoureiro Local só pode editar fechamentos do seu próprio centro de custo
-                if (fechamento.CentroCustoId != user.CentroCustoId)
-                {
-                    TempData["ErrorMessage"] = "Você não tem permissão para editar este fechamento.";
-                    return RedirectToAction(nameof(Index));
-                }
             }
 
             await PopulateDropdowns(fechamento);
@@ -253,6 +284,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // VALIDAR PERMISSÃO DE ACESSO
+            if (!await CanAccessFechamento(fechamento))
+            {
+                return Forbid();
+            }
+
             // Verificar se ainda está pendente
             if (fechamento.Status != StatusFechamentoPeriodo.Pendente)
             {
@@ -260,27 +297,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return RedirectToAction(nameof(Details), new { id = fechamento.Id });
             }
 
-            // Verificar permissões
-            var user = await _userManager.GetUserAsync(User);
-            if (!User.IsInRole("Administrador") && !User.IsInRole("TesoureiroGeral"))
-            {
-                if (fechamento.CentroCustoId != user.CentroCustoId)
-                {
-                    TempData["ErrorMessage"] = "Você não tem permissão para editar este fechamento.";
-                    return RedirectToAction(nameof(Index));
-                }
-            }
-
             try
             {
-                // =====================================================
                 // ATUALIZAR APENAS AS OBSERVAÇÕES (único campo editável)
-                // =====================================================
                 fechamento.Observacoes = fechamentoForm.Observacoes;
 
-                // =====================================================
                 // REMOVER ITENS ANTIGOS
-                // =====================================================
                 if (fechamento.ItensRateio.Any())
                 {
                     _context.ItensRateioFechamento.RemoveRange(fechamento.ItensRateio);
@@ -295,14 +317,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 fechamento.ItensRateio.Clear();
                 fechamento.DetalhesFechamento.Clear();
 
-                // =====================================================
                 // RECALCULAR TODOS OS VALORES
-                // =====================================================
                 await CalcularTotaisFechamento(fechamento);
 
-                // =====================================================
                 // REAPLICAR RATEIOS SE FOR SEDE
-                // =====================================================
                 var centroCusto = await _context.CentrosCusto.FindAsync(fechamento.CentroCustoId);
                 if (centroCusto?.Nome.ToUpper().Contains("SEDE") == true ||
                     centroCusto?.Nome.ToUpper().Contains("GERAL") == true)
@@ -315,14 +333,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     fechamento.SaldoFinal = fechamento.BalancoDigital;
                 }
 
-                // =====================================================
                 // REGERAR DETALHES
-                // =====================================================
                 await GerarDetalhesFechamento(fechamento);
 
-                // =====================================================
                 // SALVAR (Entity já está sendo rastreado)
-                // =====================================================
                 await _context.SaveChangesAsync();
 
                 // Log de auditoria
@@ -356,6 +370,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: FechamentoPeriodo/Aprovar/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = Roles.AdminOuTesoureiroGeral)] // Apenas Admin e Tesoureiro Geral podem aprovar
         public async Task<IActionResult> Aprovar(int id)
         {
             var fechamento = await _context.FechamentosPeriodo
@@ -363,7 +378,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .ThenInclude(i => i.RegraRateio)
                         .ThenInclude(r => r.CentroCustoDestino)
                 .FirstOrDefaultAsync(f => f.Id == id);
-                
+
             if (fechamento == null)
             {
                 return NotFound();
@@ -383,7 +398,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             // LOGGING ANTES DA APROVAÇÃO
             _logger.LogInformation($"Aprovando fechamento ID {id}. Itens de rateio: {fechamento.ItensRateio.Count}");
-            
+
             foreach (var item in fechamento.ItensRateio)
             {
                 _logger.LogInformation($"  Rateio: {item.ValorRateio:C} para {item.RegraRateio?.CentroCustoDestino?.Nome ?? "N/A"}");
@@ -406,9 +421,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             _logger.LogInformation($"Após aprovação: {rateiosAprovados.Count} rateios persistidos no banco");
 
-            await _auditService.LogAsync("Aprovação", "FechamentoPeriodo", 
+            await _auditService.LogAsync("Aprovação", "FechamentoPeriodo",
                 $"Fechamento {fechamento.Mes:00}/{fechamento.Ano} aprovado com {rateiosAprovados.Count} rateios");
-            
+
             TempData["SuccessMessage"] = $"Fechamento aprovado com sucesso! {rateiosAprovados.Count} rateio(s) confirmado(s).";
 
             return RedirectToAction(nameof(Index));
@@ -416,6 +431,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
         // GET: FechamentoPeriodo/Rejeitar/5
         [HttpGet]
+        [Authorize(Roles = Roles.AdminOuTesoureiroGeral)] // Apenas Admin e Tesoureiro Geral podem rejeitar
         public async Task<IActionResult> Rejeitar(int? id)
         {
             if (id == null)
@@ -443,19 +459,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return RedirectToAction(nameof(Details), new { id = fechamento.Id });
             }
 
-            // Verificar permissões (apenas Administrador e Tesoureiro Geral podem rejeitar)
-            if (!User.IsInRole("Administrador") && !User.IsInRole("TesoureiroGeral"))
-            {
-                TempData["ErrorMessage"] = "Você não tem permissão para rejeitar fechamentos.";
-                return RedirectToAction(nameof(Index));
-            }
-
             return View(fechamento);
         }
 
         // POST: FechamentoPeriodo/Rejeitar/5
         [HttpPost, ActionName("Rejeitar")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = Roles.AdminOuTesoureiroGeral)]
         public async Task<IActionResult> RejeitarConfirmed(int id, string? motivoRejeicao)
         {
             var fechamento = await _context.FechamentosPeriodo
@@ -474,13 +484,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return RedirectToAction(nameof(Details), new { id = fechamento.Id });
             }
 
-            // Verificar permissões
-            if (!User.IsInRole("Administrador") && !User.IsInRole("TesoureiroGeral"))
-            {
-                TempData["ErrorMessage"] = "Você não tem permissão para rejeitar fechamentos.";
-                return RedirectToAction(nameof(Index));
-            }
-
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
@@ -491,8 +494,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 // Atualizar status para Rejeitado
                 fechamento.Status = StatusFechamentoPeriodo.Rejeitado;
-                fechamento.DataAprovacao = DateTime.Now; // Usar como data de rejeição
-                fechamento.UsuarioAprovacaoId = user.Id; // Usar como usuário que rejeitou
+                fechamento.DataAprovacao = DateTime.Now;
+                fechamento.UsuarioAprovacaoId = user.Id;
 
                 // Adicionar motivo da rejeição nas observações
                 if (!string.IsNullOrWhiteSpace(motivoRejeicao))
@@ -545,6 +548,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // VALIDAR PERMISSÃO DE ACESSO
+            if (!await CanAccessFechamento(fechamento))
+            {
+                return Forbid();
+            }
+
             var pdfBytes = _pdfService.GerarReciboFechamento(fechamento);
             var fileName = $"Fechamento_{fechamento.CentroCusto.Nome}_{fechamento.Mes:00}_{fechamento.Ano}.pdf";
 
@@ -577,15 +586,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
-            // Verificar permissões
-            var user = await _userManager.GetUserAsync(User);
-            if (!User.IsInRole("Administrador") && !User.IsInRole("TesoureiroGeral"))
+            // VALIDAR PERMISSÃO DE ACESSO
+            if (!await CanAccessFechamento(fechamento))
             {
-                if (fechamento.CentroCustoId != user.CentroCustoId)
-                {
-                    TempData["ErrorMessage"] = "Você não tem permissão para excluir este fechamento.";
-                    return RedirectToAction(nameof(Index));
-                }
+                return Forbid();
             }
 
             // Verificar se pode ser excluído
@@ -613,15 +617,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
-            // Verificar permissões novamente
-            var user = await _userManager.GetUserAsync(User);
-            if (!User.IsInRole("Administrador") && !User.IsInRole("TesoureiroGeral"))
+            // VALIDAR PERMISSÃO DE ACESSO
+            if (!await CanAccessFechamento(fechamento))
             {
-                if (fechamento.CentroCustoId != user.CentroCustoId)
-                {
-                    TempData["ErrorMessage"] = "Você não tem permissão para excluir este fechamento.";
-                    return RedirectToAction(nameof(Index));
-                }
+                return Forbid();
             }
 
             // Verificar se pode ser excluído
@@ -662,8 +661,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // NOVO MÉTODO: Diagnóstico de Rateios
+        // DIAGNÓSTICO: DiagnósticoRateios
         [HttpGet]
+        [Authorize(Roles = Roles.AdminOuTesoureiroGeral)]
         public async Task<IActionResult> DiagnosticoRateios()
         {
             var diagnostico = new StringBuilder();
@@ -746,6 +746,34 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return View("DiagnosticoRateios");
         }
 
+        #region Métodos Auxiliares
+
+        // MÉTODO AUXILIAR: Verificar permissão de acesso ao fechamento
+        private async Task<bool> CanAccessFechamento(FechamentoPeriodo fechamento)
+        {
+            // Administradores e Tesoureiros Gerais podem acessar tudo
+            if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                return true;
+
+            var user = await _userManager.GetUserAsync(User);
+
+            // Outros usuários só podem acessar fechamentos do seu centro de custo
+            return user.CentroCustoId.HasValue && fechamento.CentroCustoId == user.CentroCustoId.Value;
+        }
+
+        // MÉTODO AUXILIAR: Verificar permissão de acesso ao centro de custo
+        private async Task<bool> CanAccessCentroCusto(int centroCustoId)
+        {
+            // Administradores e Tesoureiros Gerais podem acessar qualquer centro de custo
+            if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                return true;
+
+            var user = await _userManager.GetUserAsync(User);
+
+            // Outros usuários só podem acessar seu próprio centro de custo
+            return user.CentroCustoId.HasValue && centroCustoId == user.CentroCustoId.Value;
+        }
+
         // MÉTODO MELHORADO: Aplicar Rateios com Log Detalhado
         private async Task<string> AplicarRateiosComLog(FechamentoPeriodo fechamento)
         {
@@ -805,9 +833,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return log.ToString();
                 }
 
-                // ===================================================================
                 // CORREÇÃO: Calcular sobre TOTAL DE RECEITAS (não sobre o balanço)
-                // ===================================================================
                 var totalReceitas = fechamento.TotalEntradas;
 
                 log.AppendLine("");
@@ -819,7 +845,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 // Aplicar cada regra
                 decimal totalRateios = 0;
-                var valorBase = totalReceitas; // USAR TOTAL DE RECEITAS
+                var valorBase = totalReceitas;
                 int contador = 0;
 
                 log.AppendLine($"✓ Valor Base para Rateio: {valorBase:C}");
@@ -859,9 +885,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 fechamento.TotalRateios = totalRateios;
 
-                // ===================================================================
                 // SALDO FINAL: Balanço Total (lucro) - Rateios
-                // ===================================================================
                 var balancoTotal = fechamento.BalancoFisico + fechamento.BalancoDigital;
                 fechamento.SaldoFinal = balancoTotal - totalRateios;
 
@@ -936,47 +960,32 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             if (fechamento.TipoFechamento == TipoFechamento.Diario)
             {
-                // Para fechamento diário, data início = data fim
                 fechamento.DataFim = fechamento.DataInicio;
-
-                // Extrair mês e ano da data
                 fechamento.Mes = fechamento.DataInicio.Month;
                 fechamento.Ano = fechamento.DataInicio.Year;
             }
             else if (fechamento.TipoFechamento == TipoFechamento.Semanal)
             {
-                // Para fechamento semanal, validar que as datas foram informadas
                 if (fechamento.DataInicio == default || fechamento.DataFim == default)
                 {
                     throw new InvalidOperationException("Para fechamento semanal, é necessário informar a data de início e fim da semana.");
                 }
 
-                // Validar que a data fim é posterior à data início
                 if (fechamento.DataFim < fechamento.DataInicio)
                 {
                     throw new InvalidOperationException("A data de fim deve ser posterior ou igual à data de início.");
                 }
 
-                // Validar que não excede 7 dias (mas permitir exatamente 7)
-                var diasDiferenca = (fechamento.DataFim - fechamento.DataInicio).Days;
-                if (diasDiferenca > 6)
-                {
-                    // Permitir até 7 dias
-                }
-
-                // Extrair mês e ano da data de início
                 fechamento.Mes = fechamento.DataInicio.Month;
                 fechamento.Ano = fechamento.DataInicio.Year;
             }
             else if (fechamento.TipoFechamento == TipoFechamento.Mensal)
             {
-                // Para fechamento mensal, validar que Mês e Ano foram informados
                 if (!fechamento.Mes.HasValue || !fechamento.Ano.HasValue)
                 {
                     throw new InvalidOperationException("Para fechamento mensal, é necessário informar Mês e Ano.");
                 }
 
-                // Definir data início e fim do mês
                 fechamento.DataInicio = new DateTime(fechamento.Ano.Value, fechamento.Mes.Value, 1);
                 fechamento.DataFim = fechamento.DataInicio.AddMonths(1).AddDays(-1);
             }
@@ -1045,10 +1054,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // MÉTODO AUXILIAR: Popular Dropdowns
         private async Task PopulateDropdowns(FechamentoPeriodo? fechamento = null)
         {
-            // Popular Centro de Custo
             var user = await _userManager.GetUserAsync(User);
 
-            if (User.IsInRole("Administrador") || User.IsInRole("TesoureiroGeral"))
+            if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
             {
                 // Admin e Tesoureiro Geral veem todos os centros
                 ViewBag.CentrosCusto = new SelectList(
@@ -1092,5 +1100,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             return _context.FechamentosPeriodo.Any(f => f.Id == id);
         }
+
+        #endregion
     }
 }

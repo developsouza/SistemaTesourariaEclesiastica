@@ -84,6 +84,7 @@
                             </a>
                         </li>
 
+                        @* ==================== MENU FINANCEIRO - CORRIGIDO ==================== *@
                         @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.TesoureiroLocal))
                         {
                             <li class="nav-item has-submenu">
@@ -103,31 +104,39 @@
                                             <span class="nav-text">Saídas</span>
                                         </a>
                                     </li>
-                                    <li>
-                                        <a class="nav-link" asp-controller="TransferenciasInternas" asp-action="Index">
-                                            <span class="nav-text">Transferências</span>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="nav-link" asp-controller="Emprestimos" asp-action="Index">
-                                            <span class="nav-text">Empréstimos</span>
-                                        </a>
-                                    </li>
+
+                                    @* APENAS Admin e Tesoureiro Geral podem ver Transferências e Empréstimos *@
+                                    @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                                    {
+                                        <li>
+                                            <a class="nav-link" asp-controller="TransferenciasInternas" asp-action="Index">
+                                                <span class="nav-text">Transferências</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="nav-link" asp-controller="Emprestimos" asp-action="Index">
+                                                <span class="nav-text">Empréstimos</span>
+                                            </a>
+                                        </li>
+                                    }
                                 </ul>
                             </li>
-
-                            @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="FechamentoPeriodo" asp-action="Index">
-                                        <i class="bi bi-file-earmark-check"></i>
-                                        <span class="nav-text">Prestação de Contas</span>
-                                    </a>
-                                </li>
-                            }
                         }
 
-                        @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.Pastor))
+                        @* ==================== PRESTAÇÃO DE CONTAS - CORRIGIDO ==================== *@
+                        @* TODOS OS TESOUREIROS (Geral E Local) têm acesso *@
+                        @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.TesoureiroLocal))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="FechamentoPeriodo" asp-action="Index">
+                                    <i class="bi bi-file-earmark-check"></i>
+                                    <span class="nav-text">Prestação de Contas</span>
+                                </a>
+                            </li>
+                        }
+
+                        @* ==================== MENU RELATÓRIOS ==================== *@
+                        @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.TesoureiroLocal) || User.IsInRole(Roles.Pastor))
                         {
                             <li class="nav-item has-submenu">
                                 <a class="nav-link" href="#relatoriosSubmenu">
@@ -175,6 +184,7 @@
                             </li>
                         }
 
+                        @* ==================== MENU CADASTROS (APENAS ADMIN) ==================== *@
                         @if (User.IsInRole(Roles.Administrador))
                         {
                             <li class="nav-item has-submenu">
