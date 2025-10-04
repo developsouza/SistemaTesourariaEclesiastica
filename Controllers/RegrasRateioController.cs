@@ -34,16 +34,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             try
             {
+                // PASSO 1: Buscar as regras SEM manipulação
                 var regras = await _context.RegrasRateio
                     .Include(r => r.CentroCustoOrigem)
                     .Include(r => r.CentroCustoDestino)
                     .OrderBy(r => r.CentroCustoOrigem.Nome)
                     .ThenBy(r => r.Nome)
-                    .ToListAsync();
+                    .ToListAsync();  // ✅ Executar query PRIMEIRO
 
+                // PASSO 2: DEPOIS manipular em memória
                 // Adicionar informações sobre reconhecimento de SEDE/FUNDO
                 foreach (var regra in regras)
                 {
+                    // ✅ AGORA funciona porque já está em memória
                     regra.CentroCustoOrigem.Nome = AdicionarBadgeReconhecimento(
                         regra.CentroCustoOrigem.Nome,
                         TipoCentroCusto.Origem);
@@ -528,25 +531,46 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // Método auxiliar para popular dropdowns
+        // Método auxiliar para popular dropdowns - VERSÃO CORRIGIDA
         private async Task PopulateDropdowns(RegraRateio? regraRateio = null)
         {
+            // PASSO 1: Buscar os centros de custo SEM manipulação de string
             var centrosCusto = await _context.CentrosCusto
                 .Where(c => c.Ativo)
                 .OrderBy(c => c.Nome)
                 .Select(c => new
                 {
                     c.Id,
-                    Nome = c.Nome + (EhReconhecidoComoSede(c.Nome) ? " ⭐ SEDE" : "") +
-                                   (EhReconhecidoComoFundo(c.Nome) ? " 💰 FUNDO" : "")
+                    c.Nome  // ← SEM manipulação aqui
                 })
-                .ToListAsync();
+                .ToListAsync();  // ← Executar a query PRIMEIRO
 
-            ViewData["CentroCustoOrigemId"] = new SelectList(centrosCusto, "Id", "Nome", regraRateio?.CentroCustoOrigemId);
-            ViewData["CentroCustoDestinoId"] = new SelectList(centrosCusto, "Id", "Nome", regraRateio?.CentroCustoDestinoId);
+            // PASSO 2: AGORA sim, manipular em memória (depois da query)
+            var centrosCustoComBadges = centrosCusto.Select(c => new
+            {
+                c.Id,
+                Nome = c.Nome +
+                       (EhReconhecidoComoSede(c.Nome) ? " ⭐ SEDE" : "") +
+                       (EhReconhecidoComoFundo(c.Nome) ? " 💰 FUNDO" : "")
+            }).ToList();
+
+            // PASSO 3: Criar os SelectList
+            ViewData["CentroCustoOrigemId"] = new SelectList(
+                centrosCustoComBadges,
+                "Id",
+                "Nome",
+                regraRateio?.CentroCustoOrigemId
+            );
+
+            ViewData["CentroCustoDestinoId"] = new SelectList(
+                centrosCustoComBadges,
+                "Id",
+                "Nome",
+                regraRateio?.CentroCustoDestinoId
+            );
         }
 
-        // Métodos auxiliares de validação
+        // Métodos auxiliares de validação - MANTÉM COMO ESTÃO
         private bool RegraRateioExists(int id)
         {
             return _context.RegrasRateio.Any(e => e.Id == id);
