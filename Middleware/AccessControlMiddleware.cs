@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Models;
-using SistemaTesourariaEclesiastica.Services;
 using System.Security.Claims;
 
 namespace SistemaTesourariaEclesiastica.Middleware

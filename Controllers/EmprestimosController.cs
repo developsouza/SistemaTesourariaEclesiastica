@@ -5,7 +5,6 @@ using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
-using System.Text;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {

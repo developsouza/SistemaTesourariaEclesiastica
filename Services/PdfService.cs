@@ -240,33 +240,33 @@ namespace SistemaTesourariaEclesiastica.Services
             html.AppendLine("<div class='info-section-full'>");
             html.AppendLine("<div class='info-title'>INFORMAÇÕES GERAIS</div>");
             html.AppendLine("<div class='info-grid'>");
-            
+
             html.AppendLine("<div class='info-item'>");
             html.AppendLine("<span class='info-label'>Centro de Custo:</span>");
             html.AppendLine($"<span class='info-value'>{fechamento.CentroCusto.Nome}</span>");
             html.AppendLine("</div>");
-            
+
             html.AppendLine("<div class='info-item'>");
             html.AppendLine("<span class='info-label'>Tipo:</span>");
             html.AppendLine($"<span class='info-value'>{(fechamento.TipoFechamento == TipoFechamento.Diario ? "Diário" : fechamento.TipoFechamento == TipoFechamento.Semanal ? "Semanal" : "Mensal")}</span>");
             html.AppendLine("</div>");
-            
+
             html.AppendLine("<div class='info-item'>");
             html.AppendLine("<span class='info-label'>Período:</span>");
             html.AppendLine($"<span class='info-value'>{fechamento.DataInicio:dd/MM/yyyy} - {fechamento.DataFim:dd/MM/yyyy}</span>");
             html.AppendLine("</div>");
-            
+
             html.AppendLine("<div class='info-item'>");
             html.AppendLine("<span class='info-label'>Status:</span>");
             html.AppendLine($"<span class='info-value'>{fechamento.Status}</span>");
             html.AppendLine("</div>");
-            
+
             html.AppendLine("</div>"); // Fim info-grid
             html.AppendLine("</div>"); // Fim info-section-full
 
             // Seção de Balanços lado a lado
             html.AppendLine("<div class='balance-section'>");
-            
+
             // Balanço Físico
             html.AppendLine("<div class='balance-column'>");
             html.AppendLine("<div class='highlight-box'>");
@@ -347,26 +347,26 @@ namespace SistemaTesourariaEclesiastica.Services
             // Resumo Final - usando o mesmo layout em grid das Informações Gerais
             html.AppendLine("<div class='summary'>");
             html.AppendLine("<div class='summary-title'>RESUMO FINAL</div>");
-            
+
             // Determinar quantas colunas usar baseado na presença de rateios
             var gridColumns = fechamento.TotalRateios > 0 ? "1fr 1fr 1fr 1fr 1fr" : "1fr 1fr 1fr 1fr";
             html.AppendLine($"<div class='info-grid' style='grid-template-columns: {gridColumns};'>");
-            
+
             html.AppendLine("<div class='info-item'>");
             html.AppendLine("<span class='info-label'>Total Entradas:</span>");
             html.AppendLine($"<span class='summary-value-highlight text-success'>{fechamento.TotalEntradas:C}</span>");
             html.AppendLine("</div>");
-            
+
             html.AppendLine("<div class='info-item'>");
             html.AppendLine("<span class='info-label'>Total Saídas:</span>");
             html.AppendLine($"<span class='summary-value-highlight text-danger'>{fechamento.TotalSaidas:C}</span>");
             html.AppendLine("</div>");
-            
+
             html.AppendLine("<div class='info-item'>");
             html.AppendLine("<span class='info-label'>Físico (Repassar):</span>");
             html.AppendLine($"<span class='summary-value-highlight text-warning'>{fechamento.BalancoFisico:C}</span>");
             html.AppendLine("</div>");
-            
+
             // Se houver rateios, adicionar como quarto item
             if (fechamento.TotalRateios > 0)
             {
@@ -375,12 +375,12 @@ namespace SistemaTesourariaEclesiastica.Services
                 html.AppendLine($"<span class='summary-value-highlight text-danger'>- {fechamento.TotalRateios:C}</span>");
                 html.AppendLine("</div>");
             }
-            
+
             html.AppendLine("<div class='info-item'>");
             html.AppendLine("<span class='info-label'>Valor do repasse:</span>");
             html.AppendLine($"<span class='summary-value-highlight text-info'>{(fechamento.TotalRateios > 0 ? fechamento.SaldoFinal : fechamento.BalancoDigital):C}</span>");
             html.AppendLine("</div>");
-            
+
             html.AppendLine("</div>"); // Fim info-grid
             html.AppendLine("</div>"); // Fim summary
 
