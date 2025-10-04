@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -25,6 +26,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public decimal PercentualCongregacao { get; set; }
 
         // Navigation properties
+        [ValidateNever]
         public virtual ICollection<Entrada> Entradas { get; set; } = new List<Entrada>();
     }
 }

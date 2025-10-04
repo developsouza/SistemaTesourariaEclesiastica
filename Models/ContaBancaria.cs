@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace SistemaTesourariaEclesiastica.Models
@@ -26,6 +27,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public int CentroCustoId { get; set; }
 
         // Navigation properties
+        [ValidateNever]
         public virtual CentroCusto CentroCusto { get; set; } = null!;
     }
 }

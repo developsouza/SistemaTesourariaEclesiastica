@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SistemaTesourariaEclesiastica.Models
@@ -32,6 +33,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public DateTime? DataQuitacao { get; set; }
 
         // Relacionamento com as devoluções
+        [ValidateNever]
         public virtual ICollection<DevolucaoEmprestimo> Devolucoes { get; set; }
 
         // Propriedades calculadas
@@ -82,8 +84,9 @@ namespace SistemaTesourariaEclesiastica.Models
         [Required]
         [Display(Name = "Empréstimo")]
         public int EmprestimoId { get; set; }
-
+        
         [ForeignKey("EmprestimoId")]
+        [ValidateNever]
         public virtual Emprestimo Emprestimo { get; set; }
 
         [Required(ErrorMessage = "A data da devolução é obrigatória")]

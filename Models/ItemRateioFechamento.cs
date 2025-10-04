@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -38,7 +39,9 @@ namespace SistemaTesourariaEclesiastica.Models
         public DateTime DataCriacao { get; set; } = DateTime.Now;
 
         // Navigation properties
+        [ValidateNever]
         public virtual FechamentoPeriodo FechamentoPeriodo { get; set; } = null!;
+        [ValidateNever]
         public virtual RegraRateio RegraRateio { get; set; } = null!;
     }
 }

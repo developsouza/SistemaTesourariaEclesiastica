@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace SistemaTesourariaEclesiastica.Models
@@ -23,6 +24,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public DateTime? UltimoAcesso { get; set; }
 
         // Navigation property
+        [ValidateNever]
         public virtual CentroCusto? CentroCusto { get; set; }
     }
 }

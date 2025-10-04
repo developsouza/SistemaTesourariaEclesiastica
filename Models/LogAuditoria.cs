@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace SistemaTesourariaEclesiastica.Models
@@ -40,6 +41,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public string? UserAgent { get; set; }
 
         // Navigation properties
+        [ValidateNever]
         public virtual ApplicationUser Usuario { get; set; } = null!;
     }
 }

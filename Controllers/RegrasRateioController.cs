@@ -156,8 +156,20 @@ namespace SistemaTesourariaEclesiastica.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Nome,Descricao,CentroCustoOrigemId,CentroCustoDestinoId,Percentual")] RegraRateio regraRateio)
         {
+            // CRÍTICO: Remover navigation properties da validação do ModelState
             ModelState.Remove("CentroCustoOrigem");
             ModelState.Remove("CentroCustoDestino");
+            ModelState.Remove("ItensRateio");
+
+            // LOG para debug - ADICIONE ISTO TEMPORARIAMENTE
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors);
+                foreach (var error in errors)
+                {
+                    _logger.LogWarning($"ModelState Error: {error.ErrorMessage}");
+                }
+            }
 
             if (ModelState.IsValid)
             {
@@ -254,6 +266,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     _logger.LogError(ex, "Erro ao criar regra de rateio");
                     ModelState.AddModelError("", $"Erro ao criar regra: {ex.Message}");
                 }
+            }
+            else
+            {
+                // LOG ADICIONAL para debug
+                _logger.LogWarning("ModelState inválido ao tentar criar regra de rateio");
             }
 
             await PopulateDropdowns(regraRateio);

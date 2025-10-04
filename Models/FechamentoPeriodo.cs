@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using SistemaTesourariaEclesiastica.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -102,10 +103,15 @@ namespace SistemaTesourariaEclesiastica.Models
         public string? UsuarioAprovacaoId { get; set; }
 
         // Navigation properties
+        [ValidateNever]
         public virtual CentroCusto CentroCusto { get; set; } = null!;
+        [ValidateNever]
         public virtual ApplicationUser UsuarioSubmissao { get; set; } = null!;
+        [ValidateNever]
         public virtual ApplicationUser? UsuarioAprovacao { get; set; }
+        [ValidateNever]
         public virtual ICollection<ItemRateioFechamento> ItensRateio { get; set; } = new List<ItemRateioFechamento>();
+        [ValidateNever]
         public virtual ICollection<DetalheFechamento> DetalhesFechamento { get; set; } = new List<DetalheFechamento>();
     }
 }

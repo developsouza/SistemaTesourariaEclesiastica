@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using SistemaTesourariaEclesiastica.Enums;
 using System.ComponentModel.DataAnnotations;
 
@@ -24,9 +25,13 @@ namespace SistemaTesourariaEclesiastica.Models
         public bool Ativo { get; set; } = true;
 
         // Navigation properties
+        [ValidateNever]
         public virtual ICollection<Entrada> Entradas { get; set; } = new List<Entrada>();
+        [ValidateNever]
         public virtual ICollection<Saida> Saidas { get; set; } = new List<Saida>();
+        [ValidateNever]
         public virtual ICollection<TransferenciaInterna> TransferenciasOrigem { get; set; } = new List<TransferenciaInterna>();
+        [ValidateNever]
         public virtual ICollection<TransferenciaInterna> TransferenciasDestino { get; set; } = new List<TransferenciaInterna>();
     }
 }

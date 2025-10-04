@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -52,6 +53,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public string? Observacoes { get; set; }
 
         // Navigation property
+        [ValidateNever]
         public virtual FechamentoPeriodo FechamentoPeriodo { get; set; } = null!;
     }
 }

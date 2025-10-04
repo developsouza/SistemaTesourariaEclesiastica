@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using SistemaTesourariaEclesiastica.Enums;
 using System.ComponentModel.DataAnnotations;
 
@@ -28,7 +29,9 @@ namespace SistemaTesourariaEclesiastica.Models
         public DateTime DataCriacao { get; set; } = DateTime.Now;
 
         // Navigation properties
+        [ValidateNever]
         public virtual ICollection<Entrada> Entradas { get; set; } = new List<Entrada>();
+        [ValidateNever]
         public virtual ICollection<Saida> Saidas { get; set; } = new List<Saida>();
     }
 }

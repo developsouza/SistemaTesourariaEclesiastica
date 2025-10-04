@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 
 namespace SistemaTesourariaEclesiastica.Models
@@ -58,6 +59,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public DateTime DataCadastro { get; set; } = DateTime.Now;
 
         // Navigation properties
+        [ValidateNever]
         public virtual ICollection<Saida> Saidas { get; set; } = new List<Saida>();
     }
 }
