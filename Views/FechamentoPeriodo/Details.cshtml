@@ -75,6 +75,47 @@
                 </div>
             </div>
         </div>
+        @if (Model.FoiProcessadoPelaSede && Model.FechamentoSedeProcessador != null)
+        {
+            <div class="alert alert-info mt-3">
+                <h6 class="alert-heading">
+                    <i class="bi bi-check2-circle me-2"></i>
+                    Incluído em Fechamento da SEDE
+                </h6>
+                <p class="mb-1">
+                    Esta prestação de contas foi incluída no fechamento da SEDE em
+                    <strong>@Model.DataProcessamentoPelaSede?.ToString("dd/MM/yyyy HH:mm")</strong>
+                </p>
+                <a asp-action="Details" asp-route-id="@Model.FechamentoSedeProcessadorId" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-eye me-1"></i>Ver Fechamento da SEDE
+                </a>
+            </div>
+        }
+
+        @if (Model.FechamentosCongregacoesIncluidos.Any())
+        {
+            <div class="alert alert-success mt-3">
+                <h6 class="alert-heading">
+                    <i class="bi bi-list-check me-2"></i>
+                    Prestações de Congregações Incluídas
+                </h6>
+                <p class="mb-2">
+                    Este fechamento da SEDE processou <strong>@Model.FechamentosCongregacoesIncluidos.Count</strong> prestação(ões) de congregação(ões):
+                </p>
+                <ul class="mb-0">
+                    @foreach (var fechamento in Model.FechamentosCongregacoesIncluidos)
+                    {
+                        <li>
+                            <strong>@fechamento.CentroCusto.Nome</strong> -
+                            @fechamento.DataInicio.ToString("dd/MM/yyyy") até @fechamento.DataFim.ToString("dd/MM/yyyy")
+                            <a asp-action="Details" asp-route-id="@fechamento.Id" class="btn btn-sm btn-outline-success ms-2">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
     </div>
 </div>
 

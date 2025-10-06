@@ -84,7 +84,7 @@ namespace SistemaTesourariaEclesiastica.Models
         [Required]
         [Display(Name = "Empréstimo")]
         public int EmprestimoId { get; set; }
-        
+
         [ForeignKey("EmprestimoId")]
         [ValidateNever]
         public virtual Emprestimo Emprestimo { get; set; }

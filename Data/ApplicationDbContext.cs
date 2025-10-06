@@ -334,6 +334,13 @@ namespace SistemaTesourariaEclesiastica.Data
                 .HasForeignKey(df => df.FechamentoPeriodoId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Relacionamento de Fechamentos: Sede → Congregações Processadas
+            builder.Entity<FechamentoPeriodo>()
+                .HasOne(f => f.FechamentoSedeProcessador)
+                .WithMany(f => f.FechamentosCongregacoesIncluidos)
+                .HasForeignKey(f => f.FechamentoSedeProcessadorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // ========================================
             // 💰 CONFIGURAÇÕES - MÓDULO DE EMPRÉSTIMOS
             // ========================================

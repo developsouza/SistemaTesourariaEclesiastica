@@ -102,6 +102,35 @@ namespace SistemaTesourariaEclesiastica.Models
 
         public string? UsuarioAprovacaoId { get; set; }
 
+        /// <summary>
+        /// Indica se este fechamento de congregação já foi incluído em um fechamento da SEDE
+        /// </summary>
+        [Display(Name = "Foi Processado pela Sede?")]
+        public bool FoiProcessadoPelaSede { get; set; } = false;
+
+        /// <summary>
+        /// ID do fechamento da SEDE que processou este fechamento (se aplicável)
+        /// </summary>
+        [Display(Name = "Fechamento da Sede que Processou")]
+        public int? FechamentoSedeProcessadorId { get; set; }
+
+        /// <summary>
+        /// Data em que foi processado pela SEDE
+        /// </summary>
+        [Display(Name = "Data de Processamento pela Sede")]
+        public DateTime? DataProcessamentoPelaSede { get; set; }
+
+        // Navigation Property
+        [ValidateNever]
+        public virtual FechamentoPeriodo? FechamentoSedeProcessador { get; set; }
+
+        /// <summary>
+        /// Fechamentos de congregações que foram incluídos neste fechamento da SEDE
+        /// </summary>
+        [ValidateNever]
+        public virtual ICollection<FechamentoPeriodo> FechamentosCongregacoesIncluidos { get; set; }
+            = new List<FechamentoPeriodo>();
+
         // Navigation properties
         [ValidateNever]
         public virtual CentroCusto CentroCusto { get; set; } = null!;

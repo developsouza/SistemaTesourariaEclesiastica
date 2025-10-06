@@ -1,3 +1,5 @@
+// Services/PdfService.cs
+
 using iText.Html2pdf;
 using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
@@ -27,198 +29,282 @@ namespace SistemaTesourariaEclesiastica.Services
             html.AppendLine("<html>");
             html.AppendLine("<head>");
             html.AppendLine("<meta charset='utf-8'>");
-            html.AppendLine("<title>Recibo de Fechamento</title>");
+            html.AppendLine("<title>Prestação de Contas - Fechamento de Período</title>");
             html.AppendLine("<style>");
             html.AppendLine(@"
         @page { 
             size: A4; 
-            margin: 15mm 10mm 10mm 10mm; 
+            margin: 10mm 8mm 8mm 8mm; 
         }
         body { 
             font-family: Arial, sans-serif; 
             margin: 0;
             padding: 0;
-            font-size: 10px;
+            font-size: 7.5px;
             line-height: 1.2;
+            color: #333;
         }
         .header { 
             text-align: center; 
-            margin-bottom: 15px; 
-            border-bottom: 1px solid #333;
-            padding-bottom: 8px;
+            margin-bottom: 10px; 
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 6px;
         }
         .title { 
-            font-size: 16px; 
+            font-size: 14px; 
             font-weight: bold; 
-            color: #333;
+            color: #2c3e50;
             margin: 0;
         }
         .subtitle { 
-            font-size: 12px; 
-            color: #666;
+            font-size: 9px; 
+            color: #555;
             margin: 2px 0;
         }
-        .info-section-full { 
-            margin: 8px 0; 
-            padding: 8px;
-            background-color: #f9f9f9;
-            border-radius: 3px;
-            width: 100%;
-        }
-        .info-title {
-            font-size: 11px;
+        .section-title {
+            background-color: #3498db;
+            color: white;
+            padding: 4px 8px;
+            font-size: 9px;
             font-weight: bold;
-            color: #333;
+            margin-top: 10px;
             margin-bottom: 5px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 2px;
+            border-radius: 2px;
         }
-        .info-grid {
-            display: grid;
+        .section-title-success {
+            background-color: #27ae60;
+        }
+        .section-title-danger {
+            background-color: #e74c3c;
+        }
+        .section-title-warning {
+            background-color: #f39c12;
+        }
+        .section-title-info {
+            background-color: #16a085;
+        }
+        .info-grid { 
+            display: grid; 
             grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 10px;
-            margin-top: 5px;
+            gap: 5px;
+            margin-bottom: 8px;
         }
         .info-item {
-            display: flex;
-            flex-direction: column;
+            background-color: #f8f9fa;
+            padding: 4px;
+            border-radius: 2px;
+            border-left: 2px solid #3498db;
         }
         .info-label { 
-            font-weight: bold;
-            color: #555;
-            font-size: 9px;
-            margin-bottom: 2px;
+            font-size: 6.5px;
+            color: #666;
+            display: block;
+            margin-bottom: 1px;
         }
         .info-value { 
-            color: #333;
-            font-size: 9px;
+            font-weight: bold;
+            font-size: 8px;
+            color: #2c3e50;
         }
-        .table { 
+        .summary-box {
+            background-color: #ecf0f1;
+            border: 1px solid #bdc3c7;
+            border-radius: 3px;
+            padding: 6px;
+            margin: 6px 0;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .summary-item {
+            text-align: center;
+            padding: 4px;
+            background-color: white;
+            border-radius: 2px;
+        }
+        .summary-label {
+            font-size: 6.5px;
+            color: #666;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .summary-value {
+            font-size: 9px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .text-success { color: #27ae60; }
+        .text-danger { color: #e74c3c; }
+        .text-warning { color: #f39c12; }
+        .text-info { color: #16a085; }
+        
+        table { 
             width: 100%; 
             border-collapse: collapse; 
             margin: 5px 0;
-            font-size: 9px;
+            font-size: 7px;
         }
-        .table th, .table td { 
-            border: 1px solid #ddd; 
-            padding: 4px; 
-            text-align: left;
-        }
-        .table th { 
-            background-color: #333; 
+        table thead {
+            background-color: #34495e;
             color: white;
+        }
+        table th { 
+            padding: 3px 2px;
+            text-align: left;
             font-weight: bold;
-            font-size: 8px;
+            font-size: 7px;
         }
-        .table-striped tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
+        table td { 
+            padding: 2px 2px;
+            border-bottom: 1px solid #ecf0f1;
         }
-        .currency { 
+        table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        .table-striped tbody tr:nth-child(odd) {
+            background-color: #f8f9fa;
+        }
+        .currency {
             text-align: right;
+            font-family: 'Courier New', monospace;
         }
-        .summary {
-            background-color: #e8f4f8;
-            padding: 8px;
-            border-radius: 3px;
-            margin: 8px 0;
-        }
-        .summary-title {
-            font-size: 11px;
-            font-weight: bold;
-            color: #0066cc;
-            margin-bottom: 5px;
-        }
-        .summary-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 3px 0;
-            padding: 2px 0;
-            font-size: 10px;
-        }
-        .summary-label {
-            font-weight: bold;
-            color: #333;
-        }
-        .summary-value {
-            font-weight: bold;
-            color: #0066cc;
-            font-size: 11px;
-        }
-        .summary-value-highlight {
-            font-weight: bold;
-            font-size: 12px;
-            padding: 2px 4px;
-            border-radius: 3px;
-        }
-        .highlight-box {
-            background-color: #fff3cd;
-            border-left: 3px solid #ffc107;
-            padding: 8px;
-            margin: 8px 0;
-        }
-        .info-box {
-            background-color: #d1ecf1;
-            border-left: 3px solid #17a2b8;
-            padding: 8px;
-            margin: 8px 0;
-        }
-        .footer { 
-            margin-top: 15px; 
-            text-align: center; 
-            font-size: 8px; 
-            color: #666;
-            border-top: 1px solid #ddd;
-            padding-top: 8px;
-        }
-        .signature-center { 
-            margin-top: 30px; 
+        .center {
             text-align: center;
         }
-        .signature-line { 
-            border-top: 1px solid #333; 
-            margin: 25px auto 0 auto; 
+        .badge {
+            display: inline-block;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-size: 6px;
+            font-weight: bold;
+            color: white;
+        }
+        .badge-success { background-color: #27ae60; }
+        .badge-info { background-color: #3498db; }
+        .badge-warning { background-color: #f39c12; }
+        .badge-danger { background-color: #e74c3c; }
+        
+        .totals-row {
+            font-weight: bold;
+            background-color: #ecf0f1 !important;
+            border-top: 1px solid #2c3e50;
+        }
+        .signature-section {
+            margin-top: 15px;
+            page-break-inside: avoid;
+        }
+        .signature-line {
+            display: inline-block;
+            width: 45%;
+            text-align: center;
+            border-top: 1px solid #333;
             padding-top: 3px;
-            width: 300px;
-            font-size: 9px;
+            margin: 0 2%;
+            font-size: 7px;
         }
-        .text-danger { color: #dc3545; }
-        .text-success { color: #28a745; }
-        .text-warning { color: #ffc107; }
-        .text-info { color: #17a2b8; }
-        .fw-bold { font-weight: bold; }
-        .fs-small { font-size: 10px; }
-        .compact-table {
-            margin: 3px 0;
+        .footer { 
+            position: fixed;
+            bottom: 3mm;
+            width: 100%;
+            text-align: center; 
+            font-size: 6px; 
+            color: #999;
+            border-top: 1px solid #ddd;
+            padding-top: 2px;
         }
-        .compact-table td {
-            padding: 2px 4px;
+        .page-break {
+            page-break-after: always;
         }
-        .note {
-            margin: 3px 0 0 0; 
+        .no-data {
+            text-align: center;
+            padding: 10px;
+            color: #999;
+            font-style: italic;
+            font-size: 7px;
+        }
+        .alert-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 3px;
+            padding: 5px;
+            margin: 6px 0;
+            font-size: 6.5px;
+        }
+        .congregacao-separator {
+            background-color: #e8f5e9;
+            padding: 4px 6px;
+            margin: 8px 0 4px 0;
+            border-left: 3px solid #4caf50;
+            font-weight: bold;
             font-size: 8px;
         }
-        .balance-section {
-            display: flex;
-            gap: 15px;
-            margin: 10px 0;
-        }
-        .balance-column {
-            flex: 1;
-        }
-        .info-section { 
-            margin: 8px 0; 
-            padding: 8px;
-            background-color: #f9f9f9;
-            border-radius: 3px;
+        .sede-separator {
+            background-color: #e3f2fd;
+            padding: 4px 6px;
+            margin: 8px 0 4px 0;
+            border-left: 3px solid #2196f3;
+            font-weight: bold;
+            font-size: 8px;
         }
     ");
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
 
-            // Header
+            // ==================== CABEÇALHO ====================
+            GerarCabecalho(html, fechamento);
+
+            // ==================== RESUMO EXECUTIVO ====================
+            GerarResumoExecutivo(html, fechamento);
+
+            // ==================== INFORMAÇÕES DO FECHAMENTO ====================
+            GerarInformacoesFechamento(html, fechamento);
+
+            // ==================== CONGREGAÇÕES INCLUÍDAS (SE HOUVER) ====================
+            if (fechamento.FechamentosCongregacoesIncluidos?.Any() == true)
+            {
+                GerarCongregacoesIncluidas(html, fechamento);
+            }
+
+            // ==================== DETALHAMENTO DE ENTRADAS ====================
+            GerarDetalhamentoEntradas(html, fechamento);
+
+            // ==================== DETALHAMENTO DE SAÍDAS ====================
+            GerarDetalhamentoSaidas(html, fechamento);
+
+            // ==================== RATEIOS APLICADOS ====================
+            if (fechamento.ItensRateio?.Any() == true)
+            {
+                GerarRateiosAplicados(html, fechamento);
+            }
+
+            // ==================== OBSERVAÇÕES ====================
+            if (!string.IsNullOrEmpty(fechamento.Observacoes))
+            {
+                GerarObservacoes(html, fechamento);
+            }
+
+            // ==================== ASSINATURAS ====================
+            GerarAssinaturas(html, fechamento);
+
+            // ==================== RODAPÉ ====================
+            html.AppendLine("<div class='footer'>");
+            html.AppendLine($"Documento gerado em {DateTime.Now:dd/MM/yyyy HH:mm} - Sistema de Gestão de Tesouraria Eclesiástica");
+            html.AppendLine("</div>");
+
+            html.AppendLine("</body>");
+            html.AppendLine("</html>");
+
+            return html.ToString();
+        }
+
+        private void GerarCabecalho(StringBuilder html, FechamentoPeriodo fechamento)
+        {
             html.AppendLine("<div class='header'>");
-            html.AppendLine("<div class='title'>RECIBO DE FECHAMENTO DE PERÍODO</div>");
+            html.AppendLine("<div class='title'>PRESTAÇÃO DE CONTAS - FECHAMENTO DE PERÍODO</div>");
             html.AppendLine($"<div class='subtitle'>{fechamento.CentroCusto.Nome}</div>");
 
             if (fechamento.TipoFechamento == TipoFechamento.Diario)
@@ -234,11 +320,60 @@ namespace SistemaTesourariaEclesiastica.Services
             {
                 html.AppendLine($"<div class='subtitle'>Período: {fechamento.Mes:00}/{fechamento.Ano}</div>");
             }
+
+            var statusBadge = fechamento.Status switch
+            {
+                StatusFechamentoPeriodo.Aprovado => "<span class='badge badge-success'>APROVADO</span>",
+                StatusFechamentoPeriodo.Pendente => "<span class='badge badge-warning'>PENDENTE</span>",
+                StatusFechamentoPeriodo.Rejeitado => "<span class='badge badge-danger'>REJEITADO</span>",
+                _ => "<span class='badge badge-info'>PROCESSADO</span>"
+            };
+
+            html.AppendLine($"<div class='subtitle'>{statusBadge}</div>");
+            html.AppendLine("</div>");
+        }
+
+        private void GerarResumoExecutivo(StringBuilder html, FechamentoPeriodo fechamento)
+        {
+            html.AppendLine("<div class='summary-box'>");
+            html.AppendLine("<div style='font-size: 9px; font-weight: bold; margin-bottom: 5px; color: #2c3e50;'>RESUMO EXECUTIVO</div>");
+            html.AppendLine("<div class='summary-grid'>");
+
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Total de Entradas</span>");
+            html.AppendLine($"<span class='summary-value text-success'>{fechamento.TotalEntradas:C}</span>");
             html.AppendLine("</div>");
 
-            // Informações Gerais - ocupando toda a largura
-            html.AppendLine("<div class='info-section-full'>");
-            html.AppendLine("<div class='info-title'>INFORMAÇÕES GERAIS</div>");
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Total de Saídas</span>");
+            html.AppendLine($"<span class='summary-value text-danger'>{fechamento.TotalSaidas:C}</span>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Balanço Físico</span>");
+            html.AppendLine($"<span class='summary-value text-warning'>{fechamento.BalancoFisico:C}</span>");
+            html.AppendLine("</div>");
+
+            if (fechamento.TotalRateios > 0)
+            {
+                html.AppendLine("<div class='summary-item'>");
+                html.AppendLine("<span class='summary-label'>(-) Rateios</span>");
+                html.AppendLine($"<span class='summary-value text-danger'>-{fechamento.TotalRateios:C}</span>");
+                html.AppendLine("</div>");
+            }
+
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Saldo Final</span>");
+            html.AppendLine($"<span class='summary-value text-info'>{fechamento.SaldoFinal:C}</span>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
+        }
+
+        private void GerarInformacoesFechamento(StringBuilder html, FechamentoPeriodo fechamento)
+        {
+            html.AppendLine("<div class='section-title'>INFORMAÇÕES DO FECHAMENTO</div>");
             html.AppendLine("<div class='info-grid'>");
 
             html.AppendLine("<div class='info-item'>");
@@ -247,8 +382,10 @@ namespace SistemaTesourariaEclesiastica.Services
             html.AppendLine("</div>");
 
             html.AppendLine("<div class='info-item'>");
-            html.AppendLine("<span class='info-label'>Tipo:</span>");
-            html.AppendLine($"<span class='info-value'>{(fechamento.TipoFechamento == TipoFechamento.Diario ? "Diário" : fechamento.TipoFechamento == TipoFechamento.Semanal ? "Semanal" : "Mensal")}</span>");
+            html.AppendLine("<span class='info-label'>Tipo de Fechamento:</span>");
+            var tipoTexto = fechamento.TipoFechamento == TipoFechamento.Diario ? "Diário" :
+                            fechamento.TipoFechamento == TipoFechamento.Semanal ? "Semanal" : "Mensal";
+            html.AppendLine($"<span class='info-value'>{tipoTexto}</span>");
             html.AppendLine("</div>");
 
             html.AppendLine("<div class='info-item'>");
@@ -261,155 +398,344 @@ namespace SistemaTesourariaEclesiastica.Services
             html.AppendLine($"<span class='info-value'>{fechamento.Status}</span>");
             html.AppendLine("</div>");
 
-            html.AppendLine("</div>"); // Fim info-grid
-            html.AppendLine("</div>"); // Fim info-section-full
-
-            // Seção de Balanços lado a lado
-            html.AppendLine("<div class='balance-section'>");
-
-            // Balanço Físico
-            html.AppendLine("<div class='balance-column'>");
-            html.AppendLine("<div class='highlight-box'>");
-            html.AppendLine("<div class='info-title'>BALANÇO FÍSICO (DINHEIRO)</div>");
-            html.AppendLine("<table class='table compact-table'>");
-            html.AppendLine("<tr>");
-            html.AppendLine("<td><strong>Entradas:</strong></td>");
-            html.AppendLine($"<td class='currency text-success fw-bold'>{fechamento.TotalEntradasFisicas:C}</td>");
-            html.AppendLine("</tr>");
-            html.AppendLine("<tr>");
-            html.AppendLine("<td><strong>Saídas:</strong></td>");
-            html.AppendLine($"<td class='currency text-danger fw-bold'>{fechamento.TotalSaidasFisicas:C}</td>");
-            html.AppendLine("</tr>");
-            html.AppendLine("<tr style='background-color: #fff3cd;'>");
-            html.AppendLine("<td><strong>= TOTAL:</strong></td>");
-            html.AppendLine($"<td class='currency fw-bold fs-small text-warning'>{fechamento.BalancoFisico:C}</td>");
-            html.AppendLine("</tr>");
-            html.AppendLine("</table>");
-            html.AppendLine("<p class='note'>Valor a repassar fisicamente.</p>");
-            html.AppendLine("</div>");
+            html.AppendLine("<div class='info-item'>");
+            html.AppendLine("<span class='info-label'>Submetido por:</span>");
+            html.AppendLine($"<span class='info-value'>{fechamento.UsuarioSubmissao?.NomeCompleto ?? "N/A"}</span>");
             html.AppendLine("</div>");
 
-            // Balanço Digital - SIMPLIFICADO (sem rateios e valor final)
-            html.AppendLine("<div class='balance-column'>");
-            html.AppendLine("<div class='info-box'>");
-            html.AppendLine("<div class='info-title'>BALANÇO DIGITAL</div>");
-            html.AppendLine("<table class='table compact-table'>");
-            html.AppendLine("<tr>");
-            html.AppendLine("<td><strong>Entradas:</strong></td>");
-            html.AppendLine($"<td class='currency text-success fw-bold'>{fechamento.TotalEntradasDigitais:C}</td>");
-            html.AppendLine("</tr>");
-            html.AppendLine("<tr>");
-            html.AppendLine("<td><strong>Saídas:</strong></td>");
-            html.AppendLine($"<td class='currency text-danger fw-bold'>{fechamento.TotalSaidasDigitais:C}</td>");
-            html.AppendLine("</tr>");
-            html.AppendLine("<tr style='background-color: #d1ecf1;'>");
-            html.AppendLine("<td><strong>Subtotal:</strong></td>");
-            html.AppendLine($"<td class='currency fw-bold fs-small text-info'>{fechamento.BalancoDigital:C}</td>");
-            html.AppendLine("</tr>");
-            html.AppendLine("</table>");
-            html.AppendLine("<p class='note'>Já depositado eletronicamente.</p>");
-            html.AppendLine("</div>");
+            html.AppendLine("<div class='info-item'>");
+            html.AppendLine("<span class='info-label'>Data de Submissão:</span>");
+            html.AppendLine($"<span class='info-value'>{fechamento.DataSubmissao:dd/MM/yyyy HH:mm}</span>");
             html.AppendLine("</div>");
 
-            html.AppendLine("</div>"); // Fim balance-section
-
-            // Rateios (se houver) - versão compacta
-            if (fechamento.ItensRateio.Any())
+            if (fechamento.UsuarioAprovacao != null)
             {
-                html.AppendLine("<div class='info-section'>");
-                html.AppendLine("<div class='info-title'>RATEIOS APLICADOS</div>");
-                html.AppendLine("<table class='table table-striped compact-table'>");
+                html.AppendLine("<div class='info-item'>");
+                html.AppendLine("<span class='info-label'>Aprovado por:</span>");
+                html.AppendLine($"<span class='info-value'>{fechamento.UsuarioAprovacao.NomeCompleto}</span>");
+                html.AppendLine("</div>");
+
+                html.AppendLine("<div class='info-item'>");
+                html.AppendLine("<span class='info-label'>Data de Aprovação:</span>");
+                html.AppendLine($"<span class='info-value'>{fechamento.DataAprovacao:dd/MM/yyyy HH:mm}</span>");
+                html.AppendLine("</div>");
+            }
+
+            html.AppendLine("</div>");
+        }
+
+        private void GerarCongregacoesIncluidas(StringBuilder html, FechamentoPeriodo fechamento)
+        {
+            html.AppendLine("<div class='section-title section-title-info'>PRESTAÇÕES DE CONGREGAÇÕES INCLUÍDAS NESTE FECHAMENTO</div>");
+
+            html.AppendLine("<div class='alert-box'>");
+            html.AppendLine($"<strong>Este fechamento da SEDE consolidou {fechamento.FechamentosCongregacoesIncluidos.Count} prestação(ões) de congregação(ões).</strong> ");
+            html.AppendLine("Os valores e detalhes abaixo já estão incluídos no resumo executivo e nos totais apresentados.");
+            html.AppendLine("</div>");
+
+            html.AppendLine("<table class='table-striped'>");
+            html.AppendLine("<thead>");
+            html.AppendLine("<tr>");
+            html.AppendLine("<th>Congregação</th>");
+            html.AppendLine("<th>Período</th>");
+            html.AppendLine("<th class='currency'>Entradas</th>");
+            html.AppendLine("<th class='currency'>Saídas</th>");
+            html.AppendLine("<th class='currency'>Balanço Físico</th>");
+            html.AppendLine("<th class='center'>Data Aprovação</th>");
+            html.AppendLine("</tr>");
+            html.AppendLine("</thead>");
+            html.AppendLine("<tbody>");
+
+            foreach (var congFechamento in fechamento.FechamentosCongregacoesIncluidos.OrderBy(f => f.CentroCusto.Nome))
+            {
+                html.AppendLine("<tr>");
+                html.AppendLine($"<td><strong>{congFechamento.CentroCusto.Nome}</strong></td>");
+                html.AppendLine($"<td>{congFechamento.DataInicio:dd/MM/yyyy} - {congFechamento.DataFim:dd/MM/yyyy}</td>");
+                html.AppendLine($"<td class='currency text-success'>{congFechamento.TotalEntradas:C}</td>");
+                html.AppendLine($"<td class='currency text-danger'>{congFechamento.TotalSaidas:C}</td>");
+                html.AppendLine($"<td class='currency text-warning'>{congFechamento.BalancoFisico:C}</td>");
+                html.AppendLine($"<td class='center'>{congFechamento.DataAprovacao:dd/MM/yyyy}</td>");
+                html.AppendLine("</tr>");
+            }
+
+            html.AppendLine("</tbody>");
+            html.AppendLine("</table>");
+        }
+
+        private void GerarDetalhamentoEntradas(StringBuilder html, FechamentoPeriodo fechamento)
+        {
+            html.AppendLine("<div class='section-title section-title-success'>DETALHAMENTO DAS ENTRADAS (RECEITAS)</div>");
+
+            var entradasPorOrigem = new Dictionary<string, (List<DetalheFechamento> detalhes, bool ehSede)>();
+
+            // ✅ CORREÇÃO: Adicionar entradas da SEDE PRIMEIRO
+            var entradasSede = fechamento.DetalhesFechamento
+                .Where(d => d.TipoMovimento == "Entrada")
+                .OrderBy(d => d.Data)
+                .ThenBy(d => d.Descricao)
+                .ToList();
+
+            if (entradasSede.Any())
+            {
+                entradasPorOrigem[fechamento.CentroCusto.Nome] = (entradasSede, true);
+            }
+
+            // Adicionar entradas das congregações incluídas
+            if (fechamento.FechamentosCongregacoesIncluidos?.Any() == true)
+            {
+                foreach (var congFechamento in fechamento.FechamentosCongregacoesIncluidos.OrderBy(c => c.CentroCusto.Nome))
+                {
+                    var entradasCong = congFechamento.DetalhesFechamento
+                        .Where(d => d.TipoMovimento == "Entrada")
+                        .OrderBy(d => d.Data)
+                        .ThenBy(d => d.Descricao)
+                        .ToList();
+
+                    if (entradasCong.Any())
+                    {
+                        entradasPorOrigem[congFechamento.CentroCusto.Nome] = (entradasCong, false);
+                    }
+                }
+            }
+
+            if (!entradasPorOrigem.Any())
+            {
+                html.AppendLine("<div class='no-data'>Nenhuma entrada registrada no período.</div>");
+                return;
+            }
+
+            decimal totalGeralEntradas = 0;
+
+            foreach (var origem in entradasPorOrigem)
+            {
+                var separatorClass = origem.Value.ehSede ? "sede-separator" : "congregacao-separator";
+                var icone = origem.Value.ehSede ? "🏛️" : "📍";
+
+                html.AppendLine($"<div class='{separatorClass}'>{icone} {origem.Key}</div>");
+
+                html.AppendLine("<table class='table-striped'>");
                 html.AppendLine("<thead>");
                 html.AppendLine("<tr>");
-                html.AppendLine("<th>Regra</th>");
-                html.AppendLine("<th>Destino</th>");
-                html.AppendLine("<th>%</th>");
-                html.AppendLine("<th>Valor</th>");
+                html.AppendLine("<th style='width: 50px;'>Data</th>");
+                html.AppendLine("<th>Fonte de Renda</th>");
+                html.AppendLine("<th>Descrição</th>");
+                html.AppendLine("<th>Membro</th>");
+                html.AppendLine("<th style='width: 55px;'>Meio Pgto</th>");
+                html.AppendLine("<th class='currency' style='width: 55px;'>Valor</th>");
                 html.AppendLine("</tr>");
                 html.AppendLine("</thead>");
                 html.AppendLine("<tbody>");
 
-                foreach (var rateio in fechamento.ItensRateio.OrderBy(r => r.RegraRateio.Nome))
+                decimal subtotal = 0;
+
+                foreach (var entrada in origem.Value.detalhes)
                 {
                     html.AppendLine("<tr>");
-                    html.AppendLine($"<td>{rateio.RegraRateio.Nome}</td>");
-                    html.AppendLine($"<td>{rateio.RegraRateio.CentroCustoDestino.Nome}</td>");
-                    html.AppendLine($"<td class='currency'>{rateio.Percentual:F1}%</td>");
-                    html.AppendLine($"<td class='currency fw-bold'>{rateio.ValorRateio:C}</td>");
+                    html.AppendLine($"<td>{entrada.Data:dd/MM/yyyy}</td>");
+                    html.AppendLine($"<td>{entrada.PlanoContas ?? "N/A"}</td>");
+                    html.AppendLine($"<td>{entrada.Descricao ?? "-"}</td>");
+                    html.AppendLine($"<td>{entrada.Membro ?? "-"}</td>");
+                    html.AppendLine($"<td>{entrada.MeioPagamento ?? "N/A"}</td>");
+                    html.AppendLine($"<td class='currency text-success'><strong>{entrada.Valor:C}</strong></td>");
                     html.AppendLine("</tr>");
+
+                    subtotal += entrada.Valor;
                 }
+
+                html.AppendLine("<tr class='totals-row'>");
+                html.AppendLine($"<td colspan='5' style='text-align: right;'><strong>Subtotal {origem.Key}:</strong></td>");
+                html.AppendLine($"<td class='currency text-success'><strong>{subtotal:C}</strong></td>");
+                html.AppendLine("</tr>");
 
                 html.AppendLine("</tbody>");
                 html.AppendLine("</table>");
-                html.AppendLine("</div>");
+
+                totalGeralEntradas += subtotal;
             }
 
-            // Resumo Final - usando o mesmo layout em grid das Informações Gerais
-            html.AppendLine("<div class='summary'>");
-            html.AppendLine("<div class='summary-title'>RESUMO FINAL</div>");
-
-            // Determinar quantas colunas usar baseado na presença de rateios
-            var gridColumns = fechamento.TotalRateios > 0 ? "1fr 1fr 1fr 1fr 1fr" : "1fr 1fr 1fr 1fr";
-            html.AppendLine($"<div class='info-grid' style='grid-template-columns: {gridColumns};'>");
-
-            html.AppendLine("<div class='info-item'>");
-            html.AppendLine("<span class='info-label'>Total Entradas:</span>");
-            html.AppendLine($"<span class='summary-value-highlight text-success'>{fechamento.TotalEntradas:C}</span>");
-            html.AppendLine("</div>");
-
-            html.AppendLine("<div class='info-item'>");
-            html.AppendLine("<span class='info-label'>Total Saídas:</span>");
-            html.AppendLine($"<span class='summary-value-highlight text-danger'>{fechamento.TotalSaidas:C}</span>");
-            html.AppendLine("</div>");
-
-            html.AppendLine("<div class='info-item'>");
-            html.AppendLine("<span class='info-label'>Físico (Repassar):</span>");
-            html.AppendLine($"<span class='summary-value-highlight text-warning'>{fechamento.BalancoFisico:C}</span>");
-            html.AppendLine("</div>");
-
-            // Se houver rateios, adicionar como quarto item
-            if (fechamento.TotalRateios > 0)
+            if (entradasPorOrigem.Count > 1)
             {
-                html.AppendLine("<div class='info-item'>");
-                html.AppendLine("<span class='info-label'>(-) Rateios Aplicados:</span>");
-                html.AppendLine($"<span class='summary-value-highlight text-danger'>- {fechamento.TotalRateios:C}</span>");
-                html.AppendLine("</div>");
+                html.AppendLine("<table>");
+                html.AppendLine("<tr class='totals-row'>");
+                html.AppendLine($"<td colspan='5' style='text-align: right; font-size: 9px;'><strong>TOTAL GERAL DE ENTRADAS:</strong></td>");
+                html.AppendLine($"<td class='currency text-success' style='font-size: 9px;'><strong>{totalGeralEntradas:C}</strong></td>");
+                html.AppendLine("</tr>");
+                html.AppendLine("</table>");
             }
+        }
 
-            html.AppendLine("<div class='info-item'>");
-            html.AppendLine("<span class='info-label'>Valor do repasse:</span>");
-            html.AppendLine($"<span class='summary-value-highlight text-info'>{(fechamento.TotalRateios > 0 ? fechamento.SaldoFinal : fechamento.BalancoDigital):C}</span>");
-            html.AppendLine("</div>");
+        private void GerarDetalhamentoSaidas(StringBuilder html, FechamentoPeriodo fechamento)
+        {
+            html.AppendLine("<div class='section-title section-title-danger'>DETALHAMENTO DAS SAÍDAS (DESPESAS)</div>");
 
-            html.AppendLine("</div>"); // Fim info-grid
-            html.AppendLine("</div>"); // Fim summary
+            var saidasPorOrigem = new Dictionary<string, (List<DetalheFechamento> detalhes, bool ehSede)>();
 
-            // Observações (se houver) - compactas
-            if (!string.IsNullOrEmpty(fechamento.Observacoes))
+            // ✅ CORREÇÃO: Adicionar saídas da SEDE PRIMEIRO
+            var saidasSede = fechamento.DetalhesFechamento
+                .Where(d => d.TipoMovimento == "Saida")
+                .OrderBy(d => d.Data)
+                .ThenBy(d => d.Descricao)
+                .ToList();
+
+            if (saidasSede.Any())
             {
-                html.AppendLine("<div class='info-section'>");
-                html.AppendLine("<div class='info-title'>OBSERVAÇÕES</div>");
-                html.AppendLine($"<p style='font-size: 8px; margin: 0;'>{fechamento.Observacoes}</p>");
-                html.AppendLine("</div>");
+                saidasPorOrigem[fechamento.CentroCusto.Nome] = (saidasSede, true);
             }
 
-            // Assinatura centralizada - apenas tesoureiro
-            html.AppendLine("<div class='signature-center'>");
+            // Adicionar saídas das congregações incluídas
+            if (fechamento.FechamentosCongregacoesIncluidos?.Any() == true)
+            {
+                foreach (var congFechamento in fechamento.FechamentosCongregacoesIncluidos.OrderBy(c => c.CentroCusto.Nome))
+                {
+                    var saidasCong = congFechamento.DetalhesFechamento
+                        .Where(d => d.TipoMovimento == "Saida")
+                        .OrderBy(d => d.Data)
+                        .ThenBy(d => d.Descricao)
+                        .ToList();
+
+                    if (saidasCong.Any())
+                    {
+                        saidasPorOrigem[congFechamento.CentroCusto.Nome] = (saidasCong, false);
+                    }
+                }
+            }
+
+            if (!saidasPorOrigem.Any())
+            {
+                html.AppendLine("<div class='no-data'>Nenhuma saída registrada no período.</div>");
+                return;
+            }
+
+            decimal totalGeralSaidas = 0;
+
+            foreach (var origem in saidasPorOrigem)
+            {
+                var separatorClass = origem.Value.ehSede ? "sede-separator" : "congregacao-separator";
+                var corSeparator = origem.Value.ehSede ? "background-color: #ffebee; border-left-color: #1976d2;" : "background-color: #ffebee; border-left-color: #f44336;";
+                var icone = origem.Value.ehSede ? "🏛️" : "📍";
+
+                html.AppendLine($"<div class='congregacao-separator' style='{corSeparator}'>{icone} {origem.Key}</div>");
+
+                html.AppendLine("<table class='table-striped'>");
+                html.AppendLine("<thead>");
+                html.AppendLine("<tr>");
+                html.AppendLine("<th style='width: 50px;'>Data</th>");
+                html.AppendLine("<th>Categoria</th>");
+                html.AppendLine("<th>Descrição/Finalidade</th>");
+                html.AppendLine("<th>Fornecedor</th>");
+                html.AppendLine("<th style='width: 55px;'>Meio Pgto</th>");
+                html.AppendLine("<th class='currency' style='width: 55px;'>Valor</th>");
+                html.AppendLine("</tr>");
+                html.AppendLine("</thead>");
+                html.AppendLine("<tbody>");
+
+                decimal subtotal = 0;
+
+                foreach (var saida in origem.Value.detalhes)
+                {
+                    html.AppendLine("<tr>");
+                    html.AppendLine($"<td>{saida.Data:dd/MM/yyyy}</td>");
+                    html.AppendLine($"<td>{saida.PlanoContas ?? "N/A"}</td>");
+                    html.AppendLine($"<td>{saida.Descricao ?? "-"}</td>");
+                    html.AppendLine($"<td>{saida.Fornecedor ?? "-"}</td>");
+                    html.AppendLine($"<td>{saida.MeioPagamento ?? "N/A"}</td>");
+                    html.AppendLine($"<td class='currency text-danger'><strong>{saida.Valor:C}</strong></td>");
+                    html.AppendLine("</tr>");
+
+                    subtotal += saida.Valor;
+                }
+
+                html.AppendLine("<tr class='totals-row'>");
+                html.AppendLine($"<td colspan='5' style='text-align: right;'><strong>Subtotal {origem.Key}:</strong></td>");
+                html.AppendLine($"<td class='currency text-danger'><strong>{subtotal:C}</strong></td>");
+                html.AppendLine("</tr>");
+
+                html.AppendLine("</tbody>");
+                html.AppendLine("</table>");
+
+                totalGeralSaidas += subtotal;
+            }
+
+            if (saidasPorOrigem.Count > 1)
+            {
+                html.AppendLine("<table>");
+                html.AppendLine("<tr class='totals-row'>");
+                html.AppendLine($"<td colspan='5' style='text-align: right; font-size: 9px;'><strong>TOTAL GERAL DE SAÍDAS:</strong></td>");
+                html.AppendLine($"<td class='currency text-danger' style='font-size: 9px;'><strong>{totalGeralSaidas:C}</strong></td>");
+                html.AppendLine("</tr>");
+                html.AppendLine("</table>");
+            }
+        }
+
+        private void GerarRateiosAplicados(StringBuilder html, FechamentoPeriodo fechamento)
+        {
+            html.AppendLine("<div class='section-title section-title-warning'>RATEIOS APLICADOS</div>");
+
+            html.AppendLine("<table class='table-striped'>");
+            html.AppendLine("<thead>");
+            html.AppendLine("<tr>");
+            html.AppendLine("<th>Regra de Rateio</th>");
+            html.AppendLine("<th>Destino</th>");
+            html.AppendLine("<th class='center'>Percentual</th>");
+            html.AppendLine("<th class='currency'>Valor Base</th>");
+            html.AppendLine("<th class='currency'>Valor Rateado</th>");
+            html.AppendLine("</tr>");
+            html.AppendLine("</thead>");
+            html.AppendLine("<tbody>");
+
+            foreach (var rateio in fechamento.ItensRateio.OrderBy(r => r.RegraRateio.Nome))
+            {
+                html.AppendLine("<tr>");
+                html.AppendLine($"<td>{rateio.RegraRateio.Nome}</td>");
+                html.AppendLine($"<td><span class='badge badge-info'>{rateio.RegraRateio.CentroCustoDestino.Nome}</span></td>");
+                html.AppendLine($"<td class='center'>{rateio.Percentual:F2}%</td>");
+                html.AppendLine($"<td class='currency'>{rateio.ValorBase:C}</td>");
+                html.AppendLine($"<td class='currency text-warning'><strong>{rateio.ValorRateio:C}</strong></td>");
+                html.AppendLine("</tr>");
+            }
+
+            html.AppendLine("<tr class='totals-row'>");
+            html.AppendLine("<td colspan='4' style='text-align: right;'><strong>Total de Rateios:</strong></td>");
+            html.AppendLine($"<td class='currency text-warning'><strong>{fechamento.TotalRateios:C}</strong></td>");
+            html.AppendLine("</tr>");
+
+            html.AppendLine("</tbody>");
+            html.AppendLine("</table>");
+
+            html.AppendLine("<div class='alert-box'>");
+            html.AppendLine("<strong>Importante:</strong> O valor total de rateios foi deduzido do balanço para cálculo do saldo final. ");
+            html.AppendLine("Estes valores foram destinados aos fundos conforme as regras de rateio configuradas.");
+            html.AppendLine("</div>");
+        }
+
+        private void GerarObservacoes(StringBuilder html, FechamentoPeriodo fechamento)
+        {
+            html.AppendLine("<div class='section-title'>OBSERVAÇÕES</div>");
+            html.AppendLine("<div style='background-color: #f8f9fa; padding: 6px; border-radius: 3px; border-left: 3px solid #6c757d;'>");
+            html.AppendLine($"<p style='margin: 0; font-size: 7px; line-height: 1.4;'>{fechamento.Observacoes.Replace("\n", "<br>")}</p>");
+            html.AppendLine("</div>");
+        }
+
+        private void GerarAssinaturas(StringBuilder html, FechamentoPeriodo fechamento)
+        {
+            html.AppendLine("<div class='signature-section'>");
+            html.AppendLine("<div style='text-align: center; margin-top: 20px;'>");
+
             html.AppendLine("<div class='signature-line'>");
-            html.AppendLine($"{fechamento.UsuarioSubmissao.NomeCompleto}");
-            html.AppendLine("<br>Tesoureiro Responsável");
-            html.AppendLine("</div>");
-            html.AppendLine("</div>");
-
-            // Footer compacto
-            html.AppendLine("<div class='footer'>");
-            html.AppendLine($"Gerado em {DateTime.Now:dd/MM/yyyy HH:mm} - Sistema de Tesouraria Eclesiástica");
+            html.AppendLine($"<div>{fechamento.UsuarioSubmissao?.NomeCompleto ?? "___________________________"}</div>");
+            html.AppendLine("<div style='font-size: 6px; color: #666; margin-top: 1px;'>Tesoureiro Responsável</div>");
             html.AppendLine("</div>");
 
-            html.AppendLine("</body>");
-            html.AppendLine("</html>");
+            if (fechamento.UsuarioAprovacao != null)
+            {
+                html.AppendLine("<div class='signature-line'>");
+                html.AppendLine($"<div>{fechamento.UsuarioAprovacao.NomeCompleto}</div>");
+                html.AppendLine("<div style='font-size: 6px; color: #666; margin-top: 1px;'>Tesoureiro Geral (Aprovador)</div>");
+                html.AppendLine("</div>");
+            }
 
-            return html.ToString();
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
         }
     }
 }

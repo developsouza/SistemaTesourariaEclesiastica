@@ -1,0 +1,217 @@
+﻿@model SistemaTesourariaEclesiastica.ViewModels.FechamentoSedeViewModel
+
+@{
+    ViewData["Title"] = "Fechamento da SEDE";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-building me-2 text-primary"></i>
+                Fechamento de Período - SEDE
+            </h1>
+            <p class="text-muted mb-0">Prestação de contas consolidada da SEDE com congregações</p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+
+    <!-- Alert Informativo -->
+    <div class="alert alert-info mb-4">
+        <h5 class="alert-heading">
+            <i class="bi bi-info-circle me-2"></i>Como funciona o Fechamento da SEDE?
+        </h5>
+        <hr>
+        <ol class="mb-0 small">
+            <li>Selecione o período do fechamento da SEDE</li>
+            <li>O sistema mostrará as prestações das congregações <strong>aprovadas</strong> e <strong>pendentes de processamento</strong></li>
+            <li>Selecione quais prestações deseja incluir neste fechamento</li>
+            <li>Os valores das congregações serão <strong>somados</strong> aos valores da SEDE</li>
+            <li>O <strong>rateio será aplicado sobre o total consolidado</strong> (SEDE + Congregações)</li>
+            <li>As prestações incluídas serão <strong>marcadas como processadas</strong> e não aparecerão mais em futuros fechamentos</li>
+        </ol>
+    </div>
+
+    <form asp-action="CreateSede" method="post">
+        <div class="row g-4">
+            <!-- Coluna Esquerda - Dados do Fechamento -->
+            <div class="col-lg-5">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-check me-2"></i>
+                            Dados do Fechamento da SEDE
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Tipo de Fechamento -->
+                        <div class="mb-3">
+                            <label asp-for="TipoFechamento" class="form-label fw-semibold"></label>
+                            <select asp-for="TipoFechamento" class="form-select" asp-items="Html.GetEnumSelectList<TipoFechamento>()"></select>
+                            <span asp-validation-for="TipoFechamento" class="text-danger"></span>
+                        </div>
+
+                        <!-- Data Início -->
+                        <div class="mb-3">
+                            <label asp-for="DataInicio" class="form-label fw-semibold"></label>
+                            <input asp-for="DataInicio" type="date" class="form-control" />
+                            <span asp-validation-for="DataInicio" class="text-danger"></span>
+                        </div>
+
+                        <!-- Data Fim -->
+                        <div class="mb-3">
+                            <label asp-for="DataFim" class="form-label fw-semibold"></label>
+                            <input asp-for="DataFim" type="date" class="form-control" />
+                            <span asp-validation-for="DataFim" class="text-danger"></span>
+                        </div>
+
+                        <!-- Ano e Mês -->
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label asp-for="Ano" class="form-label fw-semibold"></label>
+                                    <input asp-for="Ano" type="number" class="form-control" min="2020" max="2099" />
+                                    <span asp-validation-for="Ano" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label asp-for="Mes" class="form-label fw-semibold"></label>
+                                    <input asp-for="Mes" type="number" class="form-control" min="1" max="12" />
+                                    <span asp-validation-for="Mes" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="mb-3">
+                            <label asp-for="Observacoes" class="form-label fw-semibold"></label>
+                            <textarea asp-for="Observacoes" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Observacoes" class="text-danger"></span>
+                        </div>
+
+                        <div class="alert alert-secondary small mb-0">
+                            <i class="bi bi-building me-1"></i>
+                            <strong>Centro de Custo:</strong> @ViewBag.SedeNome
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna Direita - Prestações das Congregações -->
+            <div class="col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-check me-2"></i>
+                            Prestações de Congregações Disponíveis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.FechamentosDisponiveis.Any())
+                        {
+                            <div class="alert alert-success small mb-3">
+                                <i class="bi bi-check-circle me-1"></i>
+                                <strong>@Model.FechamentosDisponiveis.Count</strong> prestação(ões) aprovada(s) e disponível(is) para processamento.
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="50">
+                                                <input type="checkbox" id="selectAll" class="form-check-input" checked />
+                                            </th>
+                                            <th>Congregação</th>
+                                            <th>Período</th>
+                                            <th class="text-end">Balanço Físico</th>
+                                            <th class="text-end">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < Model.FechamentosDisponiveis.Count; i++)
+                                        {
+                                            var item = Model.FechamentosDisponiveis[i];
+                                            <tr>
+                                                <td>
+                                                    <input type="checkbox"
+                                                           name="FechamentosIncluidos"
+                                                           value="@item.Id"
+                                                           class="form-check-input fechamento-checkbox"
+                                                           checked="@item.Selecionado" />
+                                                </td>
+                                                <td>
+                                                    <strong>@item.NomeCongregacao</strong>
+                                                    <br><small class="text-muted">Aprovado em: @item.DataAprovacao.ToString("dd/MM/yyyy")</small>
+                                                </td>
+                                                <td>
+                                                    @item.DataInicio.ToString("dd/MM/yyyy")
+                                                    <br><small class="text-muted">até @item.DataFim.ToString("dd/MM/yyyy")</small>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="badge bg-info">@item.BalancoFisico.ToString("C")</span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <strong>@(item.TotalEntradas - item.TotalSaidas)</strong>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5">
+                                <i class="bi bi-inbox display-1 text-muted"></i>
+                                <h5 class="mt-3 text-muted">Nenhuma prestação disponível</h5>
+                                <p class="text-muted">
+                                    Não há prestações de congregações aprovadas e pendentes de processamento no momento.
+                                </p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="d-flex gap-2 justify-content-end mt-4">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-2"></i>Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg" @(Model.FechamentosDisponiveis.Any() ? "" : "disabled")>
+                <i class="bi bi-check-circle me-2"></i>Criar Fechamento da SEDE
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // Script para selecionar/desselecionar todos os checkboxes
+        document.getElementById('selectAll').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.fechamento-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+
+        // Atualizar o checkbox "Selecionar Todos" baseado nos checkboxes individuais
+        document.querySelectorAll('.fechamento-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const selectAll = document.getElementById('selectAll');
+                const allCheckboxes = document.querySelectorAll('.fechamento-checkbox');
+                const checkedCheckboxes = document.querySelectorAll('.fechamento-checkbox:checked');
+
+                selectAll.checked = allCheckboxes.length === checkedCheckboxes.length;
+            });
+        });
+    </script>
+}

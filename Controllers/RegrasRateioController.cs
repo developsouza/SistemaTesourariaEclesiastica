@@ -46,14 +46,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Adicionar informações sobre reconhecimento de SEDE/FUNDO
                 foreach (var regra in regras)
                 {
-                    // ✅ AGORA funciona porque já está em memória
+                    // ✅ CORRIGIDO - passar boolean em vez de enum
                     regra.CentroCustoOrigem.Nome = AdicionarBadgeReconhecimento(
                         regra.CentroCustoOrigem.Nome,
-                        TipoCentroCusto.Origem);
+                        true);  // true = origem
 
                     regra.CentroCustoDestino.Nome = AdicionarBadgeReconhecimento(
                         regra.CentroCustoDestino.Nome,
-                        TipoCentroCusto.Destino);
+                        false);  // false = destino
                 }
 
                 await _auditService.LogAsync("Visualização", "RegraRateio", "Listagem de regras de rateio visualizada");
@@ -598,26 +598,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
                    nomeUpper.Contains("DIZIMO");
         }
 
-        private string AdicionarBadgeReconhecimento(string nome, TipoCentroCusto tipo)
+        private string AdicionarBadgeReconhecimento(string nome, bool ehOrigem)
         {
-            if (tipo == TipoCentroCusto.Origem && EhReconhecidoComoSede(nome))
+            if (ehOrigem && EhReconhecidoComoSede(nome))
             {
                 return nome; // Já será marcado visualmente na view
             }
 
-            if (tipo == TipoCentroCusto.Destino && EhReconhecidoComoFundo(nome))
+            if (!ehOrigem && EhReconhecidoComoFundo(nome))
             {
                 return nome; // Já será marcado visualmente na view
             }
 
             return nome;
         }
-    }
-
-    // Enum auxiliar
-    public enum TipoCentroCusto
-    {
-        Origem,
-        Destino
     }
 }
