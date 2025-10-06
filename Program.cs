@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Middleware;
 using SistemaTesourariaEclesiastica.Models;
+using SistemaTesourariaEclesiastica.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -104,10 +105,11 @@ builder.Services.AddAuthorization(options =>
 
 // Serviços da aplicação
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<SistemaTesourariaEclesiastica.Services.AuditService>();
-builder.Services.AddScoped<SistemaTesourariaEclesiastica.Services.BusinessRulesService>();
-builder.Services.AddScoped<SistemaTesourariaEclesiastica.Services.PdfService>();
-builder.Services.AddScoped<SistemaTesourariaEclesiastica.Services.BalanceteService>();
+builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<BusinessRulesService>();
+builder.Services.AddScoped<PdfService>();
+builder.Services.AddScoped<BalanceteService>();
+builder.Services.AddScoped<LancamentoAprovadoService>();
 
 
 // Configuração do MVC com filtro global de autorização

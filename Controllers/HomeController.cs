@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Data;
+using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
 using System.Diagnostics;
@@ -17,24 +18,30 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly AuditService _auditService;
+        private readonly LancamentoAprovadoService _lancamentoAprovadoService;
+
 
         public HomeController(
             ILogger<HomeController> logger,
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            AuditService auditService)
+            AuditService auditService,
+            LancamentoAprovadoService lancamentoAprovadoService)
         {
             _logger = logger;
             _context = context;
             _userManager = userManager;
             _auditService = auditService;
+            _lancamentoAprovadoService = lancamentoAprovadoService;
         }
 
         public async Task<IActionResult> Index()
         {
             try
             {
-                // 1. Verificar usuário
+                // =====================================================
+                // 1. VERIFICAR USUÁRIO E AUTENTICAÇÃO
+                // =====================================================
                 var user = await _userManager.GetUserAsync(User);
                 if (user == null)
                 {
@@ -47,7 +54,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 _logger.LogInformation($"Dashboard acessado por: {user.NomeCompleto} ({primaryRole})");
 
-                // 2. Log de auditoria (com proteção contra erro)
+                // =====================================================
+                // 2. LOG DE AUDITORIA (com proteção contra erro)
+                // =====================================================
                 try
                 {
                     await _auditService.LogAsync("DASHBOARD_ACCESS", "Home",
@@ -58,7 +67,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     _logger.LogWarning(ex, "Erro ao registrar auditoria (não crítico)");
                 }
 
-                // 3. Verificar se as tabelas existem
+                // =====================================================
+                // 3. VERIFICAR SE AS TABELAS EXISTEM
+                // =====================================================
                 var tabelasExistem = await VerificarTabelas();
                 if (!tabelasExistem)
                 {
@@ -67,62 +78,199 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return View(await ObterDadosVazios(user, primaryRole));
                 }
 
+                // =====================================================
+                // 4. CONFIGURAR PERÍODO E DATAS
+                // =====================================================
                 var hoje = DateTime.Now.Date;
                 var inicioMes = new DateTime(hoje.Year, hoje.Month, 1);
                 var fimMes = inicioMes.AddMonths(1).AddDays(-1);
 
-                // 4. Buscar dados com segurança
-                IQueryable<Entrada> entradasQuery = _context.Entradas;
-                IQueryable<Saida> saidasQuery = _context.Saidas;
+                // =====================================================
+                // 5. DETERMINAR CENTRO DE CUSTO BASEADO NO PERFIL
+                // =====================================================
+                int? centroCustoFiltro = null;
 
-                // Aplicar filtros baseados no perfil
                 if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
                 {
                     if (user.CentroCustoId.HasValue)
                     {
-                        entradasQuery = entradasQuery.Where(e => e.CentroCustoId == user.CentroCustoId.Value);
-                        saidasQuery = saidasQuery.Where(s => s.CentroCustoId == user.CentroCustoId.Value);
+                        centroCustoFiltro = user.CentroCustoId.Value;
                     }
                     else
                     {
                         _logger.LogWarning($"Usuário {user.NomeCompleto} sem Centro de Custo definido");
-                        entradasQuery = entradasQuery.Where(e => false);
-                        saidasQuery = saidasQuery.Where(s => false);
+                        // Usuário sem centro de custo verá dados vazios
+                        ViewBag.EntradasMes = "R$ 0,00";
+                        ViewBag.SaidasMes = "R$ 0,00";
+                        ViewBag.SaldoTotal = "R$ 0,00";
+                        ViewBag.DizimosMes = "R$ 0,00";
+                        ViewBag.FluxoCaixaData = new List<object>();
+                        ViewBag.DespesasData = new List<object>();
+                        ViewBag.UserRole = primaryRole;
+                        ViewBag.UserName = user.NomeCompleto;
+                        ViewBag.CentroCusto = "Não definido";
+                        ViewBag.ShowFullData = false;
+                        ViewBag.CanManageOperations = false;
+                        ViewBag.CanApproveClosures = false;
+                        ViewBag.CanViewReports = true;
+                        ViewBag.Alertas = new List<object>();
+                        ViewBag.AtividadesRecentes = new List<object>();
+
+                        TempData["Aviso"] = "Seu usuário não possui um Centro de Custo definido. Entre em contato com o administrador.";
+                        return View();
                     }
                 }
 
-                // 5. Estatísticas do mês (com proteção)
-                decimal entradasMes = 0, saidasMes = 0, totalEntradas = 0, totalSaidas = 0, dizimosMes = 0;
+                // =====================================================
+                // 6. BUSCAR IDs DE LANÇAMENTOS APROVADOS (MÊS ATUAL)
+                // =====================================================
+                List<int> idsEntradasAprovadasMes = new List<int>();
+                List<int> idsSaidasAprovadasMes = new List<int>();
 
                 try
                 {
-                    entradasMes = await entradasQuery
-                        .Where(e => e.Data >= inicioMes && e.Data <= fimMes)
-                        .SumAsync(e => (decimal?)e.Valor) ?? 0;
+                    // Buscar entradas que estão em fechamentos aprovados do mês
+                    var queryEntradasMes = _context.Entradas
+                        .Where(e => e.Data >= inicioMes && e.Data <= fimMes);
 
-                    saidasMes = await saidasQuery
-                        .Where(s => s.Data >= inicioMes && s.Data <= fimMes)
-                        .SumAsync(s => (decimal?)s.Valor) ?? 0;
+                    if (centroCustoFiltro.HasValue)
+                    {
+                        queryEntradasMes = queryEntradasMes.Where(e => e.CentroCustoId == centroCustoFiltro.Value);
+                    }
 
-                    totalEntradas = await entradasQuery.SumAsync(e => (decimal?)e.Valor) ?? 0;
-                    totalSaidas = await saidasQuery.SumAsync(s => (decimal?)s.Valor) ?? 0;
+                    idsEntradasAprovadasMes = await queryEntradasMes
+                        .Where(e => _context.FechamentosPeriodo.Any(f =>
+                            f.CentroCustoId == e.CentroCustoId &&
+                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            e.Data >= f.DataInicio &&
+                            e.Data <= f.DataFim))
+                        .Select(e => e.Id)
+                        .ToListAsync();
 
-                    // Dízimos (com proteção adicional)
-                    dizimosMes = await entradasQuery
-                        .Include(e => e.PlanoDeContas)
-                        .Where(e => e.Data >= inicioMes && e.Data <= fimMes &&
-                                   e.PlanoDeContas != null &&
-                                   e.PlanoDeContas.Nome.ToLower().Contains("dízimo"))
-                        .SumAsync(e => (decimal?)e.Valor) ?? 0;
+                    // Buscar saídas que estão em fechamentos aprovados do mês
+                    var querySaidasMes = _context.Saidas
+                        .Where(s => s.Data >= inicioMes && s.Data <= fimMes);
+
+                    if (centroCustoFiltro.HasValue)
+                    {
+                        querySaidasMes = querySaidasMes.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
+                    }
+
+                    idsSaidasAprovadasMes = await querySaidasMes
+                        .Where(s => _context.FechamentosPeriodo.Any(f =>
+                            f.CentroCustoId == s.CentroCustoId &&
+                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            s.Data >= f.DataInicio &&
+                            s.Data <= f.DataFim))
+                        .Select(s => s.Id)
+                        .ToListAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erro ao buscar IDs de lançamentos aprovados");
+                }
+
+                // =====================================================
+                // 7. CALCULAR ESTATÍSTICAS DO MÊS (APENAS APROVADOS)
+                // =====================================================
+                decimal entradasMes = 0, saidasMes = 0, dizimosMes = 0;
+
+                try
+                {
+                    // Total de entradas APROVADAS do mês
+                    if (idsEntradasAprovadasMes.Any())
+                    {
+                        entradasMes = await _context.Entradas
+                            .Where(e => idsEntradasAprovadasMes.Contains(e.Id))
+                            .SumAsync(e => (decimal?)e.Valor) ?? 0;
+
+                        // Dízimos APROVADOS do mês
+                        dizimosMes = await _context.Entradas
+                            .Include(e => e.PlanoDeContas)
+                            .Where(e => idsEntradasAprovadasMes.Contains(e.Id) &&
+                                       e.PlanoDeContas != null &&
+                                       e.PlanoDeContas.Nome.ToLower().Contains("dízimo"))
+                            .SumAsync(e => (decimal?)e.Valor) ?? 0;
+                    }
+
+                    // Total de saídas APROVADAS do mês
+                    if (idsSaidasAprovadasMes.Any())
+                    {
+                        saidasMes = await _context.Saidas
+                            .Where(s => idsSaidasAprovadasMes.Contains(s.Id))
+                            .SumAsync(s => (decimal?)s.Valor) ?? 0;
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Erro ao calcular estatísticas do mês");
                 }
 
+                // =====================================================
+                // 8. CALCULAR SALDO TOTAL (APROVADOS DE TODOS OS TEMPOS)
+                // =====================================================
+                decimal totalEntradas = 0, totalSaidas = 0;
+
+                try
+                {
+                    // Buscar TODAS as entradas aprovadas (histórico completo)
+                    var queryTodasEntradas = _context.Entradas.AsQueryable();
+
+                    if (centroCustoFiltro.HasValue)
+                    {
+                        queryTodasEntradas = queryTodasEntradas.Where(e => e.CentroCustoId == centroCustoFiltro.Value);
+                    }
+
+                    var idsTodasEntradasAprovadas = await queryTodasEntradas
+                        .Where(e => _context.FechamentosPeriodo.Any(f =>
+                            f.CentroCustoId == e.CentroCustoId &&
+                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            e.Data >= f.DataInicio &&
+                            e.Data <= f.DataFim))
+                        .Select(e => e.Id)
+                        .ToListAsync();
+
+                    if (idsTodasEntradasAprovadas.Any())
+                    {
+                        totalEntradas = await _context.Entradas
+                            .Where(e => idsTodasEntradasAprovadas.Contains(e.Id))
+                            .SumAsync(e => (decimal?)e.Valor) ?? 0;
+                    }
+
+                    // Buscar TODAS as saídas aprovadas (histórico completo)
+                    var queryTodasSaidas = _context.Saidas.AsQueryable();
+
+                    if (centroCustoFiltro.HasValue)
+                    {
+                        queryTodasSaidas = queryTodasSaidas.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
+                    }
+
+                    var idsTodasSaidasAprovadas = await queryTodasSaidas
+                        .Where(s => _context.FechamentosPeriodo.Any(f =>
+                            f.CentroCustoId == s.CentroCustoId &&
+                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            s.Data >= f.DataInicio &&
+                            s.Data <= f.DataFim))
+                        .Select(s => s.Id)
+                        .ToListAsync();
+
+                    if (idsTodasSaidasAprovadas.Any())
+                    {
+                        totalSaidas = await _context.Saidas
+                            .Where(s => idsTodasSaidasAprovadas.Contains(s.Id))
+                            .SumAsync(s => (decimal?)s.Valor) ?? 0;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erro ao calcular totais históricos");
+                }
+
                 var saldoTotal = totalEntradas - totalSaidas;
 
-                // 6. Dados para gráfico de fluxo de caixa
+                // =====================================================
+                // 9. DADOS PARA GRÁFICO DE FLUXO DE CAIXA (ÚLTIMOS 6 MESES - APROVADOS)
+                // =====================================================
                 var fluxoCaixaData = new List<object>();
 
                 try
@@ -132,17 +280,57 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         var mesInicio = hoje.AddMonths(-i).AddDays(-(hoje.Day - 1));
                         var mesFim = mesInicio.AddMonths(1).AddDays(-1);
 
-                        var entradasMesGrafico = await entradasQuery
-                            .Where(e => e.Data >= mesInicio && e.Data <= mesFim)
-                            .SumAsync(e => (decimal?)e.Valor) ?? 0;
+                        // Buscar entradas aprovadas deste mês específico
+                        var queryEntradasGrafico = _context.Entradas
+                            .Where(e => e.Data >= mesInicio && e.Data <= mesFim);
 
-                        var saidasMesGrafico = await saidasQuery
-                            .Where(s => s.Data >= mesInicio && s.Data <= mesFim)
-                            .SumAsync(s => (decimal?)s.Valor) ?? 0;
+                        if (centroCustoFiltro.HasValue)
+                        {
+                            queryEntradasGrafico = queryEntradasGrafico.Where(e => e.CentroCustoId == centroCustoFiltro.Value);
+                        }
+
+                        var idsEntradasMesGrafico = await queryEntradasGrafico
+                            .Where(e => _context.FechamentosPeriodo.Any(f =>
+                                f.CentroCustoId == e.CentroCustoId &&
+                                f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                e.Data >= f.DataInicio &&
+                                e.Data <= f.DataFim))
+                            .Select(e => e.Id)
+                            .ToListAsync();
+
+                        var entradasMesGrafico = idsEntradasMesGrafico.Any()
+                            ? await _context.Entradas
+                                .Where(e => idsEntradasMesGrafico.Contains(e.Id))
+                                .SumAsync(e => (decimal?)e.Valor) ?? 0
+                            : 0;
+
+                        // Buscar saídas aprovadas deste mês específico
+                        var querySaidasGrafico = _context.Saidas
+                            .Where(s => s.Data >= mesInicio && s.Data <= mesFim);
+
+                        if (centroCustoFiltro.HasValue)
+                        {
+                            querySaidasGrafico = querySaidasGrafico.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
+                        }
+
+                        var idsSaidasMesGrafico = await querySaidasGrafico
+                            .Where(s => _context.FechamentosPeriodo.Any(f =>
+                                f.CentroCustoId == s.CentroCustoId &&
+                                f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                s.Data >= f.DataInicio &&
+                                s.Data <= f.DataFim))
+                            .Select(s => s.Id)
+                            .ToListAsync();
+
+                        var saidasMesGrafico = idsSaidasMesGrafico.Any()
+                            ? await _context.Saidas
+                                .Where(s => idsSaidasMesGrafico.Contains(s.Id))
+                                .SumAsync(s => (decimal?)s.Valor) ?? 0
+                            : 0;
 
                         fluxoCaixaData.Add(new
                         {
-                            mes = mesInicio.ToString("MMM"),
+                            mes = mesInicio.ToString("MMM", new System.Globalization.CultureInfo("pt-BR")),
                             entradas = entradasMesGrafico,
                             saidas = saidasMesGrafico,
                             saldo = entradasMesGrafico - saidasMesGrafico
@@ -154,31 +342,56 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     _logger.LogError(ex, "Erro ao gerar dados de fluxo de caixa");
                 }
 
-                // 7. Despesas por categoria
+                // =====================================================
+                // 10. DESPESAS POR CATEGORIA (ÚLTIMOS 3 MESES - APROVADAS)
+                // =====================================================
                 var despesasPorCategoria = new List<object>();
 
                 try
                 {
                     var tresMesesAtras = hoje.AddMonths(-3);
-                    despesasPorCategoria = await saidasQuery
-                        .Include(s => s.PlanoDeContas)
-                        .Where(s => s.Data >= tresMesesAtras && s.PlanoDeContas != null)
-                        .GroupBy(s => s.PlanoDeContas.Nome)
-                        .Select(g => new
-                        {
-                            categoria = g.Key ?? "Sem Categoria",
-                            valor = g.Sum(s => s.Valor)
-                        })
-                        .OrderByDescending(x => x.valor)
-                        .Take(5)
-                        .ToListAsync<object>();
+
+                    var querySaidasCategoria = _context.Saidas
+                        .Where(s => s.Data >= tresMesesAtras);
+
+                    if (centroCustoFiltro.HasValue)
+                    {
+                        querySaidasCategoria = querySaidasCategoria.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
+                    }
+
+                    var idsSaidasCategoria = await querySaidasCategoria
+                        .Where(s => _context.FechamentosPeriodo.Any(f =>
+                            f.CentroCustoId == s.CentroCustoId &&
+                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            s.Data >= f.DataInicio &&
+                            s.Data <= f.DataFim))
+                        .Select(s => s.Id)
+                        .ToListAsync();
+
+                    if (idsSaidasCategoria.Any())
+                    {
+                        despesasPorCategoria = await _context.Saidas
+                            .Include(s => s.PlanoDeContas)
+                            .Where(s => idsSaidasCategoria.Contains(s.Id) && s.PlanoDeContas != null)
+                            .GroupBy(s => s.PlanoDeContas.Nome)
+                            .Select(g => new
+                            {
+                                categoria = g.Key ?? "Sem Categoria",
+                                valor = g.Sum(s => s.Valor)
+                            })
+                            .OrderByDescending(x => x.valor)
+                            .Take(5)
+                            .ToListAsync<object>();
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Erro ao gerar dados de despesas por categoria");
                 }
 
-                // 8. Preencher ViewBag
+                // =====================================================
+                // 11. PREENCHER VIEWBAG COM TODOS OS DADOS
+                // =====================================================
                 ViewBag.EntradasMes = entradasMes.ToString("C");
                 ViewBag.SaidasMes = saidasMes.ToString("C");
                 ViewBag.SaldoTotal = saldoTotal.ToString("C");
@@ -197,9 +410,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.CanApproveClosures = User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral);
                 ViewBag.CanViewReports = true;
 
-                // Listas vazias
+                // Listas vazias (para compatibilidade com a view)
                 ViewBag.Alertas = new List<object>();
                 ViewBag.AtividadesRecentes = new List<object>();
+
+                _logger.LogInformation($"Dashboard carregado com sucesso para {user.NomeCompleto}");
 
                 return View();
             }

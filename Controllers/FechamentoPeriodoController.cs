@@ -817,7 +817,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             if (!ModelState.IsValid)
             {
-                // Recarregar lista de fechamentos disponíveis
                 viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
                 return View(viewModel);
             }
@@ -837,13 +836,18 @@ namespace SistemaTesourariaEclesiastica.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // 1. Buscar fechamentos das congregações selecionados
-                var fechamentosCongregacoes = await _context.FechamentosPeriodo
-                    .Include(f => f.CentroCusto)
-                    .Where(f => viewModel.FechamentosIncluidos.Contains(f.Id) &&
-                                f.Status == StatusFechamentoPeriodo.Aprovado &&
-                                f.FoiProcessadoPelaSede == false)
-                    .ToListAsync();
+                // 1. Buscar fechamentos das congregações selecionados (SE HOUVER)
+                List<FechamentoPeriodo> fechamentosCongregacoes = new List<FechamentoPeriodo>();
+
+                if (viewModel.FechamentosIncluidos != null && viewModel.FechamentosIncluidos.Any())
+                {
+                    fechamentosCongregacoes = await _context.FechamentosPeriodo
+                        .Include(f => f.CentroCusto)
+                        .Where(f => viewModel.FechamentosIncluidos.Contains(f.Id) &&
+                                    f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                    f.FoiProcessadoPelaSede == false)
+                        .ToListAsync();
+                }
 
                 // 2. Calcular totais da SEDE no período
                 var totalEntradasSede = await _context.Entradas
@@ -891,7 +895,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                                 s.MeioDePagamento.TipoCaixa == TipoCaixa.Digital)
                     .SumAsync(s => s.Valor);
 
-                // 3. Somar valores das congregações APROVADAS
+                // 3. Somar valores das congregações APROVADAS (SE HOUVER)
                 decimal totalEntradasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradas);
                 decimal totalSaidasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidas);
                 decimal totalEntradasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasFisicas);
@@ -900,6 +904,17 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 decimal totalSaidasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasDigitais);
 
                 // 4. Criar fechamento consolidado da SEDE
+                var observacaoFinal = viewModel.Observacoes ?? "";
+
+                if (fechamentosCongregacoes.Any())
+                {
+                    observacaoFinal += $"\n\n✓ Incluídos {fechamentosCongregacoes.Count} fechamento(s) de congregações aprovados.";
+                }
+                else
+                {
+                    observacaoFinal += "\n\n✓ Fechamento da SEDE SEM congregações incluídas (fechamento independente).";
+                }
+
                 var fechamentoSede = new FechamentoPeriodo
                 {
                     CentroCustoId = sede.Id,
@@ -909,7 +924,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     DataFim = viewModel.DataFim,
                     TipoFechamento = viewModel.TipoFechamento,
 
-                    // TOTAIS CONSOLIDADOS (SEDE + CONGREGAÇÕES)
+                    // TOTAIS CONSOLIDADOS (SEDE + CONGREGAÇÕES, se houver)
                     TotalEntradas = totalEntradasSede + totalEntradasCongregacoes,
                     TotalSaidas = totalSaidasSede + totalSaidasCongregacoes,
 
@@ -925,8 +940,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     BalancoDigital = (entradasDigitaisSede + totalEntradasDigitaisCongregacoes) -
                                     (saidasDigitaisSede + totalSaidasDigitaisCongregacoes),
 
-                    Observacoes = viewModel.Observacoes +
-                                 $"\n\nIncluídos {fechamentosCongregacoes.Count} fechamento(s) de congregações aprovados.",
+                    Observacoes = observacaoFinal,
+
+                    // NOVAS PROPRIEDADES
+                    EhFechamentoSede = true,
+                    QuantidadeCongregacoesIncluidas = fechamentosCongregacoes.Count,
 
                     Status = StatusFechamentoPeriodo.Pendente,
                     UsuarioSubmissaoId = user.Id,
@@ -940,24 +958,29 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 _context.Add(fechamentoSede);
                 await _context.SaveChangesAsync();
 
-                // 7. Marcar fechamentos das congregações como PROCESSADOS
-                foreach (var fechamentoCongregacao in fechamentosCongregacoes)
+                // 7. Marcar fechamentos das congregações como PROCESSADOS (SE HOUVER)
+                if (fechamentosCongregacoes.Any())
                 {
-                    fechamentoCongregacao.FoiProcessadoPelaSede = true;
-                    fechamentoCongregacao.FechamentoSedeProcessadorId = fechamentoSede.Id;
-                    fechamentoCongregacao.DataProcessamentoPelaSede = DateTime.Now;
-                    fechamentoCongregacao.Status = StatusFechamentoPeriodo.Processado;
-                    _context.Update(fechamentoCongregacao);
+                    foreach (var fechamentoCongregacao in fechamentosCongregacoes)
+                    {
+                        fechamentoCongregacao.FoiProcessadoPelaSede = true;
+                        fechamentoCongregacao.FechamentoSedeProcessadorId = fechamentoSede.Id;
+                        fechamentoCongregacao.DataProcessamentoPelaSede = DateTime.Now;
+                        fechamentoCongregacao.Status = StatusFechamentoPeriodo.Processado;
+                        _context.Update(fechamentoCongregacao);
+                    }
                 }
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                await _auditService.LogAsync("Criação", "FechamentoPeriodo",
-                    $"Fechamento da SEDE criado com {fechamentosCongregacoes.Count} congregações incluídas");
+                var mensagemSucesso = fechamentosCongregacoes.Any()
+                    ? $"Fechamento da SEDE criado com sucesso! {fechamentosCongregacoes.Count} prestação(ões) de congregação(ões) incluída(s)."
+                    : "Fechamento da SEDE criado com sucesso! (Sem congregações incluídas)";
 
-                TempData["SuccessMessage"] = $"Fechamento da SEDE criado com sucesso! " +
-                    $"{fechamentosCongregacoes.Count} prestação(ões) de congregação(ões) incluída(s).";
+                await _auditService.LogAsync("Criação", "FechamentoPeriodo", mensagemSucesso);
+
+                TempData["SuccessMessage"] = mensagemSucesso;
 
                 return RedirectToAction(nameof(Details), new { id = fechamentoSede.Id });
             }
