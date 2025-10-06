@@ -19,12 +19,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private readonly ApplicationDbContext _context;
         private readonly AuditService _auditService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly BalanceteService _balanceteService;
 
-        public RelatoriosController(ApplicationDbContext context, AuditService auditService, UserManager<ApplicationUser> userManager)
+        public RelatoriosController(ApplicationDbContext context, AuditService auditService, UserManager<ApplicationUser> userManager, BalanceteService balanceteService)
         {
             _context = context;
             _auditService = auditService;
             _userManager = userManager;
+            _balanceteService = balanceteService;
         }
 
         public async Task<IActionResult> Index()
@@ -552,6 +554,145 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewBag.ResumoPorCentroCusto = resumoPorCentroCusto;
 
             return View(despesas);
+        }
+
+        // ==========================================
+        // NOVA ACTION: BALANCETE MENSAL
+        // ==========================================
+
+        /// <summary>
+        /// GET: Relatorios/BalanceteMensal
+        /// Gera o relatório de balancete mensal conforme especificação técnica
+        /// </summary>
+        [HttpGet]
+        [Authorize(Policy = "Relatorios")]
+        public async Task<IActionResult> BalanceteMensal(
+            int? centroCustoId,
+            DateTime? dataInicio,
+            DateTime? dataFim)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+
+                // Definir período padrão (mês atual)
+                if (!dataInicio.HasValue)
+                {
+                    dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                }
+                if (!dataFim.HasValue)
+                {
+                    dataFim = dataInicio.Value.AddMonths(1).AddDays(-1);
+                }
+
+                // Determinar centro de custo
+                int selectedCentroCustoId;
+
+                if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                {
+                    // Admin e Tesoureiro Geral podem escolher qualquer centro de custo
+                    if (centroCustoId.HasValue)
+                    {
+                        selectedCentroCustoId = centroCustoId.Value;
+                    }
+                    else
+                    {
+                        // Se não especificado, pegar a Sede
+                        var sede = await _context.CentrosCusto
+                            .Where(c => c.Nome.Contains("Sede") || c.Nome.Contains("SEDE"))
+                            .FirstOrDefaultAsync();
+
+                        if (sede == null)
+                        {
+                            TempData["ErrorMessage"] = "Nenhum centro de custo encontrado. Configure a Sede primeiro.";
+                            return RedirectToAction("Index");
+                        }
+
+                        selectedCentroCustoId = sede.Id;
+                    }
+
+                    // Preencher dropdown de centros de custo para filtro
+                    ViewBag.CentrosCusto = new SelectList(
+                        await _context.CentrosCusto
+                            .Where(c => c.Ativo)
+                            .OrderBy(c => c.Nome)
+                            .ToListAsync(),
+                        "Id",
+                        "Nome",
+                        selectedCentroCustoId);
+                }
+                else
+                {
+                    // Tesoureiro Local e Pastor só veem seu próprio centro de custo
+                    if (!user.CentroCustoId.HasValue)
+                    {
+                        TempData["ErrorMessage"] = "Você não está vinculado a nenhum centro de custo.";
+                        return RedirectToAction("Index");
+                    }
+
+                    selectedCentroCustoId = user.CentroCustoId.Value;
+                    ViewBag.CentrosCusto = null; // Não mostrar dropdown
+                }
+
+                // Gerar o balancete usando o serviço
+                var balancete = await _balanceteService.GerarBalanceteMensalAsync(
+                    selectedCentroCustoId,
+                    dataInicio.Value,
+                    dataFim.Value);
+
+                // Passar informações para a view
+                ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
+                ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
+                ViewBag.CentroCustoId = selectedCentroCustoId;
+                ViewBag.PodeEscolherCentroCusto = User.IsInRole(Roles.Administrador) ||
+                                                  User.IsInRole(Roles.TesoureiroGeral);
+
+                // Registrar auditoria
+                await _auditService.LogAsync(
+                    "Visualização",
+                    "Relatório",
+                    $"Balancete mensal visualizado: {balancete.CentroCustoNome} - {balancete.Periodo}");
+
+                return View(balancete);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Erro ao gerar balancete: {ex.Message}";
+                return RedirectToAction("Index");
+            }
+        }
+
+        /// <summary>
+        /// GET: Relatorios/BalanceteMensalPdf
+        /// Exporta o balancete mensal para PDF
+        /// </summary>
+        [HttpGet]
+        [Authorize(Policy = "Relatorios")]
+        public async Task<IActionResult> BalanceteMensalPdf(
+            int centroCustoId,
+            DateTime dataInicio,
+            DateTime dataFim)
+        {
+            try
+            {
+                // Gerar o balancete
+                var balancete = await _balanceteService.GerarBalanceteMensalAsync(
+                    centroCustoId,
+                    dataInicio,
+                    dataFim);
+
+                // Aqui você pode implementar a geração de PDF usando o PdfService
+                // ou uma biblioteca como IronPDF, iTextSharp, etc.
+
+                // Por enquanto, retornar um placeholder
+                TempData["InfoMessage"] = "Funcionalidade de exportação para PDF em desenvolvimento.";
+                return RedirectToAction("BalanceteMensal", new { centroCustoId, dataInicio, dataFim });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Erro ao exportar PDF: {ex.Message}";
+                return RedirectToAction("BalanceteMensal", new { centroCustoId, dataInicio, dataFim });
+            }
         }
 
         // Exportação para Excel - Entradas

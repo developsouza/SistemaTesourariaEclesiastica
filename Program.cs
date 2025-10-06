@@ -107,6 +107,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<SistemaTesourariaEclesiastica.Services.AuditService>();
 builder.Services.AddScoped<SistemaTesourariaEclesiastica.Services.BusinessRulesService>();
 builder.Services.AddScoped<SistemaTesourariaEclesiastica.Services.PdfService>();
+builder.Services.AddScoped<SistemaTesourariaEclesiastica.Services.BalanceteService>();
+
 
 // Configuração do MVC com filtro global de autorização
 builder.Services.AddControllersWithViews(options =>

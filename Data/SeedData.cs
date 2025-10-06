@@ -5,35 +5,63 @@ using SistemaTesourariaEclesiastica.Models;
 
 namespace SistemaTesourariaEclesiastica.Data
 {
+    /// <summary>
+    /// Classe responsável pela inicialização de dados no banco
+    /// Inclui: Roles, Usuários, Centros de Custo, Plano de Contas, Meios de Pagamento e Regras de Rateio
+    /// </summary>
     public static class SeedData
     {
-        public static async Task Initialize(IServiceProvider serviceProvider, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+        public static async Task Initialize(
+            IServiceProvider serviceProvider,
+            UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole> roleManager)
         {
             try
             {
-                // Criar roles
-                await CreateRoles(roleManager);
-
-                // Criar centro de custo padrão
                 using var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
-                var sedeCentroCusto = await CreateDefaultCentroCusto(context);
+                var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
-                // Criar usuários padrão
-                await CreateDefaultUsers(userManager, sedeCentroCusto.Id);
+                logger.LogInformation("========================================");
+                logger.LogInformation("INICIANDO SEED DE DADOS DO SISTEMA");
+                logger.LogInformation("========================================");
 
-                // Criar dados básicos
-                await CreateBasicData(context);
+                // 1. Criar roles
+                await CreateRoles(roleManager, logger);
+
+                // 2. Criar centros de custo
+                var (sede, caixaEvangelizacao) = await CreateCentrosCusto(context, logger);
+
+                // 3. Criar usuários padrão
+                await CreateDefaultUsers(userManager, sede.Id, logger);
+
+                // 4. Criar Plano de Contas
+                await CreatePlanoDeContas(context, logger);
+
+                // 5. Criar Meios de Pagamento
+                await CreateMeiosDePagamento(context, logger);
+
+                // 6. Criar Regras de Rateio
+                await CreateRegrasRateio(context, sede.Id, caixaEvangelizacao.Id, logger);
+
+                logger.LogInformation("========================================");
+                logger.LogInformation("SEED DE DADOS CONCLUÍDO COM SUCESSO!");
+                logger.LogInformation("========================================");
             }
             catch (Exception ex)
             {
                 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "Erro durante a inicialização dos dados");
+                logger.LogError(ex, "ERRO CRÍTICO durante a inicialização dos dados");
                 throw;
             }
         }
 
-        private static async Task CreateRoles(RoleManager<IdentityRole> roleManager)
+        // ==========================================
+        // 1. CRIAÇÃO DE ROLES
+        // ==========================================
+        private static async Task CreateRoles(RoleManager<IdentityRole> roleManager, ILogger logger)
         {
+            logger.LogInformation("1. Criando Roles...");
+
             var roles = new[]
             {
                 "Administrador",
@@ -47,175 +75,352 @@ namespace SistemaTesourariaEclesiastica.Data
                 if (!await roleManager.RoleExistsAsync(role))
                 {
                     await roleManager.CreateAsync(new IdentityRole(role));
+                    logger.LogInformation($"   ✓ Role '{role}' criada");
+                }
+                else
+                {
+                    logger.LogInformation($"   ○ Role '{role}' já existe");
                 }
             }
         }
 
-        private static async Task<CentroCusto> CreateDefaultCentroCusto(ApplicationDbContext context)
+        // ==========================================
+        // 2. CRIAÇÃO DE CENTROS DE CUSTO
+        // ==========================================
+        private static async Task<(CentroCusto sede, CentroCusto caixaEvangelizacao)> CreateCentrosCusto(
+            ApplicationDbContext context,
+            ILogger logger)
         {
-            var sede = await context.CentrosCusto.FirstOrDefaultAsync(c => c.Tipo == TipoCentroCusto.Sede);
+            logger.LogInformation("2. Criando Centros de Custo...");
 
+            // Sede
+            var sede = await context.CentrosCusto.FirstOrDefaultAsync(c => c.Nome == "Sede");
             if (sede == null)
             {
                 sede = new CentroCusto
                 {
-                    Nome = "Sede Principal",
+                    Nome = "Sede",
                     Tipo = TipoCentroCusto.Sede,
-                    Descricao = "Centro de custo principal da igreja",
+                    Descricao = "Centro de custo principal da igreja - Sede da Convenção",
                     Ativo = true,
                     DataCriacao = DateTime.Now
                 };
-
                 context.CentrosCusto.Add(sede);
                 await context.SaveChangesAsync();
+                logger.LogInformation($"   ✓ Centro de Custo 'Sede' criado (ID: {sede.Id})");
+            }
+            else
+            {
+                logger.LogInformation($"   ○ Centro de Custo 'Sede' já existe (ID: {sede.Id})");
             }
 
-            return sede;
+            // Caixa de Evangelização
+            var caixaEvangelizacao = await context.CentrosCusto
+                .FirstOrDefaultAsync(c => c.Nome == "Caixa de Evangelização");
+
+            if (caixaEvangelizacao == null)
+            {
+                caixaEvangelizacao = new CentroCusto
+                {
+                    Nome = "Caixa de Evangelização",
+                    Tipo = TipoCentroCusto.Financeiro,
+                    Descricao = "Fundo destinado aos recolhimentos automáticos de 10% das entradas da Sede",
+                    Ativo = true,
+                    DataCriacao = DateTime.Now
+                };
+                context.CentrosCusto.Add(caixaEvangelizacao);
+                await context.SaveChangesAsync();
+                logger.LogInformation($"   ✓ Centro de Custo 'Caixa de Evangelização' criado (ID: {caixaEvangelizacao.Id})");
+            }
+            else
+            {
+                logger.LogInformation($"   ○ Centro de Custo 'Caixa de Evangelização' já existe (ID: {caixaEvangelizacao.Id})");
+            }
+
+            // Congregação de Exemplo (apenas em desenvolvimento)
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            if (environment == "Development")
+            {
+                var congregacaoExemplo = await context.CentrosCusto
+                    .FirstOrDefaultAsync(c => c.Nome == "Congregação Exemplo");
+
+                if (congregacaoExemplo == null)
+                {
+                    congregacaoExemplo = new CentroCusto
+                    {
+                        Nome = "Congregação Exemplo",
+                        Tipo = TipoCentroCusto.Congregacao,
+                        Descricao = "Congregação de exemplo para testes (ambiente de desenvolvimento)",
+                        Ativo = true,
+                        DataCriacao = DateTime.Now
+                    };
+                    context.CentrosCusto.Add(congregacaoExemplo);
+                    await context.SaveChangesAsync();
+                    logger.LogInformation($"   ✓ Centro de Custo 'Congregação Exemplo' criado (ID: {congregacaoExemplo.Id})");
+                }
+            }
+
+            return (sede, caixaEvangelizacao);
         }
 
-        private static async Task CreateDefaultUsers(UserManager<ApplicationUser> userManager, int sedeCentroCustoId)
+        // ==========================================
+        // 3. CRIAÇÃO DE USUÁRIOS PADRÃO
+        // ==========================================
+        private static async Task CreateDefaultUsers(
+            UserManager<ApplicationUser> userManager,
+            int sedeCentroCustoId,
+            ILogger logger)
         {
+            logger.LogInformation("3. Criando Usuários Padrão...");
+
             // Administrador
-            if (await userManager.FindByEmailAsync("admin@tesouraria.com") == null)
+            var adminEmail = "admin@tesouraria.com";
+            if (await userManager.FindByEmailAsync(adminEmail) == null)
             {
                 var admin = new ApplicationUser
                 {
-                    UserName = "admin@tesouraria.com",
-                    Email = "admin@tesouraria.com",
+                    UserName = adminEmail,
+                    Email = adminEmail,
                     NomeCompleto = "Administrador do Sistema",
                     CentroCustoId = sedeCentroCustoId,
                     Ativo = true,
-                    EmailConfirmed = true
+                    EmailConfirmed = true,
+                    DataCriacao = DateTime.Now
                 };
 
                 var result = await userManager.CreateAsync(admin, "Admin@123");
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(admin, "Administrador");
+                    logger.LogInformation($"   ✓ Usuário 'Administrador' criado (Email: {adminEmail})");
+                }
+                else
+                {
+                    logger.LogError($"   ✗ Erro ao criar Administrador: {string.Join(", ", result.Errors.Select(e => e.Description))}");
                 }
             }
-
-            // Tesoureiro Geral
-            if (await userManager.FindByEmailAsync("tesoureiro@tesouraria.com") == null)
+            else
             {
-                var tesoureiro = new ApplicationUser
-                {
-                    UserName = "tesoureiro@tesouraria.com",
-                    Email = "tesoureiro@tesouraria.com",
-                    NomeCompleto = "Tesoureiro Geral",
-                    CentroCustoId = sedeCentroCustoId,
-                    Ativo = true,
-                    EmailConfirmed = true
-                };
-
-                var result = await userManager.CreateAsync(tesoureiro, "Tesoureiro@123");
-                if (result.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(tesoureiro, "TesoureiroGeral");
-                }
+                logger.LogInformation($"   ○ Usuário 'Administrador' já existe");
             }
 
-            // Tesoureiro Local
-            if (await userManager.FindByEmailAsync("local@tesouraria.com") == null)
+            // Apenas em desenvolvimento, criar usuários de teste
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            if (environment == "Development")
             {
-                var local = new ApplicationUser
-                {
-                    UserName = "local@tesouraria.com",
-                    Email = "local@tesouraria.com",
-                    NomeCompleto = "Tesoureiro Local",
-                    CentroCustoId = sedeCentroCustoId,
-                    Ativo = true,
-                    EmailConfirmed = true
-                };
+                await CreateTestUser(userManager, sedeCentroCustoId, "tesoureiro@tesouraria.com",
+                    "Tesoureiro Geral", "TesoureiroGeral", "Tesoureiro@123", logger);
 
-                var result = await userManager.CreateAsync(local, "Local@123");
-                if (result.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(local, "TesoureiroLocal");
-                }
+                await CreateTestUser(userManager, sedeCentroCustoId, "local@tesouraria.com",
+                    "Tesoureiro Local", "TesoureiroLocal", "Local@123", logger);
+
+                await CreateTestUser(userManager, sedeCentroCustoId, "pastor@tesouraria.com",
+                    "Pastor da Igreja", "Pastor", "Pastor@123", logger);
             }
+        }
 
-            // Pastor
-            if (await userManager.FindByEmailAsync("pastor@tesouraria.com") == null)
+        private static async Task CreateTestUser(
+            UserManager<ApplicationUser> userManager,
+            int centroCustoId,
+            string email,
+            string nomeCompleto,
+            string role,
+            string senha,
+            ILogger logger)
+        {
+            if (await userManager.FindByEmailAsync(email) == null)
             {
-                var pastor = new ApplicationUser
+                var user = new ApplicationUser
                 {
-                    UserName = "pastor@tesouraria.com",
-                    Email = "pastor@tesouraria.com",
-                    NomeCompleto = "Pastor",
-                    CentroCustoId = sedeCentroCustoId,
+                    UserName = email,
+                    Email = email,
+                    NomeCompleto = nomeCompleto,
+                    CentroCustoId = centroCustoId,
                     Ativo = true,
-                    EmailConfirmed = true
+                    EmailConfirmed = true,
+                    DataCriacao = DateTime.Now
                 };
 
-                var result = await userManager.CreateAsync(pastor, "Pastor@123");
+                var result = await userManager.CreateAsync(user, senha);
                 if (result.Succeeded)
                 {
-                    await userManager.AddToRoleAsync(pastor, "Pastor");
+                    await userManager.AddToRoleAsync(user, role);
+                    logger.LogInformation($"   ✓ Usuário de teste '{nomeCompleto}' criado (Email: {email})");
                 }
             }
         }
 
-        private static async Task CreateBasicData(ApplicationDbContext context)
+        // ==========================================
+        // 4. CRIAÇÃO DO PLANO DE CONTAS
+        // ==========================================
+        private static async Task CreatePlanoDeContas(ApplicationDbContext context, ILogger logger)
         {
-            // Criar planos de contas básicos
-            await CreateBasicPlanosContas(context);
+            logger.LogInformation("4. Criando Plano de Contas...");
 
-            // Criar meios de pagamento básicos
-            await CreateBasicMeiosPagamento(context);
+            // ==========================================
+            // 4.1. RECEITAS (Tipo = 0)
+            // ==========================================
+            logger.LogInformation("   4.1. Fontes de Renda (Receitas)...");
+
+            var receitas = new[]
+            {
+                new { Nome = "Dízimos", Descricao = "Dízimos e ofertas do Templo Central" },
+                new { Nome = "Ofertas", Descricao = "Ofertas diversas" },
+                new { Nome = "Votos", Descricao = "Votos e promessas" },
+                new { Nome = "Ofertas (Círculo de Oração)", Descricao = "Ofertas do Círculo de Oração (Adultos e Mocidade)" },
+                new { Nome = "Repasse de Congregação", Descricao = "Repasses financeiros das congregações para a Sede" }
+            };
+
+            foreach (var receita in receitas)
+            {
+                if (!await context.PlanosDeContas.AnyAsync(p => p.Nome == receita.Nome && p.Tipo == TipoPlanoContas.Receita))
+                {
+                    context.PlanosDeContas.Add(new PlanoDeContas
+                    {
+                        Nome = receita.Nome,
+                        Descricao = receita.Descricao,
+                        Tipo = TipoPlanoContas.Receita,
+                        Ativo = true,
+                        DataCriacao = DateTime.Now
+                    });
+                    logger.LogInformation($"      ✓ Receita '{receita.Nome}' criada");
+                }
+            }
+
+            await context.SaveChangesAsync();
+
+            // ==========================================
+            // 4.2. DESPESAS (Tipo = 1)
+            // ==========================================
+            logger.LogInformation("   4.2. Categorias de Despesa...");
+
+            var despesas = new[]
+            {
+                // Despesas Administrativas
+                new { Nome = "Mat. de Expediente", Descricao = "Material de Expediente" },
+                new { Nome = "Mat. Higiene e Limpeza", Descricao = "Material de Higiene e Limpeza" },
+                new { Nome = "Despesas com Telefone", Descricao = "Despesas com Telefone" },
+                new { Nome = "Despesas com Veículo", Descricao = "Despesas com Veículo" },
+                new { Nome = "Auxílio Oferta", Descricao = "Auxílio Oferta" },
+                new { Nome = "Mão de Obra Qualificada", Descricao = "Mão de Obra Qualificada" },
+                new { Nome = "Despesas com Medicamentos", Descricao = "Despesas com Medicamentos" },
+                new { Nome = "Energia Elétrica (Luz)", Descricao = "Energia Elétrica (Luz)" },
+                new { Nome = "Água", Descricao = "Água" },
+                new { Nome = "Despesas Diversas", Descricao = "Despesas Diversas" },
+                new { Nome = "Despesas com Viagens", Descricao = "Despesas com Viagens" },
+                new { Nome = "Material de Construção", Descricao = "Material de Construção" },
+                new { Nome = "Material de Conservação (Tintas, etc.)", Descricao = "Material de Conservação (Tintas, etc.)" },
+                new { Nome = "Despesas com Som (Peças e Acessórios)", Descricao = "Despesas com Som (Peças e Acessórios)" },
+                new { Nome = "Aluguel", Descricao = "Aluguel" },
+                new { Nome = "INSS", Descricao = "INSS" },
+                new { Nome = "Pagamento de Inscrição da CGADB", Descricao = "Pagamento de Inscrição da CGADB" },
+                new { Nome = "Previdência Privada", Descricao = "Previdência Privada" },
+                new { Nome = "Caixa de Evangelização", Descricao = "Caixa de Evangelização - Recolhimento de 10%" },
+                
+                // Despesas Tributárias
+                new { Nome = "IPTU", Descricao = "IPTU" },
+                new { Nome = "Imposto Predial IPTR", Descricao = "Imposto Predial IPTR" },
+                
+                // Despesas Financeiras
+                new { Nome = "Imposto Taxas Diversas", Descricao = "Imposto Taxas Diversas" },
+                new { Nome = "Saldo para o mês", Descricao = "Saldo para o mês" }
+            };
+
+            foreach (var despesa in despesas)
+            {
+                if (!await context.PlanosDeContas.AnyAsync(p => p.Nome == despesa.Nome && p.Tipo == TipoPlanoContas.Despesa))
+                {
+                    context.PlanosDeContas.Add(new PlanoDeContas
+                    {
+                        Nome = despesa.Nome,
+                        Descricao = despesa.Descricao,
+                        Tipo = TipoPlanoContas.Despesa,
+                        Ativo = true,
+                        DataCriacao = DateTime.Now
+                    });
+                    logger.LogInformation($"      ✓ Despesa '{despesa.Nome}' criada");
+                }
+            }
+
+            await context.SaveChangesAsync();
+            logger.LogInformation($"   ✓ Plano de Contas completo criado");
+        }
+
+        // ==========================================
+        // 5. CRIAÇÃO DE MEIOS DE PAGAMENTO
+        // ==========================================
+        private static async Task CreateMeiosDePagamento(ApplicationDbContext context, ILogger logger)
+        {
+            logger.LogInformation("5. Criando Meios de Pagamento...");
+
+            var meiosDePagamento = new[]
+            {
+                new { Nome = "Dinheiro", Descricao = "Pagamento em dinheiro (espécie)", TipoCaixa = TipoCaixa.Fisico },
+                new { Nome = "PIX", Descricao = "Pagamento via PIX", TipoCaixa = TipoCaixa.Digital },
+                new { Nome = "Transferência Bancária", Descricao = "Transferência bancária", TipoCaixa = TipoCaixa.Digital },
+                new { Nome = "Débito", Descricao = "Cartão de Débito", TipoCaixa = TipoCaixa.Digital },
+                new { Nome = "Crédito", Descricao = "Cartão de Crédito", TipoCaixa = TipoCaixa.Digital },
+                new { Nome = "Boleto", Descricao = "Pagamento via Boleto Bancário", TipoCaixa = TipoCaixa.Digital },
+                new { Nome = "Cheque", Descricao = "Pagamento em Cheque", TipoCaixa = TipoCaixa.Fisico }
+            };
+
+            foreach (var meio in meiosDePagamento)
+            {
+                if (!await context.MeiosDePagamento.AnyAsync(m => m.Nome == meio.Nome))
+                {
+                    context.MeiosDePagamento.Add(new MeioDePagamento
+                    {
+                        Nome = meio.Nome,
+                        Descricao = meio.Descricao,
+                        TipoCaixa = meio.TipoCaixa,
+                        Ativo = true
+                    });
+                    logger.LogInformation($"   ✓ Meio de Pagamento '{meio.Nome}' criado ({meio.TipoCaixa})");
+                }
+            }
 
             await context.SaveChangesAsync();
         }
 
-        private static async Task CreateBasicPlanosContas(ApplicationDbContext context)
+        // ==========================================
+        // 6. CRIAÇÃO DE REGRAS DE RATEIO
+        // ==========================================
+        private static async Task CreateRegrasRateio(
+            ApplicationDbContext context,
+            int sedeId,
+            int caixaEvangelizacaoId,
+            ILogger logger)
         {
-            var planosExistentes = await context.PlanosDeContas.AnyAsync();
-            if (planosExistentes) return;
+            logger.LogInformation("6. Criando Regras de Rateio...");
 
-            var planosReceitas = new[]
+            // Verificar se já existe uma regra de rateio da Sede para o Caixa de Evangelização
+            var regraExiste = await context.RegrasRateio.AnyAsync(r =>
+                r.CentroCustoOrigemId == sedeId &&
+                r.CentroCustoDestinoId == caixaEvangelizacaoId);
+
+            if (!regraExiste)
             {
-                new PlanoDeContas { Nome = "Dízimos", Descricao = "Dízimos dos membros", Tipo = TipoPlanoContas.Receita },
-                new PlanoDeContas { Nome = "Ofertas", Descricao = "Ofertas especiais e cultos", Tipo = TipoPlanoContas.Receita },
-                new PlanoDeContas { Nome = "Eventos", Descricao = "Receitas de eventos e festivais", Tipo = TipoPlanoContas.Receita },
-                new PlanoDeContas { Nome = "Doações", Descricao = "Doações diversas", Tipo = TipoPlanoContas.Receita },
-                new PlanoDeContas { Nome = "Vendas", Descricao = "Vendas de produtos e materiais", Tipo = TipoPlanoContas.Receita }
-            };
+                context.RegrasRateio.Add(new RegraRateio
+                {
+                    Nome = "Rateio Padrão da Sede - Caixa de Evangelização",
+                    Descricao = "Recolhimento automático de 10% sobre as receitas totais da Sede para o Caixa de Evangelização",
+                    CentroCustoOrigemId = sedeId,
+                    CentroCustoDestinoId = caixaEvangelizacaoId,
+                    Percentual = 10.00m,
+                    Ativo = true,
+                    DataCriacao = DateTime.Now
+                });
 
-            var planosDespesas = new[]
+                await context.SaveChangesAsync();
+                logger.LogInformation($"   ✓ Regra de Rateio '10% para Caixa de Evangelização' criada");
+                logger.LogInformation($"      Origem: Sede (ID: {sedeId})");
+                logger.LogInformation($"      Destino: Caixa de Evangelização (ID: {caixaEvangelizacaoId})");
+                logger.LogInformation($"      Percentual: 10%");
+            }
+            else
             {
-                new PlanoDeContas { Nome = "Salários", Descricao = "Salários e honorários", Tipo = TipoPlanoContas.Despesa },
-                new PlanoDeContas { Nome = "Encargos Sociais", Descricao = "INSS, FGTS e outros encargos", Tipo = TipoPlanoContas.Despesa },
-                new PlanoDeContas { Nome = "Aluguel", Descricao = "Aluguel e condomínio", Tipo = TipoPlanoContas.Despesa },
-                new PlanoDeContas { Nome = "Energia Elétrica", Descricao = "Conta de energia elétrica", Tipo = TipoPlanoContas.Despesa },
-                new PlanoDeContas { Nome = "Água e Esgoto", Descricao = "Conta de água e esgoto", Tipo = TipoPlanoContas.Despesa },
-                new PlanoDeContas { Nome = "Telefone/Internet", Descricao = "Comunicações", Tipo = TipoPlanoContas.Despesa },
-                new PlanoDeContas { Nome = "Material de Limpeza", Descricao = "Produtos de limpeza e higiene", Tipo = TipoPlanoContas.Despesa },
-                new PlanoDeContas { Nome = "Material de Escritório", Descricao = "Materiais de escritório e papelaria", Tipo = TipoPlanoContas.Despesa },
-                new PlanoDeContas { Nome = "Manutenção", Descricao = "Manutenção e reparos", Tipo = TipoPlanoContas.Despesa },
-                new PlanoDeContas { Nome = "Equipamentos", Descricao = "Compra de equipamentos", Tipo = TipoPlanoContas.Despesa }
-            };
-
-            context.PlanosDeContas.AddRange(planosReceitas);
-            context.PlanosDeContas.AddRange(planosDespesas);
-        }
-
-        private static async Task CreateBasicMeiosPagamento(ApplicationDbContext context)
-        {
-            var meiosExistentes = await context.MeiosDePagamento.AnyAsync();
-            if (meiosExistentes) return;
-
-            var meiosPagamento = new[]
-            {
-                new MeioDePagamento { Nome = "Dinheiro", Descricao = "Pagamento em espécie", TipoCaixa = TipoCaixa.Fisico },
-                new MeioDePagamento { Nome = "PIX", Descricao = "Transferência via PIX" },
-                new MeioDePagamento { Nome = "Transferência Bancária", Descricao = "TED/DOC" },
-                new MeioDePagamento { Nome = "Cartão de Débito", Descricao = "Pagamento com cartão de débito" },
-                new MeioDePagamento { Nome = "Cartão de Crédito", Descricao = "Pagamento com cartão de crédito" },
-                new MeioDePagamento { Nome = "Cheque", Descricao = "Pagamento em cheque" }
-            };
-
-            context.MeiosDePagamento.AddRange(meiosPagamento);
-            await context.SaveChangesAsync();
+                logger.LogInformation($"   ○ Regra de Rateio já existe");
+            }
         }
     }
 }

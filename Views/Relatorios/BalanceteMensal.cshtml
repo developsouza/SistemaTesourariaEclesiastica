@@ -1,0 +1,400 @@
+﻿@model SistemaTesourariaEclesiastica.ViewModels.BalanceteMensalViewModel
+
+@{
+    ViewData["Title"] = "Balancete Mensal";
+    var mes = Model.DataInicio.ToString("MMMM", new System.Globalization.CultureInfo("pt-BR")).ToUpper();
+    var ano = Model.DataInicio.Year;
+}
+
+<!-- Estilos customizados para o balancete -->
+<style>
+    .balancete-container {
+        background: white;
+        padding: 30px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        font-family: Arial, sans-serif;
+    }
+
+    .balancete-header {
+        text-align: center;
+        border: 2px solid #000;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+        .balancete-header h1 {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .balancete-header p {
+            font-size: 12px;
+            margin: 5px 0;
+        }
+
+    .periodo-info {
+        display: flex;
+        justify-content: space-between;
+        border: 1px solid #000;
+        padding: 10px;
+        margin-bottom: 20px;
+        font-size: 12px;
+    }
+
+        .periodo-info .local {
+            font-weight: bold;
+        }
+
+        .periodo-info .data {
+            text-align: right;
+        }
+
+    .secao-titulo {
+        background: #333;
+        color: white;
+        padding: 8px;
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-top: 15px;
+        margin-bottom: 5px;
+    }
+
+    .balancete-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+        font-size: 11px;
+    }
+
+        .balancete-table td {
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+        }
+
+        .balancete-table .item-descricao {
+            width: 70%;
+        }
+
+        .balancete-table .item-valor {
+            width: 30%;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .balancete-table .total-row {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .balancete-table .subtotal-row {
+            background: #fafafa;
+            font-weight: bold;
+        }
+
+    .assinaturas {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 60px;
+        padding-top: 20px;
+    }
+
+    .assinatura {
+        text-align: center;
+        flex: 1;
+    }
+
+    .assinatura-linha {
+        border-top: 1px solid #000;
+        width: 250px;
+        margin: 0 auto 5px;
+        padding-top: 5px;
+    }
+
+    .assinatura-cargo {
+        font-size: 10px;
+        color: #666;
+    }
+
+    .valor-positivo {
+        color: #006400;
+    }
+
+    .valor-negativo {
+        color: #8B0000;
+    }
+
+    .no-print {
+        margin-bottom: 20px;
+    }
+
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .balancete-container {
+            box-shadow: none;
+            padding: 0;
+        }
+
+        body {
+            background: white !important;
+        }
+    }
+</style>
+
+<!-- Botões de ação -->
+<div class="no-print mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h3><i class="bi bi-file-earmark-spreadsheet me-2"></i>Balancete Mensal</h3>
+            <p class="text-muted mb-0">Relatório de verificação de entradas e congregações</p>
+        </div>
+        <div>
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="bi bi-printer me-1"></i>Imprimir
+            </button>
+            <a href="@Url.Action("BalanceteMensalPdf", new { centroCustoId = ViewBag.CentroCustoId, dataInicio = ViewBag.DataInicio, dataFim = ViewBag.DataFim })"
+               class="btn btn-danger">
+                <i class="bi bi-file-pdf me-1"></i>Exportar PDF
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    @if (ViewBag.PodeEscolherCentroCusto)
+    {
+        <div class="card mt-3">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Centro de Custo</label>
+                        <select name="centroCustoId" class="form-select">
+                            @if (ViewBag.CentrosCusto != null)
+                            {
+                                @foreach (var item in ViewBag.CentrosCusto)
+                                {
+                                    <option value="@item.Value" selected="@(item.Selected)">@item.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Data Início</label>
+                        <input type="date" name="dataInicio" class="form-control" value="@ViewBag.DataInicio" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Data Fim</label>
+                        <input type="date" name="dataFim" class="form-control" value="@ViewBag.DataFim" />
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search me-1"></i>Filtrar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Relatório Balancete -->
+<div class="balancete-container">
+    <!-- Cabeçalho Oficial -->
+    <div class="balancete-header">
+        <div class="d-flex align-items-center justify-content-center mb-2">
+            <img src="/images/logo-convencao.png" alt="Logo" style="height: 50px; margin-right: 15px;" onerror="this.style.display='none'" />
+            <div>
+                <h1>CONVENÇÃO DE MINISTROS DAS ASSEMBLEIAS DE DEUS</h1>
+                <h1>NO ESTADO DA PARAÍBA - COMADEP</h1>
+                <p class="mb-0">PBJ 04.362.336/0001-58 - Rua 1º de Maio, 239,Jaguaribe - João Pessoa</p>
+            </div>
+        </div>
+        <h1 class="mt-2 mb-0">Balancete de Verificação de Igrejas Representadas e Congregações</h1>
+        <p class="mb-0">Realizado em</p>
+    </div>
+
+    <!-- Informações do Período -->
+    <div class="periodo-info">
+        <div class="local">@Model.CentroCustoNome</div>
+        <div class="cidade">PB</div>
+        <div class="data">@Model.DataInicio.Day / @mes / @ano</div>
+    </div>
+
+    <!-- ========================================
+         RECEITAS OPERACIONAIS
+         ======================================== -->
+    <div class="secao-titulo">RECEITAS OPERACIONAIS</div>
+
+    @if (Model.SaldoMesAnterior != 0)
+    {
+        <table class="balancete-table">
+            <tr>
+                <td class="item-descricao">Saldo do Mês Anterior</td>
+                <td class="item-valor">R$ @Model.SaldoMesAnterior.ToString("N2")</td>
+            </tr>
+        </table>
+    }
+
+    <table class="balancete-table">
+        @foreach (var item in Model.ReceitasOperacionais)
+        {
+            <tr>
+                <td class="item-descricao">@item.Descricao</td>
+                <td class="item-valor">R$ @item.Valor.ToString("N2")</td>
+            </tr>
+        }
+    </table>
+
+    <table class="balancete-table">
+        <tr>
+            <td class="item-descricao"><strong>Oferta</strong></td>
+            <td class="item-valor"><strong>R$</strong></td>
+        </tr>
+        <tr class="total-row">
+            <td class="item-descricao"><strong>Total do crédito</strong></td>
+            <td class="item-valor valor-positivo"><strong>R$ @Model.TotalCredito.ToString("N2")</strong></td>
+        </tr>
+    </table>
+
+    <!-- ========================================
+         IMOBILIZADOS
+         ======================================== -->
+    @if (Model.Imobilizados.Any())
+    {
+        <div class="secao-titulo">IMOBILIZADOS</div>
+        <table class="balancete-table">
+            @foreach (var item in Model.Imobilizados)
+            {
+                <tr>
+                    <td class="item-descricao">@item.Descricao</td>
+                    <td class="item-valor">R$ @item.Valor.ToString("N2")</td>
+                </tr>
+            }
+            <tr class="total-row">
+                <td class="item-descricao"><strong>Total do Crédito</strong></td>
+                <td class="item-valor valor-positivo"><strong>R$ @Model.TotalCreditoComImobilizados.ToString("N2")</strong></td>
+            </tr>
+        </table>
+    }
+
+    <!-- ========================================
+         DESPESAS ADMINISTRATIVAS
+         ======================================== -->
+    <div class="secao-titulo">DESPESAS ADMINISTRATIVAS</div>
+    <table class="balancete-table">
+        @foreach (var item in Model.DespesasAdministrativas)
+        {
+            <tr>
+                <td class="item-descricao">@item.Descricao</td>
+                <td class="item-valor">R$ @item.Valor.ToString("N2")</td>
+            </tr>
+        }
+    </table>
+
+    <!-- ========================================
+         DESPESAS TRIBUTÁRIAS
+         ======================================== -->
+    @if (Model.DespesasTributarias.Any())
+    {
+        <div class="secao-titulo">Despesas Tributárias</div>
+        <table class="balancete-table">
+            @foreach (var item in Model.DespesasTributarias)
+            {
+                <tr>
+                    <td class="item-descricao">@item.Descricao</td>
+                    <td class="item-valor">R$ @item.Valor.ToString("N2")</td>
+                </tr>
+            }
+            <tr class="subtotal-row">
+                <td class="item-descricao"><strong>Subtotal Tributárias</strong></td>
+                <td class="item-valor"><strong>R$ @Model.SubtotalDespesasTributarias.ToString("N2")</strong></td>
+            </tr>
+        </table>
+    }
+
+    <!-- ========================================
+         DESPESAS FINANCEIRAS
+         ======================================== -->
+    @if (Model.DespesasFinanceiras.Any())
+    {
+        <div class="secao-titulo">DESPESAS FINANCEIRAS</div>
+        <table class="balancete-table">
+            @foreach (var item in Model.DespesasFinanceiras)
+            {
+                <tr>
+                    <td class="item-descricao">@item.Descricao</td>
+                    <td class="item-valor">R$ @item.Valor.ToString("N2")</td>
+                </tr>
+            }
+            <tr class="subtotal-row">
+                <td class="item-descricao"><strong>Subtotal Financeiras</strong></td>
+                <td class="item-valor"><strong>R$ @Model.SubtotalDespesasFinanceiras.ToString("N2")</strong></td>
+            </tr>
+        </table>
+    }
+
+    <!-- ========================================
+         RECOLHIMENTOS (RATEIOS)
+         ======================================== -->
+    @if (Model.Recolhimentos.Any())
+    {
+        <table class="balancete-table mt-3">
+            @foreach (var recolhimento in Model.Recolhimentos)
+            {
+                <tr>
+                    <td class="item-descricao">@recolhimento.Destino (@recolhimento.Percentual.ToString("N2")%)</td>
+                    <td class="item-valor">R$ @recolhimento.Valor.ToString("N2")</td>
+                </tr>
+            }
+        </table>
+    }
+
+    <!-- ========================================
+         TOTAIS FINAIS
+         ======================================== -->
+    <table class="balancete-table mt-3">
+        <tr class="total-row">
+            <td class="item-descricao"><strong>Total do Débito</strong></td>
+            <td class="item-valor valor-negativo"><strong>R$ @Model.TotalDebito.ToString("N2")</strong></td>
+        </tr>
+    </table>
+
+    <!-- Saldo Final -->
+    <div class="text-center mt-4 p-3" style="background: #f8f9fa; border: 2px solid #333;">
+        <h4 class="mb-0">
+            SALDO:
+            <span class="@(Model.Saldo >= 0 ? "valor-positivo" : "valor-negativo")">
+                <strong>R$ @Model.Saldo.ToString("N2")</strong>
+            </span>
+        </h4>
+    </div>
+
+    <!-- Assinaturas -->
+    <div class="assinaturas">
+        <div class="assinatura">
+            <div class="assinatura-linha">
+                @(Model.TesoureriroResponsavel ?? "_____________________________")
+            </div>
+            <div class="assinatura-cargo">Tesoureiro</div>
+        </div>
+        <div class="assinatura">
+            <div class="assinatura-linha">
+                @(Model.VistoDoPastor ?? "_____________________________")
+            </div>
+            <div class="assinatura-cargo">Visto do Pastor</div>
+        </div>
+    </div>
+
+    <!-- Rodapé com data de geração -->
+    <div class="text-center mt-4 text-muted" style="font-size: 10px;">
+        <p class="mb-0">Relatório gerado em @Model.DataGeracao.ToString("dd/MM/yyyy HH:mm")</p>
+        <p class="mb-0">Sistema Integrado de Gestão de Tesouraria Eclesiástica</p>
+    </div>
+</div>
