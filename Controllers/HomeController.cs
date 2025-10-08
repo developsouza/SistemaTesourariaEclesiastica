@@ -115,6 +115,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         ViewBag.CanViewReports = true;
                         ViewBag.Alertas = new List<object>();
                         ViewBag.AtividadesRecentes = new List<object>();
+                        ViewBag.UltimasTransacoes = new List<object>();
 
                         TempData["Aviso"] = "Seu usuário não possui um Centro de Custo definido. Entre em contato com o administrador.";
                         return View();
@@ -391,7 +392,138 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 // =====================================================
-                // 11. PREENCHER VIEWBAG COM TODOS OS DADOS
+                // 11. BUSCAR ÚLTIMAS TRANSAÇÕES (10 MAIS RECENTES)
+                // =====================================================
+                var ultimasTransacoes = new List<object>();
+
+                try
+                {
+                    // Buscar últimas entradas aprovadas
+                    var queryUltimasEntradas = _context.Entradas
+                        .Include(e => e.PlanoDeContas)
+                        .Include(e => e.CentroCusto)
+                        .AsQueryable();
+
+                    if (centroCustoFiltro.HasValue)
+                    {
+                        queryUltimasEntradas = queryUltimasEntradas.Where(e => e.CentroCustoId == centroCustoFiltro.Value);
+                    }
+
+                    var idsUltimasEntradas = await queryUltimasEntradas
+                        .Where(e => _context.FechamentosPeriodo.Any(f =>
+                            f.CentroCustoId == e.CentroCustoId &&
+                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+                            e.Data >= f.DataInicio &&
+                            e.Data <= f.DataFim))
+                        .OrderByDescending(e => e.Data)
+                        .Take(5)
+                        .Select(e => e.Id)
+                        .ToListAsync();
+
+                    var ultimasEntradas = await _context.Entradas
+                        .Include(e => e.PlanoDeContas)
+                        .Include(e => e.CentroCusto)
+                        .Where(e => idsUltimasEntradas.Contains(e.Id))
+                        .OrderByDescending(e => e.Data)
+                        .Select(e => new
+                        {
+                            Tipo = "Entrada",
+                            Descricao = e.Descricao ?? e.PlanoDeContas.Nome,
+                            CentroCusto = e.CentroCusto.Nome,
+                            Data = e.Data,
+                            Valor = e.Valor
+                        })
+                        .ToListAsync();
+
+                    // Buscar últimas saídas aprovadas
+                    var queryUltimasSaidas = _context.Saidas
+                        .Include(s => s.PlanoDeContas)
+                        .Include(s => s.CentroCusto)
+                        .AsQueryable();
+
+                    if (centroCustoFiltro.HasValue)
+                    {
+                        queryUltimasSaidas = queryUltimasSaidas.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
+                    }
+
+                    var idsUltimasSaidas = await queryUltimasSaidas
+                        .Where(s => _context.FechamentosPeriodo.Any(f =>
+                            f.CentroCustoId == s.CentroCustoId &&
+                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+                            s.Data >= f.DataInicio &&
+                            s.Data <= f.DataFim))
+                        .OrderByDescending(s => s.Data)
+                        .Take(5)
+                        .Select(s => s.Id)
+                        .ToListAsync();
+
+                    var ultimasSaidas = await _context.Saidas
+                        .Include(s => s.PlanoDeContas)
+                        .Include(s => s.CentroCusto)
+                        .Where(s => idsUltimasSaidas.Contains(s.Id))
+                        .OrderByDescending(s => s.Data)
+                        .Select(s => new
+                        {
+                            Tipo = "Saída",
+                            Descricao = s.Descricao,
+                            CentroCusto = s.CentroCusto.Nome,
+                            Data = s.Data,
+                            Valor = s.Valor
+                        })
+                        .ToListAsync();
+
+                    // Combinar e ordenar por data
+                    ultimasTransacoes = ultimasEntradas
+                        .Concat<object>(ultimasSaidas)
+                        .OrderByDescending(t => ((dynamic)t).Data)
+                        .Take(10)
+                        .ToList();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erro ao buscar últimas transações");
+                }
+
+                // =====================================================
+                // 12. BUSCAR ATIVIDADES RECENTES (LOG DE AUDITORIA)
+                // =====================================================
+                var atividadesRecentes = new List<object>();
+
+                try
+                {
+                    var seteDiasAtras = DateTime.Now.AddDays(-7);
+                    
+                    var queryAtividades = _context.LogsAuditoria
+                        .Include(l => l.Usuario)
+                        .Where(l => l.DataHora >= seteDiasAtras)
+                        .AsQueryable();
+
+                    // Se não for admin ou tesoureiro geral, filtrar por centro de custo
+                    if (centroCustoFiltro.HasValue)
+                    {
+                        queryAtividades = queryAtividades.Where(l => 
+                            l.Usuario.CentroCustoId == centroCustoFiltro.Value);
+                    }
+
+                    atividadesRecentes = await queryAtividades
+                        .OrderByDescending(l => l.DataHora)
+                        .Take(10)
+                        .Select(l => new
+                        {
+                            Acao = l.Acao,
+                            Usuario = l.Usuario.NomeCompleto,
+                            DataHora = l.DataHora,
+                            Icone = ObterIconeAtividade(l.Acao)
+                        })
+                        .ToListAsync<object>();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erro ao buscar atividades recentes");
+                }
+
+                // =====================================================
+                // 13. PREENCHER VIEWBAG COM TODOS OS DADOS
                 // =====================================================
                 ViewBag.EntradasMes = entradasMes.ToString("C");
                 ViewBag.SaidasMes = saidasMes.ToString("C");
@@ -411,9 +543,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.CanApproveClosures = User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral);
                 ViewBag.CanViewReports = true;
 
-                // Listas vazias (para compatibilidade com a view)
-                ViewBag.Alertas = new List<object>();
-                ViewBag.AtividadesRecentes = new List<object>();
+                // Novos dados
+                ViewBag.UltimasTransacoes = ultimasTransacoes;
+                ViewBag.AtividadesRecentes = atividadesRecentes;
+                ViewBag.Alertas = new List<object>(); // Manter para compatibilidade
 
                 _logger.LogInformation($"Dashboard carregado com sucesso para {user.NomeCompleto}");
 
@@ -474,6 +607,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewBag.CanViewReports = true;
             ViewBag.Alertas = new List<object>();
             ViewBag.AtividadesRecentes = new List<object>();
+            ViewBag.UltimasTransacoes = new List<object>();
 
             return new { };
         }
@@ -603,6 +737,24 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 _logger.LogError(ex, "Erro ao obter estatísticas do dashboard");
                 return Json(new { error = "Erro ao carregar dados" });
             }
+        }
+
+        private static string ObterIconeAtividade(string acao)
+        {
+            if (acao.Contains("CREATE") || acao.Contains("INSERT"))
+                return "plus-circle-fill";
+            if (acao.Contains("UPDATE") || acao.Contains("EDIT"))
+                return "pencil-square";
+            if (acao.Contains("DELETE"))
+                return "trash-fill";
+            if (acao.Contains("LOGIN") || acao.Contains("ACCESS"))
+                return "box-arrow-in-right";
+            if (acao.Contains("APPROVAL") || acao.Contains("APPROVE"))
+                return "check-circle-fill";
+            if (acao.Contains("REJECT"))
+                return "x-circle-fill";
+            
+            return "activity";
         }
     }
 }

@@ -1,0 +1,346 @@
+/* ========================================
+   ESTILOS ESPECÍFICOS DO DASHBOARD
+   Sistema de Tesouraria Eclesiástica
+   ======================================== */
+
+/* Cards de Estatísticas */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--bs-card-bg);
+}
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, rgba(37, 99, 235, 0.8) 0%, rgba(59, 130, 246, 0.5) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .stat-card:hover::before {
+        opacity: 1;
+    }
+
+    .stat-card:hover {
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    }
+
+.stat-icon-modern {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-icon-modern {
+    animation: iconBounce 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes iconBounce {
+    0%, 100% {
+        transform: scale(1) rotate(0deg);
+    }
+
+    50% {
+        transform: scale(1.15) rotate(5deg);
+    }
+}
+
+/* Hover Shadow Effect */
+.hover-shadow {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--bs-card-bg);
+}
+
+    .hover-shadow:hover {
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+        transform: translateY(-2px);
+    }
+
+/* Ajustes para Gráficos */
+.card canvas {
+    max-height: 350px;
+}
+
+/* Cards com shadow suave */
+.card.shadow-sm {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+    background: var(--bs-card-bg);
+}
+
+.card.border-0 {
+    border: none !important;
+}
+
+/* Card Headers - Adaptativo ao tema */
+.card-header {
+    border-radius: 12px 12px 0 0 !important;
+}
+
+.card-header.bg-transparent {
+    background-color: transparent !important;
+    border-bottom: 1px solid var(--bs-border-color) !important;
+}
+
+/* Tabelas Responsivas no Dashboard */
+.table-responsive {
+    border-radius: 0 0 12px 12px;
+}
+
+.table-hover tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+    .table-hover tbody tr:hover {
+        background-color: var(--bs-table-hover-bg);
+    }
+
+/* Badges customizados */
+.badge {
+    font-weight: 500;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Animação de entrada para cards */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+/* Stagger animation para cards */
+.row .col-6:nth-child(1) .stat-card,
+.row .col-lg-3:nth-child(1) .stat-card {
+    animation: fadeInUp 0.5s ease-out;
+    animation-delay: 0.1s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+}
+
+.row .col-6:nth-child(2) .stat-card,
+.row .col-lg-3:nth-child(2) .stat-card {
+    animation: fadeInUp 0.5s ease-out;
+    animation-delay: 0.2s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+}
+
+.row .col-6:nth-child(3) .stat-card,
+.row .col-lg-3:nth-child(3) .stat-card {
+    animation: fadeInUp 0.5s ease-out;
+    animation-delay: 0.3s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+}
+
+.row .col-6:nth-child(4) .stat-card,
+.row .col-lg-3:nth-child(4) .stat-card {
+    animation: fadeInUp 0.5s ease-out;
+    animation-delay: 0.4s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+}
+
+/* Estados vazios */
+.text-center.py-5 {
+    padding: 3rem 1rem !important;
+}
+
+    .text-center.py-5 i.opacity-25 {
+        opacity: 0.25;
+    }
+
+@media (max-width: 767px) {
+    .stat-icon-modern {
+        width: 44px;
+        height: 44px;
+        font-size: 1.25rem;
+    }
+
+    /* Remove animations on mobile */
+    .stat-card:hover .stat-icon-modern {
+        animation: none;
+        transform: none;
+    }
+
+    /* Ajustar padding dos cards */
+    .card-body.p-3 {
+        padding: 1rem !important;
+    }
+
+    .card-header.pt-4 {
+        padding-top: 1rem !important;
+    }
+
+    /* Simplificar tabelas no mobile */
+    .table-responsive table {
+        font-size: 0.875rem;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .stat-icon-modern {
+        width: 48px;
+        height: 48px;
+        font-size: 1.375rem;
+    }
+}
+
+/* Dark Mode Support */
+[data-bs-theme="dark"] .stat-card::before {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.8) 0%, rgba(99, 102, 241, 0.5) 100%);
+}
+
+[data-bs-theme="dark"] .table-hover tbody tr:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Melhorias de Performance */
+.stat-card,
+.hover-shadow {
+    will-change: transform;
+}
+
+/* Smooth scrolling para tabelas */
+.card-body[style*="overflow-y"] {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+    .card-body[style*="overflow-y"]::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .card-body[style*="overflow-y"]::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .card-body[style*="overflow-y"]::-webkit-scrollbar-thumb {
+        background-color: rgba(148, 163, 184, 0.3);
+        border-radius: 3px;
+    }
+
+        .card-body[style*="overflow-y"]::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(148, 163, 184, 0.5);
+        }
+
+/* Estilos para valores monetários */
+.fw-bold[class*="text-"] {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+/* Loading state para gráficos */
+canvas {
+    transition: opacity 0.3s ease;
+}
+
+canvas.loading {
+    opacity: 0.5;
+}
+
+/* Print styles */
+@media print {
+    .stat-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+    }
+
+    .hover-shadow:hover {
+        transform: none;
+        box-shadow: none !important;
+    }
+
+    .btn {
+        display: none !important;
+    }
+}
+
+/* Acessibilidade */
+.stat-card:focus-within {
+    outline: 2px solid rgba(37, 99, 235, 0.5);
+    outline-offset: 2px;
+}
+
+/* Skeleton loader para carregamento */
+@keyframes skeleton-loading {
+    0% {
+        background-position: -200px 0;
+    }
+
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: 4px;
+}
+
+/* Estados de loading nos cards */
+.card.loading {
+    position: relative;
+}
+
+    .card.loading::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        backdrop-filter: blur(2px);
+    }
+
+/* Cards arredondados */
+.card {
+    border-radius: 12px !important;
+}
+
+/* Tabela */
+.table {
+    color: var(--bs-body-color);
+}
+
+.table-light {
+    --bs-table-bg: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+}
