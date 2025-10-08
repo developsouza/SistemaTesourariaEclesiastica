@@ -157,6 +157,69 @@
                     $(this).removeClass('is-invalid');
                 }
             });
+
+            // Inicializar Select2 para o campo de Membro com busca AJAX
+            $('#MembroId').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Digite para buscar o membro...',
+                allowClear: true,
+                language: {
+                    noResults: function() {
+                        return "Nenhum membro encontrado";
+                    },
+                    searching: function() {
+                        return "Buscando...";
+                    },
+                    inputTooShort: function() {
+                        return "Digite pelo menos 2 caracteres";
+                    }
+                },
+                ajax: {
+                    url: '@Url.Action("BuscarMembros", "Membros")',
+                    dataType: 'json',
+                    delay: 300,
+                    data: function(params) {
+                        return {
+                            term: params.term || ''
+                        };
+                    },
+                    processResults: function(data) {
+                        return {
+                            results: data.map(function(item) {
+                                return {
+                                    id: item.id,
+                                    text: item.text + (item.apelido ? ' (' + item.apelido + ')' : ''),
+                                    centroCusto: item.centroCustoNome
+                                };
+                            })
+                        };
+                    },
+                    cache: true
+                },
+                minimumInputLength: 2,
+                templateResult: formatMembro,
+                templateSelection: formatMembroSelection
+            });
+
+            // Formatar resultado no dropdown
+            function formatMembro(membro) {
+                if (!membro.id) {
+                    return membro.text;
+                }
+                
+                var $membro = $(
+                    '<div class="d-flex flex-column">' +
+                        '<div class="fw-semibold">' + membro.text + '</div>' +
+                        (membro.centroCusto ? '<small class="text-muted">' + membro.centroCusto + '</small>' : '') +
+                    '</div>'
+                );
+                return $membro;
+            }
+
+            // Formatar seleção
+            function formatMembroSelection(membro) {
+                return membro.text || membro.id;
+            }
         });
     </script>
 }

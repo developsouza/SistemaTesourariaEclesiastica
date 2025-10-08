@@ -434,8 +434,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
             }
 
+            // Membros (baseado em permissões)
+            var membrosQuery = _context.Membros.Where(m => m.Ativo);
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                // Tesoureiros Locais só veem membros do seu centro de custo
+                if (user?.CentroCustoId.HasValue == true)
+                {
+                    membrosQuery = membrosQuery.Where(m => m.CentroCustoId == user.CentroCustoId.Value);
+                }
+            }
+
             ViewData["CentroCustoId"] = new SelectList(await centrosCustoQuery.ToListAsync(), "Id", "Nome", entrada?.CentroCustoId);
-            ViewData["MembroId"] = new SelectList(await _context.Membros.Where(m => m.Ativo).ToListAsync(), "Id", "NomeCompleto", entrada?.MembroId);
+            ViewData["MembroId"] = new SelectList(await membrosQuery.ToListAsync(), "Id", "NomeCompleto", entrada?.MembroId);
             ViewData["PlanoDeContasId"] = new SelectList(await _context.PlanosDeContas.Where(p => p.Tipo == TipoPlanoContas.Receita && p.Ativo).ToListAsync(), "Id", "Nome", entrada?.PlanoDeContasId);
             ViewData["MeioDePagamentoId"] = new SelectList(await _context.MeiosDePagamento.Where(m => m.Ativo).ToListAsync(), "Id", "Nome", entrada?.MeioDePagamentoId);
         }

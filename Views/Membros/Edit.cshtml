@@ -1,7 +1,10 @@
 @model SistemaTesourariaEclesiastica.Models.Membro
+@using SistemaTesourariaEclesiastica.Attributes
 
 @{
     ViewData["Title"] = "Editar Membro";
+    var selectList = ViewBag.CentroCustoId as SelectList;
+    var isDisabled = (selectList?.Count() == 1 && !User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral));
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -54,10 +57,31 @@
 
                         <div class="col-md-6">
                             <label asp-for="CentroCustoId" class="form-label"></label>
-                            <select asp-for="CentroCustoId" class="form-select" asp-items="ViewBag.CentroCustoId">
-                                <option value="">Selecione o centro de custo</option>
-                            </select>
+                            @if (isDisabled)
+                            {
+                                @* Campo hidden para enviar o valor quando disabled *@
+                                <input type="hidden" asp-for="CentroCustoId" />
+                                <select class="form-select" disabled>
+                                    @foreach (var item in selectList)
+                                    {
+                                        <option value="@item.Value" selected="@(item.Value == Model.CentroCustoId.ToString())">@item.Text</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <select asp-for="CentroCustoId" class="form-select" asp-items="ViewBag.CentroCustoId">
+                                    <option value="">Selecione o centro de custo</option>
+                                </select>
+                            }
                             <span asp-validation-for="CentroCustoId" class="text-danger"></span>
+                            @if (isDisabled)
+                            {
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Como Tesoureiro Local, você não pode transferir membros para outro centro de custo
+                                </div>
+                            }
                         </div>
 
                         <div class="col-md-12">

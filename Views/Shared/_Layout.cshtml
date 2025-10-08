@@ -21,12 +21,17 @@
     <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" rel="stylesheet">
 
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- CSS Customizado -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/dashboard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/select2-custom.css" asp-append-version="true" />
 
     @await RenderSectionAsync("Styles", required: false)
 
@@ -238,6 +243,17 @@
                                 <a class="nav-link" asp-controller="Auditoria" asp-action="Index">
                                     <i class="bi bi-shield-check"></i>
                                     <span class="nav-text">Auditoria</span>
+                                </a>
+                            </li>
+                        }
+
+                        @* ==================== MENU MEMBROS (TESOUREIROS LOCAIS E GERAL) ==================== *@
+                        @if (User.IsInRole(Roles.TesoureiroLocal) || User.IsInRole(Roles.TesoureiroGeral))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Membros" asp-action="Index">
+                                    <i class="bi bi-people"></i>
+                                    <span class="nav-text">Membros</span>
                                 </a>
                             </li>
                         }
@@ -475,6 +491,9 @@
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+    
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
         $.extend(true, $.fn.dataTable.defaults, {
@@ -510,4 +529,4 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
-</html></html>
+</html>

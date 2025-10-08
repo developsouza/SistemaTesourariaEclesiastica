@@ -5,9 +5,12 @@ using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
+using SistemaTesourariaEclesiastica.Attributes;
+using SistemaTesourariaEclesiastica.Enums;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
+    [AuthorizeRoles(Roles.AdminOuTesoureiro)]
     public class MembrosController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -27,7 +30,26 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewData["CurrentFilter"] = searchString;
             ViewData["CurrentCentroCusto"] = centroCustoId;
 
+            var user = await _userManager.GetUserAsync(User);
             var membros = _context.Membros.Include(m => m.CentroCusto).AsQueryable();
+
+            // ==================== FILTRO POR PERFIL DE USUÁRIO ====================
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                // Tesoureiros Locais só veem membros do seu centro de custo
+                if (user?.CentroCustoId.HasValue == true)
+                {
+                    membros = membros.Where(m => m.CentroCustoId == user.CentroCustoId.Value);
+                }
+                else
+                {
+                    // Se não tem centro de custo, não vê nada
+                    membros = membros.Where(m => false);
+                }
+            }
+            // Tesoureiro Geral vê todos os membros
+            // Administrador vê todos os membros
+            // ======================================================================
 
             if (!string.IsNullOrEmpty(searchString))
             {
@@ -49,7 +71,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewBag.PageSize = pageSize;
             ViewBag.TotalItems = totalItems;
 
-            ViewBag.CentrosCusto = new SelectList(await _context.CentrosCusto.ToListAsync(), "Id", "Nome", centroCustoId);
+            // Filtrar centros de custo para dropdown baseado no perfil
+            var centrosCustoQuery = _context.CentrosCusto.AsQueryable();
+            
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                // Tesoureiros Locais só veem seu centro de custo
+                if (user?.CentroCustoId.HasValue == true)
+                {
+                    centrosCustoQuery = centrosCustoQuery.Where(c => c.Id == user.CentroCustoId.Value);
+                }
+            }
+
+            ViewBag.CentrosCusto = new SelectList(await centrosCustoQuery.ToListAsync(), "Id", "Nome", centroCustoId);
 
             var paginatedMembros = await membros
                 .OrderBy(m => m.NomeCompleto)
@@ -78,13 +112,40 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // Verificar se o usuário tem permissão para ver este membro
+            var user = await _userManager.GetUserAsync(User);
+            if (!await UsuarioPodeAcessarMembro(user, membro))
+            {
+                return Forbid();
+            }
+
             return View(membro);
         }
 
         // GET: Membros/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            ViewData["CentroCustoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome");
+            var user = await _userManager.GetUserAsync(User);
+            var centrosCustoQuery = _context.CentrosCusto.AsQueryable();
+
+            // Filtrar centros de custo baseado no perfil
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                // Tesoureiros Locais só podem cadastrar no seu centro de custo
+                if (user?.CentroCustoId.HasValue == true)
+                {
+                    centrosCustoQuery = centrosCustoQuery.Where(c => c.Id == user.CentroCustoId.Value);
+                }
+            }
+
+            ViewData["CentroCustoId"] = new SelectList(await centrosCustoQuery.ToListAsync(), "Id", "Nome");
+            
+            // Se tesoureiro local, pré-selecionar seu centro de custo
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral) && user?.CentroCustoId.HasValue == true)
+            {
+                ViewData["CentroCustoIdPreSelecionado"] = user.CentroCustoId.Value;
+            }
+
             return View();
         }
 
@@ -95,12 +156,21 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             if (ModelState.IsValid)
             {
+                // Verificar se o usuário pode cadastrar neste centro de custo
+                var user = await _userManager.GetUserAsync(User);
+                if (!await UsuarioPodeCadastrarNoCentroCusto(user, membro.CentroCustoId))
+                {
+                    ModelState.AddModelError("CentroCustoId", "Você não tem permissão para cadastrar membros neste centro de custo.");
+                    await PreencherViewDataCentroCusto(user);
+                    return View(membro);
+                }
+
                 // Verifica se o CPF já existe
                 var cpfExistente = await _context.Membros.AnyAsync(m => m.CPF == membro.CPF);
                 if (cpfExistente)
                 {
                     ModelState.AddModelError("CPF", "Este CPF já está cadastrado.");
-                    ViewData["CentroCustoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", membro.CentroCustoId);
+                    await PreencherViewDataCentroCusto(user);
                     return View(membro);
                 }
 
@@ -111,7 +181,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 _context.Add(membro);
                 await _context.SaveChangesAsync();
 
-                var user = await _userManager.GetUserAsync(User);
                 if (user != null)
                 {
                     await _auditService.LogAuditAsync(user.Id, "Criar", "Membro", membro.Id.ToString(), $"Membro {membro.NomeCompleto} criado.");
@@ -121,7 +190,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewData["CentroCustoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", membro.CentroCustoId);
+            await PreencherViewDataCentroCusto(await _userManager.GetUserAsync(User));
             return View(membro);
         }
 
@@ -139,7 +208,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
-            ViewData["CentroCustoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", membro.CentroCustoId);
+            // Verificar se o usuário tem permissão para editar este membro
+            var user = await _userManager.GetUserAsync(User);
+            if (!await UsuarioPodeAcessarMembro(user, membro))
+            {
+                return Forbid();
+            }
+
+            await PreencherViewDataCentroCusto(user, membro.CentroCustoId);
             return View(membro);
         }
 
@@ -157,26 +233,42 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 try
                 {
+                    var user = await _userManager.GetUserAsync(User);
+                    
+                    // Verificar permissões
+                    var membroOriginal = await _context.Membros.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
+                    if (membroOriginal == null)
+                    {
+                        return NotFound();
+                    }
+
+                    if (!await UsuarioPodeAcessarMembro(user, membroOriginal))
+                    {
+                        return Forbid();
+                    }
+
+                    if (!await UsuarioPodeCadastrarNoCentroCusto(user, membro.CentroCustoId))
+                    {
+                        ModelState.AddModelError("CentroCustoId", "Você não tem permissão para mover membros para este centro de custo.");
+                        await PreencherViewDataCentroCusto(user, membro.CentroCustoId);
+                        return View(membro);
+                    }
+
                     // Verifica se o CPF já existe para outro membro
                     var cpfExistente = await _context.Membros.AnyAsync(m => m.CPF == membro.CPF && m.Id != membro.Id);
                     if (cpfExistente)
                     {
                         ModelState.AddModelError("CPF", "Este CPF já está cadastrado para outro membro.");
-                        ViewData["CentroCustoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", membro.CentroCustoId);
+                        await PreencherViewDataCentroCusto(user, membro.CentroCustoId);
                         return View(membro);
                     }
 
                     // Preserva a data de cadastro original
-                    var membroOriginal = await _context.Membros.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
-                    if (membroOriginal != null)
-                    {
-                        membro.DataCadastro = membroOriginal.DataCadastro;
-                    }
+                    membro.DataCadastro = membroOriginal.DataCadastro;
 
                     _context.Update(membro);
                     await _context.SaveChangesAsync();
 
-                    var user = await _userManager.GetUserAsync(User);
                     if (user != null)
                     {
                         await _auditService.LogAuditAsync(user.Id, "Editar", "Membro", membro.Id.ToString(), $"Membro {membro.NomeCompleto} atualizado.");
@@ -198,7 +290,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ViewData["CentroCustoId"] = new SelectList(_context.CentrosCusto, "Id", "Nome", membro.CentroCustoId);
+            await PreencherViewDataCentroCusto(await _userManager.GetUserAsync(User), membro.CentroCustoId);
             return View(membro);
         }
 
@@ -219,6 +311,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return NotFound();
             }
 
+            // Verificar se o usuário tem permissão para excluir este membro
+            var user = await _userManager.GetUserAsync(User);
+            if (!await UsuarioPodeAcessarMembro(user, membro))
+            {
+                return Forbid();
+            }
+
             return View(membro);
         }
 
@@ -230,6 +329,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
             var membro = await _context.Membros.FindAsync(id);
             if (membro != null)
             {
+                // Verificar permissões
+                var user = await _userManager.GetUserAsync(User);
+                if (!await UsuarioPodeAcessarMembro(user, membro))
+                {
+                    return Forbid();
+                }
+
                 // Verifica se o membro possui entradas associadas
                 var possuiEntradas = await _context.Entradas.AnyAsync(e => e.MembroId == id);
                 if (possuiEntradas)
@@ -240,7 +346,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 _context.Membros.Remove(membro);
                 await _context.SaveChangesAsync();
-                var user = await _userManager.GetUserAsync(User);
+                
                 if (user != null)
                 {
                     await _auditService.LogAuditAsync(user.Id, "Excluir", "Membro", membro.Id.ToString(), $"Membro {membro.NomeCompleto} excluído.");
@@ -275,7 +381,23 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return Json(new List<object>());
             }
 
-            var membros = await _context.Membros
+            var user = await _userManager.GetUserAsync(User);
+            var membrosQuery = _context.Membros.AsQueryable();
+
+            // Filtrar por centro de custo baseado no perfil
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                if (user?.CentroCustoId.HasValue == true)
+                {
+                    membrosQuery = membrosQuery.Where(m => m.CentroCustoId == user.CentroCustoId.Value);
+                }
+                else
+                {
+                    return Json(new List<object>());
+                }
+            }
+
+            var membros = await membrosQuery
                 .Where(m => m.NomeCompleto.Contains(term) || (m.Apelido != null && m.Apelido.Contains(term)))
                 .Select(m => new
                 {
@@ -294,6 +416,62 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private bool MembroExists(int id)
         {
             return _context.Membros.Any(e => e.Id == id);
+        }
+
+        // Métodos auxiliares para controle de acesso
+        private async Task<bool> UsuarioPodeAcessarMembro(ApplicationUser? user, Membro membro)
+        {
+            if (user == null) return false;
+
+            // Administrador e Tesoureiro Geral têm acesso a tudo
+            if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+            {
+                return true;
+            }
+
+            // Tesoureiro Local só acessa membros do seu centro de custo
+            if (user.CentroCustoId.HasValue)
+            {
+                return membro.CentroCustoId == user.CentroCustoId.Value;
+            }
+
+            return false;
+        }
+
+        private async Task<bool> UsuarioPodeCadastrarNoCentroCusto(ApplicationUser? user, int centroCustoId)
+        {
+            if (user == null) return false;
+
+            // Administrador e Tesoureiro Geral podem cadastrar em qualquer centro de custo
+            if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+            {
+                return true;
+            }
+
+            // Tesoureiro Local só pode cadastrar no seu centro de custo
+            if (user.CentroCustoId.HasValue)
+            {
+                return centroCustoId == user.CentroCustoId.Value;
+            }
+
+            return false;
+        }
+
+        private async Task PreencherViewDataCentroCusto(ApplicationUser? user, int? centroCustoIdSelecionado = null)
+        {
+            var centrosCustoQuery = _context.CentrosCusto.AsQueryable();
+
+            // Filtrar centros de custo baseado no perfil
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                // Tesoureiros Locais só veem seu centro de custo
+                if (user?.CentroCustoId.HasValue == true)
+                {
+                    centrosCustoQuery = centrosCustoQuery.Where(c => c.Id == user.CentroCustoId.Value);
+                }
+            }
+
+            ViewData["CentroCustoId"] = new SelectList(await centrosCustoQuery.ToListAsync(), "Id", "Nome", centroCustoIdSelecionado);
         }
     }
 }

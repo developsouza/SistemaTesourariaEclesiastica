@@ -162,6 +162,92 @@
                     $(this).removeClass('is-invalid');
                 }
             });
+
+            // Inicializar Select2 para o campo de Membro com busca AJAX
+            $('#MembroId').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Digite para buscar o membro...',
+                allowClear: true,
+                language: {
+                    noResults: function() {
+                        return "Nenhum membro encontrado";
+                    },
+                    searching: function() {
+                        return "Buscando...";
+                    },
+                    inputTooShort: function() {
+                        return "Digite pelo menos 2 caracteres";
+                    }
+                },
+                ajax: {
+                    url: '@Url.Action("BuscarMembros", "Membros")',
+                    dataType: 'json',
+                    delay: 300,
+                    data: function(params) {
+                        return {
+                            term: params.term || ''
+                        };
+                    },
+                    processResults: function(data) {
+                        // Adicionar opção vazia no início
+                        var results = [{
+                            id: '',
+                            text: 'Selecione o membro (opcional)'
+                        }];
+                        
+                        // Adicionar resultados da busca
+                        data.forEach(function(item) {
+                            results.push({
+                                id: item.id,
+                                text: item.text + (item.apelido ? ' (' + item.apelido + ')' : ''),
+                                centroCusto: item.centroCustoNome
+                            });
+                        });
+                        
+                        return {
+                            results: results
+                        };
+                    },
+                    cache: true
+                },
+                minimumInputLength: 0,
+                templateResult: formatMembro,
+                templateSelection: formatMembroSelection
+            });
+
+            // Formatar resultado no dropdown
+            function formatMembro(membro) {
+                if (!membro.id) {
+                    return membro.text;
+                }
+                
+                var $membro = $(
+                    '<div class="d-flex flex-column">' +
+                        '<div class="fw-semibold">' + membro.text + '</div>' +
+                        (membro.centroCusto ? '<small class="text-muted">' + membro.centroCusto + '</small>' : '') +
+                    '</div>'
+                );
+                return $membro;
+            }
+
+            // Formatar seleção
+            function formatMembroSelection(membro) {
+                return membro.text || membro.id;
+            }
+
+            // Se houver um membro selecionado, carregar seus dados
+            @if (Model.MembroId.HasValue)
+            {
+                <text>
+                var membroId = @Model.MembroId;
+                var membroNome = '@(Model.Membro?.NomeCompleto ?? "")';
+                
+                if (membroId && membroNome) {
+                    var option = new Option(membroNome, membroId, true, true);
+                    $('#MembroId').append(option).trigger('change');
+                }
+                </text>
+            }
         });
     </script>
 }
