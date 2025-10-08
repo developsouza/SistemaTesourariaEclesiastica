@@ -7,7 +7,7 @@ namespace SistemaTesourariaEclesiastica.Data
 {
     /// <summary>
     /// Classe responsável pela inicialização de dados no banco
-    /// Inclui: Roles, Usuários, Centros de Custo, Plano de Contas, Meios de Pagamento e Regras de Rateio
+    /// Inclui: Roles, Usuários, Centros de Custo, Plano de Contas e Meios de Pagamento
     /// </summary>
     public static class SeedData
     {
@@ -29,7 +29,7 @@ namespace SistemaTesourariaEclesiastica.Data
                 await CreateRoles(roleManager, logger);
 
                 // 2. Criar centros de custo
-                var (sede, caixaEvangelizacao) = await CreateCentrosCusto(context, logger);
+                var sede = await CreateCentrosCusto(context, logger);
 
                 // 3. Criar usuários padrão
                 await CreateDefaultUsers(userManager, sede.Id, logger);
@@ -39,9 +39,6 @@ namespace SistemaTesourariaEclesiastica.Data
 
                 // 5. Criar Meios de Pagamento
                 await CreateMeiosDePagamento(context, logger);
-
-                // 6. Criar Regras de Rateio
-                await CreateRegrasRateio(context, sede.Id, caixaEvangelizacao.Id, logger);
 
                 logger.LogInformation("========================================");
                 logger.LogInformation("SEED DE DADOS CONCLUÍDO COM SUCESSO!");
@@ -87,7 +84,7 @@ namespace SistemaTesourariaEclesiastica.Data
         // ==========================================
         // 2. CRIAÇÃO DE CENTROS DE CUSTO
         // ==========================================
-        private static async Task<(CentroCusto sede, CentroCusto caixaEvangelizacao)> CreateCentrosCusto(
+        private static async Task<CentroCusto> CreateCentrosCusto(
             ApplicationDbContext context,
             ILogger logger)
         {
@@ -114,53 +111,7 @@ namespace SistemaTesourariaEclesiastica.Data
                 logger.LogInformation($"   ○ Centro de Custo 'Sede' já existe (ID: {sede.Id})");
             }
 
-            // Caixa de Evangelização
-            var caixaEvangelizacao = await context.CentrosCusto
-                .FirstOrDefaultAsync(c => c.Nome == "Caixa de Evangelização");
-
-            if (caixaEvangelizacao == null)
-            {
-                caixaEvangelizacao = new CentroCusto
-                {
-                    Nome = "Caixa de Evangelização",
-                    Tipo = TipoCentroCusto.Financeiro,
-                    Descricao = "Fundo destinado aos recolhimentos automáticos de 10% das entradas da Sede",
-                    Ativo = true,
-                    DataCriacao = DateTime.Now
-                };
-                context.CentrosCusto.Add(caixaEvangelizacao);
-                await context.SaveChangesAsync();
-                logger.LogInformation($"   ✓ Centro de Custo 'Caixa de Evangelização' criado (ID: {caixaEvangelizacao.Id})");
-            }
-            else
-            {
-                logger.LogInformation($"   ○ Centro de Custo 'Caixa de Evangelização' já existe (ID: {caixaEvangelizacao.Id})");
-            }
-
-            // Congregação de Exemplo (apenas em desenvolvimento)
-            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            if (environment == "Development")
-            {
-                var congregacaoExemplo = await context.CentrosCusto
-                    .FirstOrDefaultAsync(c => c.Nome == "Congregação Exemplo");
-
-                if (congregacaoExemplo == null)
-                {
-                    congregacaoExemplo = new CentroCusto
-                    {
-                        Nome = "Congregação Exemplo",
-                        Tipo = TipoCentroCusto.Congregacao,
-                        Descricao = "Congregação de exemplo para testes (ambiente de desenvolvimento)",
-                        Ativo = true,
-                        DataCriacao = DateTime.Now
-                    };
-                    context.CentrosCusto.Add(congregacaoExemplo);
-                    await context.SaveChangesAsync();
-                    logger.LogInformation($"   ✓ Centro de Custo 'Congregação Exemplo' criado (ID: {congregacaoExemplo.Id})");
-                }
-            }
-
-            return (sede, caixaEvangelizacao);
+            return sede;
         }
 
         // ==========================================
@@ -315,7 +266,6 @@ namespace SistemaTesourariaEclesiastica.Data
                 new { Nome = "INSS", Descricao = "INSS" },
                 new { Nome = "Pagamento de Inscrição da CGADB", Descricao = "Pagamento de Inscrição da CGADB" },
                 new { Nome = "Previdência Privada", Descricao = "Previdência Privada" },
-                new { Nome = "Caixa de Evangelização", Descricao = "Caixa de Evangelização - Recolhimento de 10%" },
                 
                 // Despesas Tributárias
                 new { Nome = "IPTU", Descricao = "IPTU" },
@@ -380,47 +330,6 @@ namespace SistemaTesourariaEclesiastica.Data
             }
 
             await context.SaveChangesAsync();
-        }
-
-        // ==========================================
-        // 6. CRIAÇÃO DE REGRAS DE RATEIO
-        // ==========================================
-        private static async Task CreateRegrasRateio(
-            ApplicationDbContext context,
-            int sedeId,
-            int caixaEvangelizacaoId,
-            ILogger logger)
-        {
-            logger.LogInformation("6. Criando Regras de Rateio...");
-
-            // Verificar se já existe uma regra de rateio da Sede para o Caixa de Evangelização
-            var regraExiste = await context.RegrasRateio.AnyAsync(r =>
-                r.CentroCustoOrigemId == sedeId &&
-                r.CentroCustoDestinoId == caixaEvangelizacaoId);
-
-            if (!regraExiste)
-            {
-                context.RegrasRateio.Add(new RegraRateio
-                {
-                    Nome = "Rateio Padrão da Sede - Caixa de Evangelização",
-                    Descricao = "Recolhimento automático de 10% sobre as receitas totais da Sede para o Caixa de Evangelização",
-                    CentroCustoOrigemId = sedeId,
-                    CentroCustoDestinoId = caixaEvangelizacaoId,
-                    Percentual = 10.00m,
-                    Ativo = true,
-                    DataCriacao = DateTime.Now
-                });
-
-                await context.SaveChangesAsync();
-                logger.LogInformation($"   ✓ Regra de Rateio '10% para Caixa de Evangelização' criada");
-                logger.LogInformation($"      Origem: Sede (ID: {sedeId})");
-                logger.LogInformation($"      Destino: Caixa de Evangelização (ID: {caixaEvangelizacaoId})");
-                logger.LogInformation($"      Percentual: 10%");
-            }
-            else
-            {
-                logger.LogInformation($"   ○ Regra de Rateio já existe");
-            }
         }
     }
 }
