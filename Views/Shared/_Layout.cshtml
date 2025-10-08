@@ -9,7 +9,6 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="csrf-token" content="@Html.AntiForgeryToken()" />
     <title>@ViewData["Title"] - Tesouraria AD Jacumã</title>
 
     <!-- Bootstrap 5.3 -->
@@ -44,11 +43,11 @@
         var roles = await UserManager.GetRolesAsync(user);
         var primaryRole = roles.FirstOrDefault() ?? "Usuário";
 
-        <!-- Wrapper Principal -->
+        @* Wrapper Principal *@
         <div class="wrapper">
-            <!-- Sidebar -->
+            @* Sidebar *@
             <aside class="sidebar" id="sidebar">
-                <!-- Header -->
+                @* Header *@
                 <div class="sidebar-header">
                     <a href="/" class="sidebar-brand">
                         <i class="bi bi-bank2"></i>
@@ -60,7 +59,7 @@
                 </div>
 
                 <div class="sidebar-content">
-                    <!-- Perfil -->
+                    @* Perfil *@
                     <div class="profile-card">
                         <div class="profile-avatar">
                             @user?.NomeCompleto?.Substring(0, 1).ToUpper()
@@ -75,7 +74,7 @@
                         </div>
                     </div>
 
-                    <!-- Menu -->
+                    @* Menu *@
                     <ul class="nav-menu">
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="Home" asp-action="Index">
@@ -245,18 +244,18 @@
                 </div>
             </aside>
 
-            <!-- Conteúdo -->
+            @* Conteúdo *@
             <div class="content" id="content">
-                <!-- Navbar -->
+                @* Navbar *@
                 <nav class="navbar navbar-expand-lg navbar-light">
                     <div class="container-fluid">
-                        <!-- Botão Menu Mobile -->
+                        @* Botão Menu Mobile *@
                         <button class="btn btn-link d-lg-none p-0 me-3" id="sidebarCollapseTop">
                             <i class="bi bi-list fs-3"></i>
                         </button>
 
                         <div class="ms-auto d-flex align-items-center gap-2 gap-md-3">
-                            <!-- Tema -->
+                            @* Tema *@
                             <div class="dropdown">
                                 <button class="btn btn-link dropdown-toggle p-2" type="button" id="themeDropdown"
                                         data-bs-toggle="dropdown" aria-expanded="false" title="Tema">
@@ -284,7 +283,7 @@
                                 </ul>
                             </div>
 
-                            <!-- Perfil -->
+                            @* Perfil *@
                             <div class="dropdown">
                                 <button class="btn btn-link dropdown-toggle d-flex align-items-center p-2 text-decoration-none"
                                         type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -297,7 +296,7 @@
                                     </div>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border" style="min-width: 280px;">
-                                    <!-- Cabeçalho do Dropdown -->
+                                    @* Cabeçalho do Dropdown *@
                                     <li class="dropdown-header p-3" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%);">
                                         <div class="d-flex align-items-center mb-2">
                                             <div class="user-avatar-dropdown me-3 d-flex align-items-center justify-content-center rounded-circle bg-primary text-white fw-bold"
@@ -324,7 +323,7 @@
 
                                     <li><hr class="dropdown-divider my-2"></li>
 
-                                    <!-- Seção: Minha Conta -->
+                                    @* Seção: Minha Conta *@
                                     <li class="px-3 py-1">
                                         <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">
                                             Minha Conta
@@ -357,7 +356,7 @@
 
                                     <li><hr class="dropdown-divider my-2"></li>
 
-                                    <!-- Seção: Preferências -->
+                                    @* Seção: Preferências *@
                                     <li class="px-3 py-1">
                                         <small class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.5px;">
                                             Preferências
@@ -378,7 +377,7 @@
 
                                     <li><hr class="dropdown-divider my-2"></li>
 
-                                    <!-- Sair -->
+                                    @* Sair *@
                                     <li>
                                         <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline w-100">
                                             <button type="submit" class="dropdown-item d-flex align-items-center py-2 text-danger">
@@ -399,9 +398,9 @@
                     </div>
                 </nav>
 
-                <!-- Main -->
+                @* Main *@
                 <main role="main" class="main-content">
-                    <!-- Breadcrumb -->
+                    @* Breadcrumb *@
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item">
@@ -418,7 +417,7 @@
                         </ol>
                     </nav>
 
-                    <!-- Alertas -->
+                    @* Alertas *@
                     @if (TempData["Sucesso"] != null)
                     {
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -455,7 +454,7 @@
         </main>
     }
 
-    <!-- Loading -->
+    @* Loading *@
     <div id="loadingOverlay" class="loading-overlay d-none">
         <div class="loading-content">
             <div class="spinner-border text-primary" role="status">
@@ -465,10 +464,10 @@
         </div>
     </div>
 
-    <!-- Toast -->
+    @* Toast *@
     <div class="toast-container position-fixed top-0 end-0 p-3"></div>
 
-    <!-- Scripts -->
+    @* Scripts *@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
@@ -510,4 +509,4 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
-</html>
+</html></html>

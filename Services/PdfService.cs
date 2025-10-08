@@ -1,5 +1,3 @@
-// Services/PdfService.cs
-
 using iText.Html2pdf;
 using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;

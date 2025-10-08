@@ -166,6 +166,8 @@ class SidebarManager {
         this.sidebar = document.getElementById('sidebar');
         this.content = document.getElementById('content');
         this.backdrop = null;
+        this.tempExpandTimeout = null;
+        this.autoCollapseTimeout = null;
         this.init();
     }
 
@@ -204,6 +206,9 @@ class SidebarManager {
 
         // Marcar link ativo
         this.setActiveLink();
+
+        // Gerenciar cliques em submenus quando recolhido
+        this.setupCollapsedSubmenuBehavior();
     }
 
     createBackdrop() {
@@ -251,12 +256,17 @@ class SidebarManager {
 
     collapse() {
         this.sidebar.classList.add('collapsed');
+        this.sidebar.classList.remove('temp-expanded');
         this.content?.classList.add('expanded');
         localStorage.setItem('sidebarCollapsed', 'true');
+        
+        // Fechar todos os submenus
+        this.closeAllSubmenus();
     }
 
     expand() {
         this.sidebar.classList.remove('collapsed');
+        this.sidebar.classList.remove('temp-expanded');
         this.content?.classList.remove('expanded');
         localStorage.setItem('sidebarCollapsed', 'false');
     }
@@ -292,6 +302,93 @@ class SidebarManager {
             }
         });
     }
+
+    setupCollapsedSubmenuBehavior() {
+        // Detectar cliques em itens com submenu quando sidebar está recolhido
+        document.querySelectorAll('.has-submenu > .nav-link').forEach(menuLink => {
+            menuLink.addEventListener('click', (e) => {
+                const parent = menuLink.closest('.has-submenu');
+                
+                // Se sidebar está recolhido no desktop
+                if (this.sidebar.classList.contains('collapsed') && window.innerWidth > 991) {
+                    e.preventDefault();
+                    this.temporaryExpand(parent);
+                }
+            });
+        });
+
+        // Fechar sidebar recolhido ao clicar em links de submenu
+        document.querySelectorAll('.submenu .nav-link').forEach(submenuLink => {
+            submenuLink.addEventListener('click', () => {
+                if (this.sidebar.classList.contains('collapsed') && 
+                    this.sidebar.classList.contains('temp-expanded') && 
+                    window.innerWidth > 991) {
+                    // Auto-colapsar após um pequeno delay para permitir navegação
+                    setTimeout(() => {
+                        this.autoCollapse();
+                    }, 150);
+                }
+            });
+        });
+
+        // Fechar expansão temporária ao clicar fora do sidebar
+        document.addEventListener('click', (e) => {
+            if (this.sidebar.classList.contains('collapsed') && 
+                this.sidebar.classList.contains('temp-expanded') &&
+                !this.sidebar.contains(e.target) &&
+                window.innerWidth > 991) {
+                this.autoCollapse();
+            }
+        });
+    }
+
+    temporaryExpand(menuItem) {
+        // Limpar timeouts anteriores
+        clearTimeout(this.autoCollapseTimeout);
+        
+        // Adicionar classe de expansão temporária
+        this.sidebar.classList.add('temp-expanded');
+        
+        // Fechar todos os submenus
+        this.closeAllSubmenus();
+        
+        // Abrir o submenu clicado após um pequeno delay para animação
+        setTimeout(() => {
+            if (menuItem) {
+                menuItem.classList.add('show');
+                const submenu = menuItem.querySelector('.submenu');
+                if (submenu) {
+                    submenu.classList.add('show');
+                }
+            }
+        }, 50);
+
+        // Auto-colapsar após 10 segundos se não houver interação
+        this.autoCollapseTimeout = setTimeout(() => {
+            this.autoCollapse();
+        }, 10000);
+    }
+
+    autoCollapse() {
+        // Fechar submenus
+        this.closeAllSubmenus();
+        
+        // Remover expansão temporária
+        this.sidebar.classList.remove('temp-expanded');
+        
+        // Limpar timeout
+        clearTimeout(this.autoCollapseTimeout);
+    }
+
+    closeAllSubmenus() {
+        document.querySelectorAll('.has-submenu.show').forEach(menu => {
+            menu.classList.remove('show');
+            const submenu = menu.querySelector('.submenu');
+            if (submenu) {
+                submenu.classList.remove('show');
+            }
+        });
+    }
 }
 
 // ===== GERENCIADOR DE SUBMENU =====
@@ -303,7 +400,16 @@ class SubmenuManager {
     init() {
         document.querySelectorAll('.has-submenu > .nav-link').forEach(item => {
             item.addEventListener('click', (e) => {
+                const sidebar = document.getElementById('sidebar');
+                
+                // Se sidebar está recolhido no desktop, não processar aqui
+                // (será tratado pelo SidebarManager)
+                if (sidebar && sidebar.classList.contains('collapsed') && window.innerWidth > 991) {
+                    return;
+                }
+
                 e.preventDefault();
+                
                 const parent = item.closest('.has-submenu');
                 const submenu = parent.querySelector('.submenu');
 
