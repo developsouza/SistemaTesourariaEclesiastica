@@ -29,6 +29,36 @@
 </head>
 
 <body class="h-100">
+    <!-- Seletor de Tema -->
+    <div class="theme-selector position-fixed top-0 end-0 m-3" style="z-index: 1050;">
+        <div class="dropdown">
+            <button class="btn btn-light dropdown-toggle shadow-sm" type="button" id="themeDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Selecionar tema">
+                <i id="themeIcon" class="bi bi-sun-fill"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border" aria-labelledby="themeDropdown">
+                <li>
+                    <button class="dropdown-item d-flex align-items-center" type="button" data-theme="light">
+                        <i class="bi bi-sun me-2"></i>
+                        <span>Claro</span>
+                    </button>
+                </li>
+                <li>
+                    <button class="dropdown-item d-flex align-items-center" type="button" data-theme="dark">
+                        <i class="bi bi-moon-stars me-2"></i>
+                        <span>Escuro</span>
+                    </button>
+                </li>
+                <li>
+                    <button class="dropdown-item d-flex align-items-center" type="button" data-theme="auto">
+                        <i class="bi bi-circle-half me-2"></i>
+                        <span>Automático</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
     <!-- Preloader -->
     <div class="preloader" id="preloader">
         <div class="preloader-content">

@@ -3,6 +3,37 @@
    Estilos de Autenticação - login.css
    ========================================== */
 
+/* ===== VARIÁVEIS CSS ===== */
+:root {
+    /* Cores Light Theme */
+    --auth-primary: #2563eb;
+    --auth-primary-hover: #1d4ed8;
+    --auth-bg-main: #ffffff;
+    --auth-bg-panel: #f8fafc;
+    --auth-text-primary: #0f172a;
+    --auth-text-secondary: #64748b;
+    --auth-text-muted: #94a3b8;
+    --auth-border: #e2e8f0;
+    --auth-input-bg: #ffffff;
+    --auth-gradient-start: rgba(37, 99, 235, 0.95);
+    --auth-gradient-end: rgba(30, 64, 175, 0.95);
+}
+
+/* Dark Theme */
+[data-bs-theme="dark"] {
+    --auth-primary: #3b82f6;
+    --auth-primary-hover: #60a5fa;
+    --auth-bg-main: #1e293b;
+    --auth-bg-panel: #0f172a;
+    --auth-text-primary: #f1f5f9;
+    --auth-text-secondary: #cbd5e1;
+    --auth-text-muted: #94a3b8;
+    --auth-border: #475569;
+    --auth-input-bg: #334155;
+    --auth-gradient-start: rgba(30, 41, 59, 0.95);
+    --auth-gradient-end: rgba(15, 23, 42, 0.95);
+}
+
 /* ===== RESET E BASE ===== */
 * {
     margin: 0;
@@ -14,11 +45,14 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
+    background: var(--auth-bg-main);
+    color: var(--auth-text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* ===== BACKGROUND E CONTAINERS ===== */
 .bg-gradient-primary {
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    background: linear-gradient(135deg, var(--auth-gradient-start) 0%, var(--auth-gradient-end) 100%);
     min-height: 100vh;
     position: relative;
     overflow: hidden;
@@ -43,6 +77,46 @@ body {
     z-index: 1;
 }
 
+/* ===== SELETOR DE TEMA ===== */
+.theme-selector .btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--auth-border);
+    background: var(--auth-bg-main);
+    color: var(--auth-text-primary);
+    transition: all 0.3s ease;
+}
+
+    .theme-selector .btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+.theme-selector .dropdown-menu {
+    background: var(--auth-bg-main);
+    border: 1px solid var(--auth-border);
+    min-width: 150px;
+}
+
+.theme-selector .dropdown-item {
+    color: var(--auth-text-primary);
+    transition: all 0.2s ease;
+}
+
+    .theme-selector .dropdown-item:hover {
+        background: var(--auth-bg-panel);
+        color: var(--auth-primary);
+    }
+
+    .theme-selector .dropdown-item.active {
+        background: var(--auth-primary);
+        color: white;
+    }
+
 /* ===== PRELOADER ===== */
 .preloader {
     position: fixed;
@@ -50,7 +124,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    background: linear-gradient(135deg, var(--auth-gradient-start) 0%, var(--auth-gradient-end) 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -97,7 +171,7 @@ body {
 
 /* ===== PAINEL ESQUERDO (LOGIN/REGISTER) ===== */
 .bg-login-image {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(29, 78, 216, 0.95) 100%), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="church-pattern" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse"><circle cx="40" cy="40" r="2" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="1000" height="1000" fill="url(%23church-pattern)"/></svg>');
+    background: linear-gradient(135deg, var(--auth-gradient-start) 0%, var(--auth-gradient-end) 100%), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="church-pattern" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse"><circle cx="40" cy="40" r="2" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="1000" height="1000" fill="url(%23church-pattern)"/></svg>');
     background-size: cover;
     background-position: center;
     position: relative;
@@ -152,9 +226,10 @@ body {
 
 /* ===== PAINEL DO FORMULÁRIO ===== */
 .login-form-panel {
-    background: white;
+    background: var(--auth-bg-main);
     position: relative;
     overflow: hidden;
+    transition: background-color 0.3s ease;
 }
 
     .login-form-panel::before {
@@ -168,32 +243,49 @@ body {
         pointer-events: none;
     }
 
+/* Dark mode ajustes para painel de formulário */
+[data-bs-theme="dark"] .login-form-panel::before {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+}
+
 /* ===== CARDS ===== */
 .card {
     border-radius: 1rem;
     overflow: hidden;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    background: var(--auth-bg-main);
+    border: 1px solid var(--auth-border);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 /* ===== FORM CONTROLS ===== */
 .form-control,
 .form-select {
     border-radius: 0.5rem;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--auth-border);
     padding: 0.75rem 1rem;
     transition: all 0.3s ease;
+    background: var(--auth-input-bg);
+    color: var(--auth-text-primary);
 }
 
     .form-control:focus,
     .form-select:focus {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        border-color: var(--auth-primary);
+        box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25);
         outline: none;
+        background: var(--auth-input-bg);
+        color: var(--auth-text-primary);
     }
 
     .form-control::placeholder {
-        color: #94a3b8;
+        color: var(--auth-text-muted);
     }
+
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+}
 
 .form-control-lg {
     padding: 0.875rem 1.125rem;
@@ -201,18 +293,24 @@ body {
 }
 
 .form-control-user {
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--auth-border);
     border-radius: 0.5rem;
     padding: 0.875rem 1.125rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 1rem;
+    background: var(--auth-input-bg);
+    color: var(--auth-text-primary);
 }
 
     .form-control-user:focus {
-        border-color: #2563eb;
+        border-color: var(--auth-primary);
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-        background-color: #ffffff;
+        background-color: var(--auth-input-bg);
     }
+
+[data-bs-theme="dark"] .form-control-user:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
 
 /* ===== INPUT GROUPS ===== */
 .input-group {
@@ -224,10 +322,10 @@ body {
     }
 
 .input-group-text {
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--auth-border);
     border-right: none;
-    background-color: #f8fafc;
-    color: #64748b;
+    background-color: var(--auth-bg-panel);
+    color: var(--auth-text-secondary);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -236,13 +334,17 @@ body {
 }
 
 .input-group:focus-within .input-group-text {
-    border-color: #86b7fe;
-    background-color: #eff6ff;
-    color: #2563eb;
+    border-color: var(--auth-primary);
+    background-color: var(--auth-primary-hover);
+    color: var(--auth-primary);
+}
+
+[data-bs-theme="dark"] .input-group:focus-within .input-group-text {
+    background-color: rgba(59, 130, 246, 0.15);
 }
 
 .input-group:focus-within .form-control {
-    border-color: #86b7fe;
+    border-color: var(--auth-primary);
 }
 
 /* ===== BOTÕES ===== */
@@ -263,10 +365,20 @@ body {
         background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
         transform: translateY(-2px);
         box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+        color: white;
     }
 
     .btn-primary:active {
         transform: translateY(0);
+    }
+
+[data-bs-theme="dark"] .btn-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+    [data-bs-theme="dark"] .btn-primary:hover {
+        background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+        box-shadow: 0 8px 16px rgba(59, 130, 246, 0.4);
     }
 
 .btn-user {
@@ -310,6 +422,18 @@ body {
         transform: translateY(0);
     }
 
+.btn-outline-secondary {
+    border: 1px solid var(--auth-border);
+    color: var(--auth-text-primary);
+    background: transparent;
+}
+
+    .btn-outline-secondary:hover {
+        background: var(--auth-bg-panel);
+        border-color: var(--auth-border);
+        color: var(--auth-text-primary);
+    }
+
 .btn-loading {
     position: relative;
     pointer-events: none;
@@ -333,24 +457,29 @@ body {
 
 /* ===== CHECKBOX ===== */
 .form-check-input {
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--auth-border);
     border-radius: 0.25rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background-color: var(--auth-input-bg);
 }
 
     .form-check-input:checked {
-        background-color: #2563eb;
-        border-color: #2563eb;
+        background-color: var(--auth-primary);
+        border-color: var(--auth-primary);
     }
 
     .form-check-input:focus {
-        border-color: #2563eb;
+        border-color: var(--auth-primary);
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
         outline: none;
     }
 
+[data-bs-theme="dark"] .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
 .form-check-label {
-    color: #64748b;
+    color: var(--auth-text-secondary);
     font-weight: 500;
     user-select: none;
     cursor: pointer;
@@ -404,10 +533,15 @@ body {
 /* ===== LINKS ===== */
 a {
     transition: all 0.3s ease;
+    color: var(--auth-primary);
 }
 
+    a:hover {
+        color: var(--auth-primary-hover);
+    }
+
 .login-form-panel a {
-    color: #2563eb;
+    color: var(--auth-primary);
     text-decoration: none;
     font-weight: 600;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -421,7 +555,7 @@ a {
         left: 0;
         width: 0;
         height: 2px;
-        background: #2563eb;
+        background: var(--auth-primary);
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -430,7 +564,7 @@ a {
     }
 
     .login-form-panel a:hover {
-        color: #1e40af;
+        color: var(--auth-primary-hover);
     }
 
 /* ===== DIVIDER ===== */
@@ -439,7 +573,7 @@ a {
     align-items: center;
     text-align: center;
     margin: 1.5rem 0;
-    color: #94a3b8;
+    color: var(--auth-text-muted);
     font-size: 0.875rem;
     font-weight: 500;
 }
@@ -448,7 +582,7 @@ a {
     .login-divider::after {
         content: '';
         flex: 1;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--auth-border);
     }
 
     .login-divider::before {
@@ -483,11 +617,15 @@ a {
     transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-    .loading-overlay.d-none {
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-    }
+[data-bs-theme="dark"] .loading-overlay {
+    background: rgba(15, 23, 42, 0.97);
+}
+
+.loading-overlay.d-none {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
 
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar {
@@ -496,16 +634,16 @@ a {
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--auth-bg-panel);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: var(--auth-text-muted);
     border-radius: 4px;
 }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
+        background: var(--auth-text-secondary);
     }
 
 /* ===== UTILITIES ===== */
@@ -530,6 +668,24 @@ a {
 
 .shadow-lg {
     box-shadow: 0 10px 15px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== DARK MODE SPECIFIC ===== */
+[data-bs-theme="dark"] .text-muted {
+    color: var(--auth-text-muted) !important;
+}
+
+[data-bs-theme="dark"] .bg-white {
+    background: var(--auth-bg-main) !important;
+}
+
+[data-bs-theme="dark"] .bg-light {
+    background: var(--auth-bg-panel) !important;
+}
+
+[data-bs-theme="dark"] hr {
+    border-color: var(--auth-border);
+    opacity: 0.3;
 }
 
 /* ===== ANIMAÇÕES ===== */
@@ -673,6 +829,10 @@ a {
     .card {
         border-radius: 0.75rem;
     }
+
+    .theme-selector {
+        margin: 0.75rem !important;
+    }
 }
 
 /* ===== MELHORIAS DE ACESSIBILIDADE ===== */
@@ -685,7 +845,7 @@ a {
 
 /* Remove outline padrão mas mantém acessibilidade */
 *:focus-visible {
-    outline: 2px solid #2563eb;
+    outline: 2px solid var(--auth-primary);
     outline-offset: 2px;
 }
 
@@ -694,7 +854,8 @@ a {
     .preloader,
     .btn,
     .form-control,
-    .input-group-text {
+    .input-group-text,
+    .theme-selector {
         display: none !important;
     }
 }

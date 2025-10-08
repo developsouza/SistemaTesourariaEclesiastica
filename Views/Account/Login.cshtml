@@ -10,7 +10,7 @@
         <!-- Painel Esquerdo - Informações -->
         <div class="col-lg-6 d-none d-lg-flex"
              style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(30, 64, 175, 0.95) 100%),
-             url('data:image /svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 1000 1000&quot;><defs><pattern id=&quot;church-pattern&quot; x=&quot;0&quot; y=&quot;0&quot; width=&quot;80&quot; height=&quot;80&quot; patternUnits=&quot;userSpaceOnUse&quot;><circle cx=&quot;40&quot; cy=&quot;40&quot; r=&quot;2&quot; fill=&quot;rgba(255,255,255,0.1)&quot;/></pattern></defs><rect width=&quot;1000&quot; height=&quot;1000&quot; fill=&quot;url(%23church-pattern)&quot;/></svg>');
+             url('data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 1000 1000&quot;><defs><pattern id=&quot;church-pattern&quot; x=&quot;0&quot; y=&quot;0&quot; width=&quot;80&quot; height=&quot;80&quot; patternUnits=&quot;userSpaceOnUse&quot;><circle cx=&quot;40&quot; cy=&quot;40&quot; r=&quot;2&quot; fill=&quot;rgba(255,255,255,0.1)&quot;/></pattern></defs><rect width=&quot;1000&quot; height=&quot;1000&quot; fill=&quot;url(%23church-pattern)&quot;/></svg>');
                     background-size: cover; background-position: center;">
             <div class="d-flex flex-column justify-content-center align-items-center w-100 p-5 text-white">
                 <div class="text-center mb-5" style="animation: fadeInDown 0.8s ease-out;">
@@ -78,12 +78,12 @@
         </div>
 
         <!-- Painel Direito - Formulário -->
-        <div class="col-lg-6 d-flex align-items-center justify-content-center bg-white position-relative">
+        <div class="col-lg-6 d-flex align-items-center justify-content-center login-form-panel position-relative">
             <div class="w-100 p-4 p-md-5" style="max-width: 450px; animation: fadeInRight 0.8s ease-out;">
                 <!-- Logo Mobile -->
                 <div class="text-center mb-5 d-lg-none">
                     <div class="mb-3">
-                        <i class="bi bi-bank2" style="font-size: 4rem; color: #2563eb;"></i>
+                        <i class="bi bi-bank2" style="font-size: 4rem; color: var(--auth-primary);"></i>
                     </div>
                     <h2 class="fw-bold">Tesouraria</h2>
                 </div>
@@ -173,14 +173,14 @@
                     <!-- E-mail -->
                     <div class="mb-3">
                         <label asp-for="Email" class="form-label fw-semibold">
-                            <i class="bi bi-envelope text-muted me-2"></i>E-mail
+                            <i class="bi bi-envelope me-2" style="color: var(--auth-text-muted);"></i>E-mail
                         </label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0">
+                            <span class="input-group-text">
                                 <i class="bi bi-person"></i>
                             </span>
                             <input asp-for="Email" type="email"
-                                   class="form-control form-control-lg border-start-0"
+                                   class="form-control form-control-lg"
                                    placeholder="seu@email.com"
                                    required
                                    autocomplete="username"
@@ -192,14 +192,14 @@
                     <!-- Senha -->
                     <div class="mb-3">
                         <label asp-for="Password" class="form-label fw-semibold">
-                            <i class="bi bi-lock text-muted me-2"></i>Senha
+                            <i class="bi bi-lock me-2" style="color: var(--auth-text-muted);"></i>Senha
                         </label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light border-end-0">
+                            <span class="input-group-text">
                                 <i class="bi bi-key"></i>
                             </span>
                             <input asp-for="Password" type="password"
-                                   class="form-control form-control-lg border-start-0"
+                                   class="form-control form-control-lg"
                                    placeholder="Digite sua senha"
                                    required
                                    autocomplete="current-password" />
@@ -232,14 +232,14 @@
                     <!-- Divider -->
                     <div class="position-relative my-4">
                         <hr class="text-muted">
-                        <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small">ou</span>
+                        <span class="position-absolute top-50 start-50 translate-middle px-3 text-muted small" style="background: var(--auth-bg-main);">ou</span>
                     </div>
 
                     <!-- Primeiro Acesso -->
                     <div class="text-center">
                         <p class="mb-0 text-muted">
                             Primeiro acesso?
-                            <a href="#" class="text-primary fw-semibold text-decoration-none" onclick="alert('Entre em contato com o administrador do sistema para criar sua conta.'); return false;">
+                            <a href="#" class="fw-semibold text-decoration-none" onclick="alert('Entre em contato com o administrador do sistema para criar sua conta.'); return false;">
                                 Entre em contato com o administrador
                             </a>
                         </p>
@@ -403,7 +403,7 @@
         }
     }
 
-    /* Alerts personalizados */
+    /* Alerts personalizados com suporte a tema */
     .alert {
         border-radius: 0.5rem;
         border: none;
@@ -413,105 +413,54 @@
     .alert-danger {
         background-color: #fef2f2;
         color: #991b1b;
+        border-left: 4px solid #dc2626;
+    }
+
+    [data-bs-theme="dark"] .alert-danger {
+        background-color: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border-left: 4px solid #ef4444;
     }
 
     .alert-warning {
         background-color: #fffbeb;
         color: #92400e;
+        border-left: 4px solid #f59e0b;
+    }
+
+    [data-bs-theme="dark"] .alert-warning {
+        background-color: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+        border-left: 4px solid #f59e0b;
     }
 
     .alert-success {
         background-color: #f0fdf4;
         color: #166534;
+        border-left: 4px solid #10b981;
+    }
+
+    [data-bs-theme="dark"] .alert-success {
+        background-color: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border-left: 4px solid #10b981;
     }
 
     .alert-info {
         background-color: #eff6ff;
         color: #1e40af;
+        border-left: 4px solid #3b82f6;
+    }
+
+    [data-bs-theme="dark"] .alert-info {
+        background-color: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        border-left: 4px solid #3b82f6;
     }
 
     .alert i {
         flex-shrink: 0;
     }
-
-    /* Form Controls */
-    .form-control-lg {
-        border-radius: 0.5rem;
-        padding: 0.75rem 1rem;
-    }
-
-    .form-control:focus {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-
-    .input-group-text {
-        background-color: #f8f9fa;
-        border-right: none;
-    }
-
-    .input-group .form-control {
-        border-left: none;
-    }
-
-    .input-group:focus-within .input-group-text {
-        border-color: #86b7fe;
-        background-color: #eff6ff;
-        color: #2563eb;
-    }
-
-    .input-group:focus-within .form-control {
-        border-color: #86b7fe;
-    }
-
-    /* Botões */
-    .btn-primary {
-        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-        border: none;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        transition: all 0.3s ease;
-    }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-    .btn-outline-secondary:focus {
-        box-shadow: none;
-    }
-
-    /* Checkbox */
-    .form-check-input {
-        border: 2px solid #e2e8f0;
-        border-radius: 0.25rem;
-        transition: all 0.3s ease;
-    }
-
-        .form-check-input:checked {
-            background-color: #2563eb;
-            border-color: #2563eb;
-        }
-
-        .form-check-input:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.25);
-        }
-
-    /* Links */
-    a {
-        transition: all 0.3s ease;
-    }
-
-        a:hover {
-            color: #1d4ed8 !important;
-        }
 
     /* Responsividade */
     @@media (max-width: 991.98px) {
