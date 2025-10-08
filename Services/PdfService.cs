@@ -468,7 +468,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
             var entradasPorOrigem = new Dictionary<string, (List<DetalheFechamento> detalhes, bool ehSede)>();
 
-            // ✅ CORREÇÃO: Adicionar entradas da SEDE PRIMEIRO
+            // ✅ SEMPRE BUSCAR ENTRADAS DA SEDE PRIMEIRO (do próprio fechamento principal)
             var entradasSede = fechamento.DetalhesFechamento
                 .Where(d => d.TipoMovimento == "Entrada")
                 .OrderBy(d => d.Data)
@@ -570,7 +570,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
             var saidasPorOrigem = new Dictionary<string, (List<DetalheFechamento> detalhes, bool ehSede)>();
 
-            // ✅ CORREÇÃO: Adicionar saídas da SEDE PRIMEIRO
+            // ✅ SEMPRE BUSCAR SAÍDAS DA SEDE PRIMEIRO (do próprio fechamento principal)
             var saidasSede = fechamento.DetalhesFechamento
                 .Where(d => d.TipoMovimento == "Saida")
                 .OrderBy(d => d.Data)

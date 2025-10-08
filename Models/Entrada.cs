@@ -57,6 +57,25 @@ namespace SistemaTesourariaEclesiastica.Models
         [Display(Name = "Data de Criação")]
         public DateTime DataCriacao { get; set; } = DateTime.Now;
 
+        // ✅ NOVOS CAMPOS PARA CONTROLE DE FECHAMENTOS
+        /// <summary>
+        /// Indica se este lançamento já foi incluído em algum fechamento
+        /// </summary>
+        [Display(Name = "Incluída em Fechamento?")]
+        public bool IncluidaEmFechamento { get; set; } = false;
+
+        /// <summary>
+        /// ID do fechamento que incluiu este lançamento
+        /// </summary>
+        [Display(Name = "Fechamento que Incluiu")]
+        public int? FechamentoQueIncluiuId { get; set; }
+
+        /// <summary>
+        /// Data em que foi incluído no fechamento
+        /// </summary>
+        [Display(Name = "Data de Inclusão no Fechamento")]
+        public DateTime? DataInclusaoFechamento { get; set; }
+
         // Navigation properties - ADICIONAR [ValidateNever] para evitar validação
         [ValidateNever]
         public virtual MeioDePagamento MeioDePagamento { get; set; } = null!;
@@ -75,5 +94,8 @@ namespace SistemaTesourariaEclesiastica.Models
 
         [ValidateNever]
         public virtual ApplicationUser Usuario { get; set; } = null!;
+
+        [ValidateNever]
+        public virtual FechamentoPeriodo? FechamentoQueIncluiu { get; set; }
     }
 }

@@ -1,123 +1,131 @@
-@model SistemaTesourariaEclesiastica.Models.FechamentoPeriodo
+@model SistemaTesourariaEclesiastica.ViewModels.FechamentoUnificadoViewModel
 
 @{
-    ViewData["Title"] = "Novo Fechamento";
+    ViewData["Title"] = Model.EhSede ? "Fechamento da SEDE" : "Fechamento de Período";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-0">
-            <i class="bi bi-calendar-check me-2"></i>
-            Novo Fechamento de Período
-        </h1>
-        <p class="text-muted mb-0">Submeter fechamento para aprovação</p>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-@(Model.EhSede ? "building" : "calendar-check") me-2 text-primary"></i>
+                @(Model.EhSede ? "Fechamento de Período - SEDE" : "Fechamento de Período")
+            </h1>
+            <p class="text-muted mb-0">
+                @if (Model.EhSede)
+                {
+                    <text>Prestação de contas consolidada da SEDE</text>
+                }
+                else
+                {
+                    <text>Prestação de contas de @Model.NomeCentroCusto</text>
+                }
+            </p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
+        </a>
     </div>
-    <a asp-action="Index" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-2"></i>
-        Voltar
-    </a>
-</div>
 
-<form asp-action="Create" method="post" id="formFechamento">
-    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <!-- Alert Informativo -->
+    @if (Model.EhSede)
+    {
+        <div class="alert alert-info mb-4">
+            <h5 class="alert-heading">
+                <i class="bi bi-info-circle me-2"></i>Como funciona o Fechamento da SEDE?
+            </h5>
+            <hr>
+            <ol class="mb-0 small">
+                <li>Selecione o período do fechamento da SEDE</li>
+                <li>O sistema mostrará as prestações das congregações <strong>aprovadas e pendentes de processamento</strong></li>
+                <li>Selecione quais prestações deseja incluir neste fechamento</li>
+                <li>Os valores das congregações serão <strong>somados</strong> aos valores da SEDE</li>
+                <li>O <strong>rateio será aplicado sobre o total consolidado</strong></li>
+                <li>As prestações incluídas serão <strong>marcadas como processadas</strong></li>
+            </ol>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info mb-4">
+            <h5 class="alert-heading">
+                <i class="bi bi-info-circle me-2"></i>Informações sobre o Fechamento
+            </h5>
+            <hr>
+            <p class="mb-1 small">
+                O sistema calculará automaticamente:
+            </p>
+            <ul class="small mb-0">
+                <li><strong>Balanço Físico:</strong> Dinheiro em espécie que deve ser repassado à Sede</li>
+                <li><strong>Balanço Digital:</strong> Valores já depositados (PIX, transferências) - apenas informativo</li>
+                <li>Após aprovação, este fechamento estará disponível para ser incluído no fechamento da SEDE</li>
+            </ul>
+        </div>
+    }
 
-    <div class="row">
-        <!-- Coluna Principal -->
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Informações do Fechamento
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <!-- Centro de Custo -->
-                    <div class="mb-3">
-                        <label asp-for="CentroCustoId" class="form-label required"></label>
-                        <select asp-for="CentroCustoId" class="form-select" asp-items="ViewBag.CentrosCusto">
-                            <option value="">Selecione o centro de custo...</option>
-                        </select>
-                        <span asp-validation-for="CentroCustoId" class="text-danger"></span>
+    <form asp-action="Create" method="post">
+        <input type="hidden" asp-for="CentroCustoId" />
+        <input type="hidden" asp-for="NomeCentroCusto" />
+        <input type="hidden" asp-for="EhSede" />
+
+        <div class="row g-4">
+            <!-- Coluna Esquerda - Dados do Fechamento -->
+            <div class="@(Model.EhSede && Model.FechamentosDisponiveis.Any() ? "col-lg-5" : "col-lg-12")">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-check me-2"></i>
+                            Dados do Fechamento
+                        </h5>
                     </div>
-
-                    <!-- NOVO: Tipo de Fechamento -->
-                    <div class="mb-3">
-                        <label asp-for="TipoFechamento" class="form-label required"></label>
-                        <select asp-for="TipoFechamento" class="form-select" asp-items="Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.TipoFechamento>()">
-                        </select>
-                        <span asp-validation-for="TipoFechamento" class="text-danger"></span>
-                        <div class="form-text">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Escolha entre fechamento de um dia específico ou de um mês inteiro
-                        </div>
-                    </div>
-
-                    <!-- FECHAMENTO DIÁRIO -->
-                    <div id="camposFechamentoDiario" style="display: none;">
-                        <div class="alert alert-info">
-                            <i class="bi bi-calendar-day me-2"></i>
-                            <strong>Fechamento Diário:</strong> Selecione a data do dia que deseja fechar.
-                        </div>
-
+                    <div class="card-body">
+                        <!-- Tipo de Fechamento -->
                         <div class="mb-3">
-                            <label asp-for="DataInicio" class="form-label required">Data do Fechamento</label>
-                            <input asp-for="DataInicio" type="date" class="form-control" id="dataFechamentoDiario">
-                            <span asp-validation-for="DataInicio" class="text-danger"></span>
-                        </div>
-                    </div>
-
-                    <!-- FECHAMENTO SEMANAL -->
-                    <div id="camposFechamentoSemanal" style="display: none;">
-                        <div class="alert alert-primary">
-                            <i class="bi bi-calendar-week me-2"></i>
-                            <strong>Fechamento Semanal:</strong> Selecione a semana que deseja fechar.
+                            <label asp-for="TipoFechamento" class="form-label fw-semibold"></label>
+                            <select asp-for="TipoFechamento" class="form-select" id="tipoFechamento">
+                                <option value="@((int)SistemaTesourariaEclesiastica.Enums.TipoFechamento.Diario)">Diário</option>
+                                <option value="@((int)SistemaTesourariaEclesiastica.Enums.TipoFechamento.Semanal)">Semanal</option>
+                                <option value="@((int)SistemaTesourariaEclesiastica.Enums.TipoFechamento.Mensal)" selected>Mensal</option>
+                            </select>
+                            <span asp-validation-for="TipoFechamento" class="text-danger"></span>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label required">Data de Início da Semana</label>
-                                    <input type="date" class="form-control" id="dataInicioSemanal" name="DataInicio">
-                                    <div class="form-text">
-                                        <i class="bi bi-info-circle me-1"></i>
-                                        Primeiro dia da semana (geralmente domingo ou segunda)
-                                    </div>
+                        <!-- Fechamento Diário -->
+                        <div id="camposDiario" style="display: none;">
+                            <div class="mb-3">
+                                <label asp-for="DataInicio" class="form-label fw-semibold">Data do Fechamento</label>
+                                <input asp-for="DataInicio" type="date" class="form-control" id="dataFechamentoDiario" />
+                                <span asp-validation-for="DataInicio" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <!-- Fechamento Semanal -->
+                        <div id="camposSemanal" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="DataInicio" class="form-label fw-semibold"></label>
+                                    <input asp-for="DataInicio" type="date" class="form-control" id="dataInicioSemanal" />
+                                    <span asp-validation-for="DataInicio" class="text-danger"></span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="DataFim" class="form-label fw-semibold"></label>
+                                    <input asp-for="DataFim" type="date" class="form-control" id="dataFimSemanal" />
+                                    <span asp-validation-for="DataFim" class="text-danger"></span>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label required">Data de Fim da Semana</label>
-                                    <input type="date" class="form-control" id="dataFimSemanal" name="DataFim">
-                                    <div class="form-text">
-                                        <i class="bi bi-info-circle me-1"></i>
-                                        Último dia da semana (geralmente sábado ou domingo)
-                                    </div>
+                        </div>
+
+                        <!-- Fechamento Mensal -->
+                        <div id="camposMensal">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Ano" class="form-label fw-semibold"></label>
+                                    <select asp-for="Ano" class="form-select" id="selectAno"></select>
+                                    <span asp-validation-for="Ano" class="text-danger"></span>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Período da Semana</label>
-                            <div class="alert alert-secondary" id="previewSemana">
-                                Selecione as datas acima
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- FECHAMENTO MENSAL -->
-                    <div id="camposFechamentoMensal">
-                        <div class="alert alert-primary">
-                            <i class="bi bi-calendar-month me-2"></i>
-                            <strong>Fechamento Mensal:</strong> Selecione o mês e ano que deseja fechar.
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Mes" class="form-label required"></label>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Mes" class="form-label fw-semibold"></label>
                                     <select asp-for="Mes" class="form-select" id="selectMes">
-                                        <option value="">Selecione...</option>
                                         <option value="1">Janeiro</option>
                                         <option value="2">Fevereiro</option>
                                         <option value="3">Março</option>
@@ -134,110 +142,117 @@
                                     <span asp-validation-for="Mes" class="text-danger"></span>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Ano" class="form-label required"></label>
-                                    <select asp-for="Ano" class="form-select" id="selectAno">
-                                        <option value="">Selecione...</option>
-                                    </select>
-                                    <span asp-validation-for="Ano" class="text-danger"></span>
-                                </div>
-                            </div>
                         </div>
 
+                        <!-- Observações -->
                         <div class="mb-3">
-                            <label class="form-label">Período do Fechamento</label>
-                            <div class="alert alert-secondary" id="previewPeriodo">
-                                Selecione o mês e ano acima
+                            <label asp-for="Observacoes" class="form-label fw-semibold"></label>
+                            <textarea asp-for="Observacoes" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Observacoes" class="text-danger"></span>
+                        </div>
+
+                        <div class="alert alert-secondary small mb-0">
+                            <i class="bi bi-building me-1"></i>
+                            <strong>Centro de Custo:</strong> @Model.NomeCentroCusto
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botão de Submissão -->
+                <div class="d-grid gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle me-2"></i>Criar Fechamento
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </a>
+                </div>
+            </div>
+
+            <!-- Coluna Direita - Prestações das Congregações (apenas para SEDE) -->
+            @if (Model.EhSede && Model.FechamentosDisponiveis.Any())
+            {
+                <div class="col-lg-7">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-list-check me-2"></i>
+                                Prestações de Congregações Disponíveis
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-success small mb-3">
+                                <i class="bi bi-check-circle me-1"></i>
+                                <strong>@Model.FechamentosDisponiveis.Count</strong> prestação(ões) aprovada(s) e disponível(is) para processamento.
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="50">
+                                                <input type="checkbox" id="selectAll" class="form-check-input" checked />
+                                            </th>
+                                            <th>Congregação</th>
+                                            <th>Período</th>
+                                            <th class="text-end">Balanço Físico</th>
+                                            <th class="text-end">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < Model.FechamentosDisponiveis.Count; i++)
+                                        {
+                                            var item = Model.FechamentosDisponiveis[i];
+                                            <tr>
+                                                <td>
+                                                    <input type="checkbox"
+                                                           name="FechamentosIncluidos"
+                                                           value="@item.Id"
+                                                           class="form-check-input fechamento-checkbox"
+                                                           checked="@item.Selecionado" />
+                                                </td>
+                                                <td>
+                                                    <strong>@item.NomeCongregacao</strong>
+                                                    <br><small class="text-muted">Aprovado em: @item.DataAprovacao.ToString("dd/MM/yyyy")</small>
+                                                </td>
+                                                <td>
+                                                    @item.DataInicio.ToString("dd/MM/yyyy") -
+                                                    @item.DataFim.ToString("dd/MM/yyyy")
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="badge bg-warning text-dark">@item.BalancoFisico.ToString("C")</span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <strong>@item.TotalEntradas.ToString("C")</strong>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Observações -->
-                    <div class="mb-3">
-                        <label asp-for="Observacoes" class="form-label"></label>
-                        <textarea asp-for="Observacoes" class="form-control" rows="3" placeholder="Observações sobre este fechamento..."></textarea>
-                        <span asp-validation-for="Observacoes" class="text-danger"></span>
-                        <div class="form-text">
-                            <span id="contadorCaracteres">0</span> / 500 caracteres
-                        </div>
+                </div>
+            }
+            else if (Model.EhSede && !Model.FechamentosDisponiveis.Any())
+            {
+                <div class="col-lg-7">
+                    <div class="alert alert-warning">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Nenhuma Prestação Disponível
+                        </h5>
+                        <hr>
+                        <p class="mb-0">
+                            Não há prestações de congregações aprovadas e pendentes de processamento no momento.
+                            O fechamento da SEDE será criado apenas com os lançamentos diretos da SEDE.
+                        </p>
                     </div>
                 </div>
-            </div>
-
-            <!-- Botões de Ação -->
-            <div class="d-flex justify-content-end gap-2">
-                <a asp-action="Index" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle me-2"></i>
-                    Cancelar
-                </a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-circle me-2"></i>
-                    Criar Fechamento
-                </button>
-            </div>
+            }
         </div>
-
-        <!-- Sidebar de Ajuda -->
-        <div class="col-lg-4">
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h6 class="card-title mb-0">
-                        <i class="bi bi-lightbulb me-2"></i>
-                        Como Funciona
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <h6 class="text-primary">
-                        <i class="bi bi-1-circle me-1"></i>
-                        Escolha o Tipo
-                    </h6>
-                    <p class="small text-muted mb-3">
-                        <strong>Diário:</strong> Para fechar um dia específico<br>
-                        <strong>Semanal:</strong> Para fechar uma semana (até 7 dias)<br>
-                        <strong>Mensal:</strong> Para fechar um mês inteiro
-                    </p>
-
-                    <h6 class="text-primary">
-                        <i class="bi bi-2-circle me-1"></i>
-                        Cálculos Automáticos
-                    </h6>
-                    <p class="small text-muted mb-3">
-                        O sistema calculará automaticamente:
-                    </p>
-                    <ul class="small text-muted">
-                        <li><strong>Balanço Físico:</strong> Entradas e saídas em dinheiro</li>
-                        <li><strong>Balanço Digital:</strong> Entradas e saídas via PIX, cartões, etc.</li>
-                        <li><strong>Rateios:</strong> Se for Sede, aplicará regras de rateio automáticas</li>
-                    </ul>
-
-                    <h6 class="text-primary">
-                        <i class="bi bi-3-circle me-1"></i>
-                        Aprovação
-                    </h6>
-                    <p class="small text-muted mb-0">
-                        Após criar o fechamento, ele ficará <strong>Pendente</strong> até ser aprovado pelo Tesoureiro Geral.
-                    </p>
-                </div>
-            </div>
-
-            <div class="card bg-warning bg-opacity-10 border-warning">
-                <div class="card-header bg-transparent border-warning">
-                    <h6 class="card-title mb-0 text-warning">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        Atenção
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <p class="small mb-0">
-                        <strong>Balanço Físico:</strong> Representa o dinheiro em espécie que precisa ser fisicamente repassado para a Sede.<br><br>
-                        <strong>Balanço Digital:</strong> É informativo, representa valores já depositados eletronicamente.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-</form>
+    </form>
+</div>
 
 @section Scripts {
     @{
@@ -246,7 +261,7 @@
 
     <script>
         $(document).ready(function() {
-            // Popular anos (últimos 5 anos + próximo ano)
+            // Popular anos
             var anoAtual = new Date().getFullYear();
             for (var i = anoAtual + 1; i >= anoAtual - 5; i--) {
                 $('#selectAno').append($('<option>', {
@@ -260,146 +275,36 @@
             var mesAtual = new Date().getMonth() + 1;
             $('#selectMes').val(mesAtual);
 
-            // Definir data atual para fechamento diário
+            // Definir data atual
             var hoje = new Date().toISOString().split('T')[0];
             $('#dataFechamentoDiario').val(hoje);
 
             // Alternar entre Diário, Semanal e Mensal
-            $('#TipoFechamento').change(function() {
+            $('#tipoFechamento').change(function() {
                 var tipo = $(this).val();
 
+                $('#camposDiario, #camposSemanal, #camposMensal').hide();
+
                 if (tipo == '1') { // Diário
-                    $('#camposFechamentoDiario').slideDown();
-                    $('#camposFechamentoSemanal').slideUp();
-                    $('#camposFechamentoMensal').slideUp();
-
-                    // Desabilitar validação de outros tipos
-                    $('#selectMes, #selectAno').prop('required', false);
-                    $('#dataInicioSemanal, #dataFimSemanal').prop('required', false);
-                    $('#dataFechamentoDiario').prop('required', true);
+                    $('#camposDiario').show();
                 } else if (tipo == '2') { // Semanal
-                    $('#camposFechamentoDiario').slideUp();
-                    $('#camposFechamentoSemanal').slideDown();
-                    $('#camposFechamentoMensal').slideUp();
-
-                    // Desabilitar validação de outros tipos
-                    $('#selectMes, #selectAno').prop('required', false);
-                    $('#dataFechamentoDiario').prop('required', false);
-                    $('#dataInicioSemanal, #dataFimSemanal').prop('required', true);
-
-                    // Sugerir semana atual
-                    sugerirSemanaAtual();
+                    $('#camposSemanal').show();
                 } else { // Mensal
-                    $('#camposFechamentoDiario').slideUp();
-                    $('#camposFechamentoSemanal').slideUp();
-                    $('#camposFechamentoMensal').slideDown();
-
-                    // Habilitar validação de Mês/Ano
-                    $('#selectMes, #selectAno').prop('required', true);
-                    $('#dataFechamentoDiario').prop('required', false);
-                    $('#dataInicioSemanal, #dataFimSemanal').prop('required', false);
-
-                    atualizarPreviewPeriodo();
-                }
-            }).trigger('change');
-
-            // Função para sugerir semana atual
-            function sugerirSemanaAtual() {
-                var hoje = new Date();
-                var diaSemana = hoje.getDay(); // 0 = Domingo, 6 = Sábado
-
-                // Calcular domingo da semana atual
-                var domingo = new Date(hoje);
-                domingo.setDate(hoje.getDate() - diaSemana);
-
-                // Calcular sábado da semana atual
-                var sabado = new Date(domingo);
-                sabado.setDate(domingo.getDate() + 6);
-
-                $('#dataInicioSemanal').val(domingo.toISOString().split('T')[0]);
-                $('#dataFimSemanal').val(sabado.toISOString().split('T')[0]);
-
-                atualizarPreviewSemana();
-            }
-
-            // Atualizar preview da semana
-            function atualizarPreviewSemana() {
-                var dataInicio = $('#dataInicioSemanal').val();
-                var dataFim = $('#dataFimSemanal').val();
-
-                if (dataInicio && dataFim) {
-                    var inicio = new Date(dataInicio + 'T00:00:00');
-                    var fim = new Date(dataFim + 'T00:00:00');
-
-                    var diasDiferenca = Math.round((fim - inicio) / (1000 * 60 * 60 * 24));
-
-                    var texto = `<strong>Semana de ${inicio.toLocaleDateString('pt-BR')} até ${fim.toLocaleDateString('pt-BR')}</strong><br>`;
-                    texto += `Total: ${diasDiferenca + 1} dia(s)`;
-
-                    if (diasDiferenca < 0) {
-                        texto = '<span class="text-danger">⚠️ A data de fim deve ser posterior à data de início!</span>';
-                    } else if (diasDiferenca > 7) {
-                        texto += '<br><span class="text-warning">⚠️ O período excede 7 dias. Verifique se está correto.</span>';
-                    }
-
-                    $('#previewSemana').html(texto);
-                } else {
-                    $('#previewSemana').text('Selecione as datas acima');
-                }
-            }
-
-            // Atualizar preview quando mudar as datas
-            $('#dataInicioSemanal, #dataFimSemanal').change(atualizarPreviewSemana);
-
-            // Atualizar preview do período mensal
-            function atualizarPreviewPeriodo() {
-                var mes = parseInt($('#selectMes').val());
-                var ano = parseInt($('#selectAno').val());
-
-                if (mes && ano) {
-                    var nomesMeses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-
-                    var dataInicio = new Date(ano, mes - 1, 1);
-                    var dataFim = new Date(ano, mes, 0);
-
-                    var texto = `<strong>${nomesMeses[mes]} de ${ano}</strong><br>` +
-                               `De ${dataInicio.toLocaleDateString('pt-BR')} até ${dataFim.toLocaleDateString('pt-BR')}`;
-
-                    $('#previewPeriodo').html(texto);
-                } else {
-                    $('#previewPeriodo').text('Selecione o mês e ano acima');
-                }
-            }
-
-            $('#selectMes, #selectAno').change(atualizarPreviewPeriodo);
-
-            // Contador de caracteres
-            $('#Observacoes').on('input', function() {
-                $('#contadorCaracteres').text($(this).val().length);
-            });
-
-            // Validação antes do submit
-            $('#formFechamento').submit(function(e) {
-                var tipoFechamento = $('#TipoFechamento').val();
-
-                if (tipoFechamento == '1') { // Diário
-                    if (!$('#dataFechamentoDiario').val()) {
-                        e.preventDefault();
-                        alert('Por favor, selecione a data do fechamento diário.');
-                        return false;
-                    }
-                } else { // Mensal
-                    if (!$('#selectMes').val() || !$('#selectAno').val()) {
-                        e.preventDefault();
-                        alert('Por favor, selecione o mês e ano do fechamento.');
-                        return false;
-                    }
+                    $('#camposMensal').show();
                 }
             });
 
-            // Inicializar preview
-            atualizarPreviewPeriodo();
+            // Select All para congregações
+            $('#selectAll').change(function() {
+                $('.fechamento-checkbox').prop('checked', $(this).prop('checked'));
+            });
+
+            // Desmarcar "Select All" se algum item for desmarcado
+            $('.fechamento-checkbox').change(function() {
+                if (!$(this).prop('checked')) {
+                    $('#selectAll').prop('checked', false);
+                }
+            });
         });
     </script>
 }

@@ -998,10 +998,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
         [HttpGet]
         [Authorize(Policy = "Relatorios")]
-        public async Task<IActionResult> BalanceteMensalPdf(
-            int centroCustoId,
-            DateTime dataInicio,
-            DateTime dataFim)
+        public async Task<IActionResult> BalanceteMensalPdf(int centroCustoId, DateTime dataInicio, DateTime dataFim)
         {
             try
             {
@@ -1010,8 +1007,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     dataInicio,
                     dataFim);
 
-                TempData["InfoMessage"] = "Funcionalidade de exportação para PDF em desenvolvimento.";
-                return RedirectToAction("BalanceteMensal", new { centroCustoId, dataInicio, dataFim });
+                var pdfBytes = SistemaTesourariaEclesiastica.Helpers.BalancetePdfHelper.GerarPdfBalanceteMensal(balancete);
+
+                var nomeArquivo = $"Balancete_Mensal_{balancete.CentroCustoNome.Replace(" ", "_")}_{dataInicio:yyyyMM}.pdf";
+
+                await _auditService.LogAsync("Exportação", "Relatório",
+                    $"Balancete mensal PDF: {balancete.CentroCustoNome} - {balancete.Periodo}");
+
+                return File(pdfBytes, "application/pdf", nomeArquivo);
             }
             catch (Exception ex)
             {

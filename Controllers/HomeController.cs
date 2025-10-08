@@ -129,7 +129,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 try
                 {
-                    // Buscar entradas que estão em fechamentos aprovados do mês
+                    // ✅ CORREÇÃO: Buscar entradas que estão em fechamentos aprovados OU processados do mês
                     var queryEntradasMes = _context.Entradas
                         .Where(e => e.Data >= inicioMes && e.Data <= fimMes);
 
@@ -141,13 +141,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     idsEntradasAprovadasMes = await queryEntradasMes
                         .Where(e => _context.FechamentosPeriodo.Any(f =>
                             f.CentroCustoId == e.CentroCustoId &&
-                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                             e.Data >= f.DataInicio &&
                             e.Data <= f.DataFim))
                         .Select(e => e.Id)
                         .ToListAsync();
 
-                    // Buscar saídas que estão em fechamentos aprovados do mês
+                    // ✅ CORREÇÃO: Buscar saídas que estão em fechamentos aprovados OU processados do mês
                     var querySaidasMes = _context.Saidas
                         .Where(s => s.Data >= inicioMes && s.Data <= fimMes);
 
@@ -159,7 +159,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     idsSaidasAprovadasMes = await querySaidasMes
                         .Where(s => _context.FechamentosPeriodo.Any(f =>
                             f.CentroCustoId == s.CentroCustoId &&
-                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                             s.Data >= f.DataInicio &&
                             s.Data <= f.DataFim))
                         .Select(s => s.Id)
@@ -213,7 +213,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 try
                 {
-                    // Buscar TODAS as entradas aprovadas (histórico completo)
+                    // ✅ CORREÇÃO: Buscar TODAS as entradas aprovadas ou processadas (histórico completo)
                     var queryTodasEntradas = _context.Entradas.AsQueryable();
 
                     if (centroCustoFiltro.HasValue)
@@ -224,7 +224,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     var idsTodasEntradasAprovadas = await queryTodasEntradas
                         .Where(e => _context.FechamentosPeriodo.Any(f =>
                             f.CentroCustoId == e.CentroCustoId &&
-                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                             e.Data >= f.DataInicio &&
                             e.Data <= f.DataFim))
                         .Select(e => e.Id)
@@ -237,7 +237,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                             .SumAsync(e => (decimal?)e.Valor) ?? 0;
                     }
 
-                    // Buscar TODAS as saídas aprovadas (histórico completo)
+                    // ✅ CORREÇÃO: Buscar TODAS as saídas aprovadas ou processadas (histórico completo)
                     var queryTodasSaidas = _context.Saidas.AsQueryable();
 
                     if (centroCustoFiltro.HasValue)
@@ -248,7 +248,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     var idsTodasSaidasAprovadas = await queryTodasSaidas
                         .Where(s => _context.FechamentosPeriodo.Any(f =>
                             f.CentroCustoId == s.CentroCustoId &&
-                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                             s.Data >= f.DataInicio &&
                             s.Data <= f.DataFim))
                         .Select(s => s.Id)
@@ -280,7 +280,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         var mesInicio = hoje.AddMonths(-i).AddDays(-(hoje.Day - 1));
                         var mesFim = mesInicio.AddMonths(1).AddDays(-1);
 
-                        // Buscar entradas aprovadas deste mês específico
+                        // ✅ CORREÇÃO: Buscar entradas aprovadas ou processadas deste mês específico
                         var queryEntradasGrafico = _context.Entradas
                             .Where(e => e.Data >= mesInicio && e.Data <= mesFim);
 
@@ -292,7 +292,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         var idsEntradasMesGrafico = await queryEntradasGrafico
                             .Where(e => _context.FechamentosPeriodo.Any(f =>
                                 f.CentroCustoId == e.CentroCustoId &&
-                                f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                                 e.Data >= f.DataInicio &&
                                 e.Data <= f.DataFim))
                             .Select(e => e.Id)
@@ -304,7 +304,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                                 .SumAsync(e => (decimal?)e.Valor) ?? 0
                             : 0;
 
-                        // Buscar saídas aprovadas deste mês específico
+                        // ✅ CORREÇÃO: Buscar saídas aprovadas ou processadas deste mês específico
                         var querySaidasGrafico = _context.Saidas
                             .Where(s => s.Data >= mesInicio && s.Data <= mesFim);
 
@@ -316,7 +316,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         var idsSaidasMesGrafico = await querySaidasGrafico
                             .Where(s => _context.FechamentosPeriodo.Any(f =>
                                 f.CentroCustoId == s.CentroCustoId &&
-                                f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                                 s.Data >= f.DataInicio &&
                                 s.Data <= f.DataFim))
                             .Select(s => s.Id)
@@ -359,10 +359,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         querySaidasCategoria = querySaidasCategoria.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                     }
 
+                    // ✅ CORREÇÃO: Incluir fechamentos processados
                     var idsSaidasCategoria = await querySaidasCategoria
                         .Where(s => _context.FechamentosPeriodo.Any(f =>
                             f.CentroCustoId == s.CentroCustoId &&
-                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                             s.Data >= f.DataInicio &&
                             s.Data <= f.DataFim))
                         .Select(s => s.Id)

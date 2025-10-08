@@ -1,13 +1,14 @@
-Ôªøusing Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
+using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.ViewModels;
 
 namespace SistemaTesourariaEclesiastica.Services
 {
     /// <summary>
-    /// Servi√ßo para gera√ß√£o do Relat√≥rio de Balancete Mensal
-    /// Implementa a l√≥gica conforme especifica√ß√£o t√©cnica do projeto
+    /// ServiÁo para geraÁ„o do RelatÛrio de Balancete Mensal
+    /// Implementa a lÛgica conforme especificaÁ„o tÈcnica do projeto
     /// </summary>
     public class BalanceteService
     {
@@ -23,7 +24,7 @@ namespace SistemaTesourariaEclesiastica.Services
         }
 
         /// <summary>
-        /// Gera o balancete mensal para um centro de custo espec√≠fico
+        /// Gera o balancete mensal para um centro de custo especÌfico
         /// </summary>
         public async Task<BalanceteMensalViewModel> GerarBalanceteMensalAsync(
             int centroCustoId,
@@ -32,8 +33,8 @@ namespace SistemaTesourariaEclesiastica.Services
         {
             try
             {
-                _logger.LogInformation($"Iniciando gera√ß√£o de balancete: CentroCusto={centroCustoId}, " +
-                    $"Per√≠odo={dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}");
+                _logger.LogInformation($"Iniciando geraÁ„o de balancete: CentroCusto={centroCustoId}, " +
+                    $"PerÌodo={dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}");
 
                 var viewModel = new BalanceteMensalViewModel
                 {
@@ -48,45 +49,71 @@ namespace SistemaTesourariaEclesiastica.Services
 
                 if (centroCusto == null)
                 {
-                    throw new Exception($"Centro de custo ID {centroCustoId} n√£o encontrado");
+                    throw new Exception($"Centro de custo ID {centroCustoId} n„o encontrado");
                 }
 
                 viewModel.CentroCustoNome = centroCusto.Nome;
 
+                // Verificar se existe fechamento da SEDE no perÌodo
+                var ehSede = centroCusto.Tipo == TipoCentroCusto.Sede;
+                var fechamentoSede = await _context.FechamentosPeriodo
+                    .Include(f => f.FechamentosCongregacoesIncluidos)
+                    .FirstOrDefaultAsync(f => f.CentroCustoId == centroCustoId &&
+                                             f.DataInicio >= dataInicio &&
+                                             f.DataFim <= dataFim &&
+                                             f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                             f.EhFechamentoSede);
+
+                // Determinar quais centros de custo devem ser incluÌdos
+                var centrosCustoParaIncluir = new List<int> { centroCustoId };
+
+                if (ehSede && fechamentoSede != null && fechamentoSede.FechamentosCongregacoesIncluidos.Any())
+                {
+                    // Se È SEDE com fechamento consolidado, incluir todas as congregaÁıes processadas
+                    var congregacoesIncluidas = fechamentoSede.FechamentosCongregacoesIncluidos
+                        .Select(f => f.CentroCustoId)
+                        .Distinct()
+                        .ToList();
+                    
+                    centrosCustoParaIncluir.AddRange(congregacoesIncluidas);
+                    
+                    _logger.LogInformation($"Balancete da SEDE incluir· {congregacoesIncluidas.Count} congregaÁıes");
+                }
+
                 // ==========================================
-                // 1. CALCULAR SALDO DO M√äS ANTERIOR
+                // 1. CALCULAR SALDO DO M S ANTERIOR
                 // ==========================================
-                viewModel.SaldoMesAnterior = await CalcularSaldoMesAnteriorAsync(centroCustoId, dataInicio);
+                viewModel.SaldoMesAnterior = await CalcularSaldoMesAnteriorAsync(centrosCustoParaIncluir, dataInicio);
 
                 // ==========================================
                 // 2. CALCULAR RECEITAS OPERACIONAIS
                 // ==========================================
-                await ProcessarReceitasAsync(viewModel, centroCustoId, dataInicio, dataFim);
+                await ProcessarReceitasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
 
                 // ==========================================
                 // 3. CALCULAR IMOBILIZADOS
                 // ==========================================
-                await ProcessarImobilizadosAsync(viewModel, centroCustoId, dataInicio, dataFim);
+                await ProcessarImobilizadosAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
 
                 // ==========================================
                 // 4. CALCULAR DESPESAS ADMINISTRATIVAS
                 // ==========================================
-                await ProcessarDespesasAdministrativasAsync(viewModel, centroCustoId, dataInicio, dataFim);
+                await ProcessarDespesasAdministrativasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
 
                 // ==========================================
-                // 5. CALCULAR DESPESAS TRIBUT√ÅRIAS
+                // 5. CALCULAR DESPESAS TRIBUT¡RIAS
                 // ==========================================
-                await ProcessarDespesasTributariasAsync(viewModel, centroCustoId, dataInicio, dataFim);
+                await ProcessarDespesasTributariasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
 
                 // ==========================================
                 // 6. CALCULAR DESPESAS FINANCEIRAS
                 // ==========================================
-                await ProcessarDespesasFinanceirasAsync(viewModel, centroCustoId, dataInicio, dataFim);
+                await ProcessarDespesasFinanceirasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
 
                 // ==========================================
                 // 7. CALCULAR RECOLHIMENTOS (RATEIOS)
                 // ==========================================
-                await ProcessarRecolhimentosAsync(viewModel, centroCustoId, dataInicio, dataFim);
+                await ProcessarRecolhimentosAsync(viewModel, centroCustoId, dataInicio, dataFim, fechamentoSede);
 
                 // ==========================================
                 // 8. CALCULAR TOTAIS FINAIS
@@ -105,56 +132,56 @@ namespace SistemaTesourariaEclesiastica.Services
         }
 
         /// <summary>
-        /// Calcula o saldo acumulado at√© o m√™s anterior ao per√≠odo selecionado
+        /// Calcula o saldo acumulado atÈ o mÍs anterior ao perÌodo selecionado
         /// </summary>
-        private async Task<decimal> CalcularSaldoMesAnteriorAsync(int centroCustoId, DateTime dataInicio)
+        private async Task<decimal> CalcularSaldoMesAnteriorAsync(List<int> centrosCustoIds, DateTime dataInicio)
         {
             try
             {
-                // Buscar todas as entradas at√© o dia anterior ao in√≠cio do per√≠odo
+                // Buscar todas as entradas atÈ o dia anterior ao inÌcio do perÌodo
                 var totalEntradasAnteriores = await _context.Entradas
-                    .Where(e => e.CentroCustoId == centroCustoId && e.Data < dataInicio)
+                    .Where(e => centrosCustoIds.Contains(e.CentroCustoId) && e.Data < dataInicio)
                     .SumAsync(e => (decimal?)e.Valor) ?? 0;
 
-                // Buscar todas as sa√≠das at√© o dia anterior ao in√≠cio do per√≠odo
+                // Buscar todas as saÌdas atÈ o dia anterior ao inÌcio do perÌodo
                 var totalSaidasAnteriores = await _context.Saidas
-                    .Where(s => s.CentroCustoId == centroCustoId && s.Data < dataInicio)
+                    .Where(s => centrosCustoIds.Contains(s.CentroCustoId) && s.Data < dataInicio)
                     .SumAsync(s => (decimal?)s.Valor) ?? 0;
 
                 // Buscar todos os rateios de fechamentos anteriores
                 var totalRateiosAnteriores = await _context.ItensRateioFechamento
                     .Include(r => r.FechamentoPeriodo)
-                    .Where(r => r.FechamentoPeriodo.CentroCustoId == centroCustoId &&
+                    .Where(r => centrosCustoIds.Contains(r.FechamentoPeriodo.CentroCustoId) &&
                                r.FechamentoPeriodo.DataFim < dataInicio &&
                                r.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado)
                     .SumAsync(r => (decimal?)r.ValorRateio) ?? 0;
 
                 var saldo = totalEntradasAnteriores - totalSaidasAnteriores - totalRateiosAnteriores;
 
-                _logger.LogDebug($"Saldo do m√™s anterior: Entradas={totalEntradasAnteriores:C}, " +
-                    $"Sa√≠das={totalSaidasAnteriores:C}, Rateios={totalRateiosAnteriores:C}, Saldo={saldo:C}");
+                _logger.LogDebug($"Saldo do mÍs anterior: Entradas={totalEntradasAnteriores:C}, " +
+                    $"SaÌdas={totalSaidasAnteriores:C}, Rateios={totalRateiosAnteriores:C}, Saldo={saldo:C}");
 
                 return saldo;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao calcular saldo do m√™s anterior");
+                _logger.LogError(ex, "Erro ao calcular saldo do mÍs anterior");
                 return 0;
             }
         }
 
         /// <summary>
-        /// Processa as receitas operacionais (d√≠zimos, ofertas, votos, etc.)
+        /// Processa as receitas operacionais (dÌzimos, ofertas, votos, etc.)
         /// </summary>
         private async Task ProcessarReceitasAsync(
             BalanceteMensalViewModel viewModel,
-            int centroCustoId,
+            List<int> centrosCustoIds,
             DateTime dataInicio,
             DateTime dataFim)
         {
             var receitas = await _context.Entradas
                 .Include(e => e.PlanoDeContas)
-                .Where(e => e.CentroCustoId == centroCustoId &&
+                .Where(e => centrosCustoIds.Contains(e.CentroCustoId) &&
                            e.Data >= dataInicio &&
                            e.Data <= dataFim)
                 .GroupBy(e => e.PlanoDeContas.Nome)
@@ -177,16 +204,16 @@ namespace SistemaTesourariaEclesiastica.Services
         /// </summary>
         private async Task ProcessarImobilizadosAsync(
             BalanceteMensalViewModel viewModel,
-            int centroCustoId,
+            List<int> centrosCustoIds,
             DateTime dataInicio,
             DateTime dataFim)
         {
             // Buscar entradas que sejam consideradas imobilizados
-            // Crit√©rio: podem ser entradas com plano de contas espec√≠fico ou tag especial
+            // CritÈrio: podem ser entradas com plano de contas especÌfico ou tag especial
             var imobilizados = new List<ItemBalanceteViewModel>();
 
-            // Placeholder: voc√™ pode adaptar esta l√≥gica conforme necess√°rio
-            // Por exemplo, criar um PlanoDeContas espec√≠fico para imobilizados
+            // Placeholder: vocÍ pode adaptar esta lÛgica conforme necess·rio
+            // Por exemplo, criar um PlanoDeContas especÌfico para imobilizados
             // ou adicionar um campo "EhImobilizado" na tabela Entrada
 
             viewModel.Imobilizados = imobilizados;
@@ -194,41 +221,41 @@ namespace SistemaTesourariaEclesiastica.Services
         }
 
         /// <summary>
-        /// Processa despesas administrativas conforme categorias da especifica√ß√£o
+        /// Processa despesas administrativas conforme categorias da especificaÁ„o
         /// </summary>
         private async Task ProcessarDespesasAdministrativasAsync(
             BalanceteMensalViewModel viewModel,
-            int centroCustoId,
+            List<int> centrosCustoIds,
             DateTime dataInicio,
             DateTime dataFim)
         {
-            // Lista de categorias administrativas conforme especifica√ß√£o
+            // Lista de categorias administrativas conforme especificaÁ„o
             var categoriasAdministrativas = new[]
             {
                 "Mat. de Expediente",
                 "Mat. Higiene e Limpeza",
                 "Despesas com Telefone",
-                "Despesas com Ve√≠culo",
-                "Aux√≠lio Oferta",
-                "M√£o de Obra Qualificada",
+                "Despesas com VeÌculo",
+                "AuxÌlio Oferta",
+                "M„o de Obra Qualificada",
                 "Despesas com Medicamentos",
-                "Energia El√©trica (Luz)",
-                "√Ågua",
+                "Energia ElÈtrica (Luz)",
+                "¡gua",
                 "Despesas Diversas",
                 "Despesas com Viagens",
-                "Material de Constru√ß√£o",
-                "Material de Conserva√ß√£o (Tintas, etc.)",
-                "Despesas com Som (Pe√ßas e Acess√≥rios)",
+                "Material de ConstruÁ„o",
+                "Material de ConservaÁ„o (Tintas, etc.)",
+                "Despesas com Som (PeÁas e AcessÛrios)",
                 "Aluguel",
                 "INSS",
-                "Pagamento de Inscri√ß√£o da CGADB",
-                "Previd√™ncia Privada",
-                "Caixa de Evangeliza√ß√£o"
+                "Pagamento de InscriÁ„o da CGADB",
+                "PrevidÍncia Privada",
+                "Caixa de EvangelizaÁ„o"
             };
 
             var despesas = await _context.Saidas
                 .Include(s => s.PlanoDeContas)
-                .Where(s => s.CentroCustoId == centroCustoId &&
+                .Where(s => centrosCustoIds.Contains(s.CentroCustoId) &&
                            s.Data >= dataInicio &&
                            s.Data <= dataFim &&
                            categoriasAdministrativas.Contains(s.PlanoDeContas.Nome))
@@ -240,7 +267,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 })
                 .ToListAsync();
 
-            // Garantir que todas as categorias apare√ßam, mesmo com valor zero
+            // Garantir que todas as categorias apareÁam, mesmo com valor zero
             var despesasCompletas = categoriasAdministrativas.Select(cat => new ItemBalanceteViewModel
             {
                 Descricao = cat,
@@ -255,11 +282,11 @@ namespace SistemaTesourariaEclesiastica.Services
         }
 
         /// <summary>
-        /// Processa despesas tribut√°rias (IPTU, impostos, etc.)
+        /// Processa despesas tribut·rias (IPTU, impostos, etc.)
         /// </summary>
         private async Task ProcessarDespesasTributariasAsync(
             BalanceteMensalViewModel viewModel,
-            int centroCustoId,
+            List<int> centrosCustoIds,
             DateTime dataInicio,
             DateTime dataFim)
         {
@@ -267,7 +294,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
             var despesas = await _context.Saidas
                 .Include(s => s.PlanoDeContas)
-                .Where(s => s.CentroCustoId == centroCustoId &&
+                .Where(s => centrosCustoIds.Contains(s.CentroCustoId) &&
                            s.Data >= dataInicio &&
                            s.Data <= dataFim &&
                            categoriasTributarias.Contains(s.PlanoDeContas.Nome))
@@ -288,19 +315,19 @@ namespace SistemaTesourariaEclesiastica.Services
         /// </summary>
         private async Task ProcessarDespesasFinanceirasAsync(
             BalanceteMensalViewModel viewModel,
-            int centroCustoId,
+            List<int> centrosCustoIds,
             DateTime dataInicio,
             DateTime dataFim)
         {
             var categoriasFinanceiras = new[]
             {
                 "Imposto Taxas Diversas",
-                "Saldo para o m√™s"
+                "Saldo para o mÍs"
             };
 
             var despesas = await _context.Saidas
                 .Include(s => s.PlanoDeContas)
-                .Where(s => s.CentroCustoId == centroCustoId &&
+                .Where(s => centrosCustoIds.Contains(s.CentroCustoId) &&
                            s.Data >= dataInicio &&
                            s.Data <= dataFim &&
                            categoriasFinanceiras.Contains(s.PlanoDeContas.Nome))
@@ -323,38 +350,64 @@ namespace SistemaTesourariaEclesiastica.Services
             BalanceteMensalViewModel viewModel,
             int centroCustoId,
             DateTime dataInicio,
-            DateTime dataFim)
+            DateTime dataFim,
+            FechamentoPeriodo? fechamentoSede)
         {
-            // Buscar rateios aplicados em fechamentos aprovados no per√≠odo
-            var recolhimentos = await _context.ItensRateioFechamento
-                .Include(r => r.RegraRateio)
-                .ThenInclude(rr => rr.CentroCustoDestino)
-                .Include(r => r.FechamentoPeriodo)
-                .Where(r => r.FechamentoPeriodo.CentroCustoId == centroCustoId &&
-                           r.FechamentoPeriodo.DataInicio >= dataInicio &&
-                           r.FechamentoPeriodo.DataFim <= dataFim &&
-                           r.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado)
-                .GroupBy(r => new
-                {
-                    r.RegraRateio.CentroCustoDestino.Nome,
-                    r.Percentual
-                })
-                .Select(g => new ItemRecolhimentoViewModel
-                {
-                    Destino = g.Key.Nome,
-                    Percentual = g.Key.Percentual,
-                    Valor = g.Sum(r => r.ValorRateio)
-                })
-                .ToListAsync();
+            var recolhimentos = new List<ItemRecolhimentoViewModel>();
 
-            // Se n√£o houver fechamentos, calcular rateios diretamente das regras
-            if (!recolhimentos.Any())
+            if (fechamentoSede != null)
             {
-                recolhimentos = await CalcularRateiosSemFechamentoAsync(
-                    centroCustoId,
-                    dataInicio,
-                    dataFim,
-                    viewModel.TotalCredito);
+                // Se existe fechamento da SEDE aprovado, usar os rateios dele
+                recolhimentos = await _context.ItensRateioFechamento
+                    .Include(r => r.RegraRateio)
+                    .ThenInclude(rr => rr.CentroCustoDestino)
+                    .Where(r => r.FechamentoPeriodoId == fechamentoSede.Id)
+                    .GroupBy(r => new
+                    {
+                        r.RegraRateio.CentroCustoDestino.Nome,
+                        r.Percentual
+                    })
+                    .Select(g => new ItemRecolhimentoViewModel
+                    {
+                        Destino = g.Key.Nome,
+                        Percentual = g.Key.Percentual,
+                        Valor = g.Sum(r => r.ValorRateio)
+                    })
+                    .ToListAsync();
+            }
+            else
+            {
+                // Buscar rateios de fechamentos do centro de custo especÌfico
+                recolhimentos = await _context.ItensRateioFechamento
+                    .Include(r => r.RegraRateio)
+                    .ThenInclude(rr => rr.CentroCustoDestino)
+                    .Include(r => r.FechamentoPeriodo)
+                    .Where(r => r.FechamentoPeriodo.CentroCustoId == centroCustoId &&
+                               r.FechamentoPeriodo.DataInicio >= dataInicio &&
+                               r.FechamentoPeriodo.DataFim <= dataFim &&
+                               r.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado)
+                    .GroupBy(r => new
+                    {
+                        r.RegraRateio.CentroCustoDestino.Nome,
+                        r.Percentual
+                    })
+                    .Select(g => new ItemRecolhimentoViewModel
+                    {
+                        Destino = g.Key.Nome,
+                        Percentual = g.Key.Percentual,
+                        Valor = g.Sum(r => r.ValorRateio)
+                    })
+                    .ToListAsync();
+
+                // Se n„o houver fechamentos, calcular rateios diretamente das regras
+                if (!recolhimentos.Any())
+                {
+                    recolhimentos = await CalcularRateiosSemFechamentoAsync(
+                        centroCustoId,
+                        dataInicio,
+                        dataFim,
+                        viewModel.TotalCredito);
+                }
             }
 
             viewModel.Recolhimentos = recolhimentos;
@@ -364,7 +417,7 @@ namespace SistemaTesourariaEclesiastica.Services
         }
 
         /// <summary>
-        /// Calcula rateios baseado nas regras ativas quando n√£o h√° fechamento aprovado
+        /// Calcula rateios baseado nas regras ativas quando n„o h· fechamento aprovado
         /// </summary>
         private async Task<List<ItemRecolhimentoViewModel>> CalcularRateiosSemFechamentoAsync(
             int centroCustoId,
@@ -392,13 +445,13 @@ namespace SistemaTesourariaEclesiastica.Services
         /// </summary>
         private void CalcularTotaisFinais(BalanceteMensalViewModel viewModel)
         {
-            // Total do D√©bito = Despesas + Recolhimentos
+            // Total do DÈbito = Despesas + Recolhimentos
             viewModel.TotalDebito = viewModel.SubtotalDespesasAdministrativas +
                                    viewModel.SubtotalDespesasTributarias +
                                    viewModel.SubtotalDespesasFinanceiras +
                                    viewModel.TotalRecolhimentos;
 
-            // Saldo = Saldo Anterior + Total Cr√©dito - Total D√©bito
+            // Saldo = Saldo Anterior + Total CrÈdito - Total DÈbito
             viewModel.Saldo = viewModel.SaldoMesAnterior +
                              viewModel.TotalCreditoComImobilizados -
                              viewModel.TotalDebito;

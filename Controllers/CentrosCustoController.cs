@@ -231,7 +231,16 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var possuiEntradas = await _context.Entradas.AnyAsync(e => e.CentroCustoId == id);
                 var possuiSaidas = await _context.Saidas.AnyAsync(s => s.CentroCustoId == id);
 
-                if (possuiMembros || possuiUsuarios || possuiEntradas || possuiSaidas)
+                // ADICIONAR ESTAS VERIFICAÇÕES:
+                var possuiContasBancarias = await _context.ContasBancarias.AnyAsync(cb => cb.CentroCustoId == id);
+                var possuiRegrasRateio = await _context.RegrasRateio.AnyAsync(rr => 
+                    rr.CentroCustoOrigemId == id || rr.CentroCustoDestinoId == id);
+                var possuiTransferencias = await _context.TransferenciasInternas.AnyAsync(ti => 
+                    ti.CentroCustoOrigemId == id || ti.CentroCustoDestinoId == id);
+                var possuiFechamentos = await _context.FechamentosPeriodo.AnyAsync(fp => fp.CentroCustoId == id);
+
+                if (possuiMembros || possuiUsuarios || possuiEntradas || possuiSaidas || 
+                    possuiContasBancarias || possuiRegrasRateio || possuiTransferencias || possuiFechamentos)
                 {
                     TempData["ErrorMessage"] = "Não é possível excluir este centro de custo pois ele possui registros associados.";
                     return RedirectToAction(nameof(Index));

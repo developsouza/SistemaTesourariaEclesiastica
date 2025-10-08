@@ -115,112 +115,306 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> Create()
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
 
-            var fechamento = new FechamentoPeriodo
+            // Buscar o centro de custo do usuário
+            var centroCusto = await _context.CentrosCusto
+                .FirstOrDefaultAsync(c => c.Id == user.CentroCustoId);
+
+            if (centroCusto == null)
             {
-                TipoFechamento = TipoFechamento.Mensal,
-                DataInicio = DateTime.Now.Date,
-                Mes = DateTime.Now.Month,
+                TempData["ErrorMessage"] = "Usuário sem centro de custo definido. Entre em contato com o administrador.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var viewModel = new FechamentoUnificadoViewModel
+            {
+                CentroCustoId = centroCusto.Id,
+                NomeCentroCusto = centroCusto.Nome,
+                EhSede = centroCusto.Tipo == TipoCentroCusto.Sede,
+                DataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1),
+                DataFim = DateTime.Now.Date,
                 Ano = DateTime.Now.Year,
-                CentroCustoId = user.CentroCustoId ?? 0 // Pré-selecionar o centro de custo do usuário
+                Mes = DateTime.Now.Month,
+                TipoFechamento = TipoFechamento.Mensal
             };
 
-            await PopulateDropdowns(fechamento);
-            return View(fechamento);
+            // Se for SEDE, buscar fechamentos de congregações disponíveis
+            if (viewModel.EhSede)
+            {
+                viewModel.FechamentosDisponiveis = await _context.FechamentosPeriodo
+                    .Include(f => f.CentroCusto)
+                    .Where(f => f.CentroCusto.Tipo == TipoCentroCusto.Congregacao &&
+                                f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                f.FoiProcessadoPelaSede == false)
+                    .OrderByDescending(f => f.DataAprovacao)
+                    .Select(f => new FechamentoCongregacaoDisponivel
+                    {
+                        Id = f.Id,
+                        NomeCongregacao = f.CentroCusto.Nome,
+                        DataInicio = f.DataInicio,
+                        DataFim = f.DataFim,
+                        TotalEntradas = f.TotalEntradas,
+                        TotalSaidas = f.TotalSaidas,
+                        BalancoFisico = f.BalancoFisico,
+                        BalancoDigital = f.BalancoDigital,
+                        DataAprovacao = f.DataAprovacao.Value,
+                        Selecionado = true // Por padrão, todos selecionados
+                    })
+                    .ToListAsync();
+            }
+
+            return View(viewModel);
         }
 
         // POST: FechamentoPeriodo/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(FechamentoPeriodo fechamento)
+        public async Task<IActionResult> Create(FechamentoUnificadoViewModel viewModel)
         {
-            ModelState.Remove("DataFim");
-            ModelState.Remove("CentroCusto");
-            ModelState.Remove("UsuarioSubmissao");
-            ModelState.Remove("UsuarioSubmissaoId");
-
-            // VALIDAR PERMISSÃO DE ACESSO AO CENTRO DE CUSTO
-            if (!await CanAccessCentroCusto(fechamento.CentroCustoId))
+            if (!ModelState.IsValid)
             {
-                ModelState.AddModelError("CentroCustoId", "Você não tem permissão para criar fechamentos neste centro de custo.");
+                // Recarregar dados se for SEDE
+                if (viewModel.EhSede)
+                {
+                    viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                }
+                return View(viewModel);
             }
 
-            if (ModelState.IsValid)
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                // USAR TRANSAÇÃO PARA GARANTIR ATOMICIDADE
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                // ✅ VERIFICAR SE JÁ EXISTE FECHAMENTO APROVADO NO PERÍODO
+                var fechamentoExistente = await _context.FechamentosPeriodo
+                    .Where(f => f.CentroCustoId == viewModel.CentroCustoId &&
+                                f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                f.DataInicio == viewModel.DataInicio &&
+                                f.DataFim == viewModel.DataFim)
+                    .FirstOrDefaultAsync();
 
-                try
+                if (fechamentoExistente != null)
                 {
-                    var user = await _userManager.GetUserAsync(User);
-                    if (user == null)
+                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}). Não é possível criar outro fechamento no mesmo período.";
+                    
+                    if (viewModel.EhSede)
                     {
-                        TempData["ErrorMessage"] = "Usuário não autenticado.";
-                        return RedirectToAction(nameof(Index));
+                        viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
                     }
+                    return View(viewModel);
+                }
 
-                    // Validar e ajustar datas
-                    ValidarTipoFechamento(fechamento);
+                // Buscar fechamentos das congregações selecionados (apenas se for SEDE)
+                List<FechamentoPeriodo> fechamentosCongregacoes = new List<FechamentoPeriodo>();
 
-                    fechamento.UsuarioSubmissaoId = user.Id;
-                    fechamento.DataSubmissao = DateTime.Now;
-                    fechamento.Status = StatusFechamentoPeriodo.Pendente;
-
-                    // Calcular totais do período
-                    await CalcularTotaisFechamento(fechamento);
-
-                    _logger.LogInformation($"Fechamento criado - Balanço Digital: {fechamento.BalancoDigital:C}");
-
-                    // APLICAR RATEIOS COM LOG DETALHADO
-                    var resultadoRateio = await AplicarRateiosComLog(fechamento);
-
-                    if (!string.IsNullOrEmpty(resultadoRateio))
-                    {
-                        _logger.LogInformation($"Resultado do Rateio: {resultadoRateio}");
-                        ViewBag.LogRateio = resultadoRateio;
-                    }
-
-                    // Gerar detalhes do fechamento
-                    await GerarDetalhesFechamento(fechamento);
-
-                    // SALVAR FECHAMENTO
-                    _context.Add(fechamento);
-                    await _context.SaveChangesAsync();
-
-                    _logger.LogInformation($"Fechamento ID {fechamento.Id} salvo com sucesso");
-
-                    // VERIFICAR SE OS ITENS DE RATEIO FORAM SALVOS
-                    var itensRateioSalvos = await _context.ItensRateioFechamento
-                        .Where(i => i.FechamentoPeriodoId == fechamento.Id)
+                if (viewModel.EhSede && viewModel.FechamentosIncluidos != null && viewModel.FechamentosIncluidos.Any())
+                {
+                    fechamentosCongregacoes = await _context.FechamentosPeriodo
+                        .Include(f => f.CentroCusto)
+                        .Where(f => viewModel.FechamentosIncluidos.Contains(f.Id) &&
+                                    f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                    f.FoiProcessadoPelaSede == false)
                         .ToListAsync();
-
-                    _logger.LogInformation($"Itens de rateio salvos: {itensRateioSalvos.Count}");
-
-                    // CONFIRMAR TRANSAÇÃO
-                    await transaction.CommitAsync();
-
-                    await _auditService.LogAsync("Criação", "FechamentoPeriodo",
-                        $"Fechamento {ObterDescricaoFechamento(fechamento)} criado. Rateios aplicados: {itensRateioSalvos.Count}");
-
-                    TempData["SuccessMessage"] = $"Fechamento criado com sucesso! {itensRateioSalvos.Count} rateio(s) aplicado(s).";
-
-                    if (!string.IsNullOrEmpty(resultadoRateio))
-                    {
-                        TempData["InfoMessage"] = resultadoRateio;
-                    }
-
-                    return RedirectToAction(nameof(Details), new { id = fechamento.Id });
                 }
-                catch (Exception ex)
+
+                // ✅ CALCULAR TOTAIS APENAS COM LANÇAMENTOS NÃO INCLUÍDOS EM FECHAMENTOS APROVADOS
+                var totalEntradas = await _context.Entradas
+                    .Where(e => e.CentroCustoId == viewModel.CentroCustoId &&
+                                e.Data >= viewModel.DataInicio &&
+                                e.Data <= viewModel.DataFim &&
+                                (!e.IncluidaEmFechamento || 
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
+                    .SumAsync(e => e.Valor);
+
+                var totalSaidas = await _context.Saidas
+                    .Where(s => s.CentroCustoId == viewModel.CentroCustoId &&
+                                s.Data >= viewModel.DataInicio &&
+                                s.Data <= viewModel.DataFim &&
+                                (!s.IncluidaEmFechamento || 
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
+                    .SumAsync(s => s.Valor);
+
+                // ✅ VERIFICAR SE HÁ LANÇAMENTOS NOVOS
+                var temLancamentosNovos = totalEntradas > 0 || totalSaidas > 0;
+                
+                if (!temLancamentosNovos && (!viewModel.EhSede || !fechamentosCongregacoes.Any()))
                 {
-                    await transaction.RollbackAsync();
-                    _logger.LogError(ex, "Erro ao criar fechamento");
-                    TempData["ErrorMessage"] = $"Erro ao criar fechamento: {ex.Message}";
+                    TempData["ErrorMessage"] = "Não há lançamentos novos para incluir neste fechamento. Todos os lançamentos do período já foram incluídos em fechamentos aprovados anteriormente.";
+                    
+                    if (viewModel.EhSede)
+                    {
+                        viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                    }
+                    return View(viewModel);
                 }
-            }
 
-            await PopulateDropdowns(fechamento);
-            return View(fechamento);
+                // Separar por tipo de caixa (APENAS LANÇAMENTOS NÃO INCLUÍDOS)
+                var entradasFisicas = await _context.Entradas
+                    .Include(e => e.MeioDePagamento)
+                    .Where(e => e.CentroCustoId == viewModel.CentroCustoId &&
+                                e.Data >= viewModel.DataInicio &&
+                                e.Data <= viewModel.DataFim &&
+                                e.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico &&
+                                (!e.IncluidaEmFechamento || 
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
+                    .SumAsync(e => e.Valor);
+
+                var entradasDigitais = await _context.Entradas
+                    .Include(e => e.MeioDePagamento)
+                    .Where(e => e.CentroCustoId == viewModel.CentroCustoId &&
+                                e.Data >= viewModel.DataInicio &&
+                                e.Data <= viewModel.DataFim &&
+                                e.MeioDePagamento.TipoCaixa == TipoCaixa.Digital &&
+                                (!e.IncluidaEmFechamento || 
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
+                    .SumAsync(e => e.Valor);
+
+                var saidasFisicas = await _context.Saidas
+                    .Include(s => s.MeioDePagamento)
+                    .Where(s => s.CentroCustoId == viewModel.CentroCustoId &&
+                                s.Data >= viewModel.DataInicio &&
+                                s.Data <= viewModel.DataFim &&
+                                s.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico &&
+                                (!s.IncluidaEmFechamento || 
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
+                    .SumAsync(s => s.Valor);
+
+                var saidasDigitais = await _context.Saidas
+                    .Include(s => s.MeioDePagamento)
+                    .Where(s => s.CentroCustoId == viewModel.CentroCustoId &&
+                                s.Data >= viewModel.DataInicio &&
+                                s.Data <= viewModel.DataFim &&
+                                s.MeioDePagamento.TipoCaixa == TipoCaixa.Digital &&
+                                (!s.IncluidaEmFechamento || 
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
+                    .SumAsync(s => s.Valor);
+
+                // Somar valores das congregações (se houver)
+                decimal totalEntradasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradas);
+                decimal totalSaidasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidas);
+                decimal totalEntradasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasFisicas);
+                decimal totalSaidasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasFisicas);
+                decimal totalEntradasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasDigitais);
+                decimal totalSaidasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasDigitais);
+
+                // Preparar observação
+                var observacaoFinal = viewModel.Observacoes ?? "";
+
+                if (viewModel.EhSede && fechamentosCongregacoes.Any())
+                {
+                    observacaoFinal += $"\n\n✓ Fechamento consolidado: incluídos {fechamentosCongregacoes.Count} fechamento(s) de congregações aprovados.";
+                }
+
+                if (temLancamentosNovos)
+                {
+                    observacaoFinal += $"\n\n✓ Lançamentos novos incluídos: {totalEntradas:C} em entradas e {totalSaidas:C} em saídas.";
+                }
+
+                // Criar fechamento
+                var fechamento = new FechamentoPeriodo
+                {
+                    CentroCustoId = viewModel.CentroCustoId,
+                    Ano = viewModel.Ano,
+                    Mes = viewModel.Mes,
+                    DataInicio = viewModel.DataInicio,
+                    DataFim = viewModel.DataFim,
+                    TipoFechamento = viewModel.TipoFechamento,
+
+                    // TOTAIS CONSOLIDADOS
+                    TotalEntradas = totalEntradas + totalEntradasCongregacoes,
+                    TotalSaidas = totalSaidas + totalSaidasCongregacoes,
+
+                    TotalEntradasFisicas = entradasFisicas + totalEntradasFisicasCongregacoes,
+                    TotalSaidasFisicas = saidasFisicas + totalSaidasFisicasCongregacoes,
+
+                    TotalEntradasDigitais = entradasDigitais + totalEntradasDigitaisCongregacoes,
+                    TotalSaidasDigitais = saidasDigitais + totalSaidasDigitaisCongregacoes,
+
+                    BalancoFisico = (entradasFisicas + totalEntradasFisicasCongregacoes) -
+                                   (saidasFisicas + totalSaidasFisicasCongregacoes),
+
+                    BalancoDigital = (entradasDigitais + totalEntradasDigitaisCongregacoes) -
+                                    (saidasDigitais + totalSaidasDigitaisCongregacoes),
+
+                    Observacoes = observacaoFinal,
+
+                    // Marcar como fechamento da SEDE se aplicável
+                    EhFechamentoSede = viewModel.EhSede,
+                    QuantidadeCongregacoesIncluidas = fechamentosCongregacoes.Count,
+
+                    Status = StatusFechamentoPeriodo.Pendente,
+                    UsuarioSubmissaoId = user.Id,
+                    DataSubmissao = DateTime.Now
+                };
+
+                // Aplicar rateios (apenas para SEDE)
+                if (viewModel.EhSede)
+                {
+                    await AplicarRateiosComLog(fechamento);
+                }
+                else
+                {
+                    fechamento.TotalRateios = 0;
+                    fechamento.SaldoFinal = fechamento.BalancoFisico + fechamento.BalancoDigital;
+                }
+
+                // Gerar detalhes do fechamento (APENAS COM LANÇAMENTOS NÃO INCLUÍDOS)
+                await GerarDetalhesFechamento(fechamento);
+
+                // Salvar fechamento
+                _context.Add(fechamento);
+                await _context.SaveChangesAsync();
+
+                // ✅ MARCAR LANÇAMENTOS COMO INCLUÍDOS EM FECHAMENTO (APENAS OS NOVOS)
+                await MarcarLancamentosComoIncluidos(fechamento);
+
+                // Marcar fechamentos das congregações como PROCESSADOS (se houver)
+                if (fechamentosCongregacoes.Any())
+                {
+                    foreach (var fechamentoCongregacao in fechamentosCongregacoes)
+                    {
+                        fechamentoCongregacao.FoiProcessadoPelaSede = true;
+                        fechamentoCongregacao.FechamentoSedeProcessadorId = fechamento.Id;
+                        fechamentoCongregacao.DataProcessamentoPelaSede = DateTime.Now;
+                        fechamentoCongregacao.Status = StatusFechamentoPeriodo.Processado;
+                        _context.Update(fechamentoCongregacao);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                var mensagemSucesso = viewModel.EhSede && fechamentosCongregacoes.Any()
+                    ? $"Fechamento da SEDE criado com sucesso! {fechamentosCongregacoes.Count} prestação(ões) de congregação(ões) incluída(s)."
+                    : "Fechamento criado com sucesso!";
+
+                if (temLancamentosNovos)
+                {
+                    mensagemSucesso += $" Total de {totalEntradas:C} em entradas e {totalSaidas:C} em saídas foram incluídos.";
+                }
+
+                await _auditService.LogAsync("Criação", "FechamentoPeriodo", mensagemSucesso);
+
+                TempData["SuccessMessage"] = mensagemSucesso;
+
+                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Erro ao criar fechamento");
+                TempData["ErrorMessage"] = $"Erro ao criar fechamento: {ex.Message}";
+
+                // Recarregar dados se for SEDE
+                if (viewModel.EhSede)
+                {
+                    viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                }
+                return View(viewModel);
+            }
         }
 
         // GET: FechamentoPeriodo/Edit/5
@@ -493,6 +687,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             try
             {
+                // ✅ DESMARCAR LANÇAMENTOS QUANDO REJEITAR
+                await DesmarcarLancamentosComoIncluidos(fechamento.Id);
+
                 // Atualizar status para Rejeitado
                 fechamento.Status = StatusFechamentoPeriodo.Rejeitado;
                 fechamento.DataAprovacao = DateTime.Now;
@@ -511,9 +708,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 // Log de auditoria
                 await _auditService.LogAsync("Rejeição", "FechamentoPeriodo",
-                    $"Fechamento {ObterDescricaoFechamento(fechamento)} rejeitado. Motivo: {motivoRejeicao ?? "Não informado"}");
+                    $"Fechamento {ObterDescricaoFechamento(fechamento)} rejeitado. Motivo: {motivoRejeicao ?? "Não informado"}. Lançamentos liberados para novo fechamento.");
 
-                TempData["SuccessMessage"] = "Fechamento rejeitado com sucesso!";
+                TempData["SuccessMessage"] = "Fechamento rejeitado com sucesso! Os lançamentos foram liberados para novo fechamento.";
                 _logger.LogInformation($"Fechamento ID {id} rejeitado por {user.UserName}. Motivo: {motivoRejeicao}");
             }
             catch (Exception ex)
@@ -639,6 +836,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             try
             {
+                // ✅ DESMARCAR LANÇAMENTOS ANTES DE EXCLUIR
+                await DesmarcarLancamentosComoIncluidos(fechamento.Id);
+
                 // Remover itens relacionados primeiro
                 if (fechamento.ItensRateio.Any())
                 {
@@ -657,7 +857,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 await _auditService.LogAsync("Exclusão", "FechamentoPeriodo",
                     $"Fechamento {ObterDescricaoFechamento(fechamento)} excluído");
 
-                TempData["SuccessMessage"] = "Fechamento excluído com sucesso!";
+                TempData["SuccessMessage"] = "Fechamento excluído com sucesso! Os lançamentos foram liberados para novo fechamento.";
             }
             catch (Exception ex)
             {
@@ -836,6 +1036,21 @@ namespace SistemaTesourariaEclesiastica.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                // ✅ VERIFICAR SE JÁ EXISTE FECHAMENTO APROVADO NO PERÍODO
+                var fechamentoExistente = await _context.FechamentosPeriodo
+                    .Where(f => f.CentroCustoId == sede.Id &&
+                                f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                f.DataInicio == viewModel.DataInicio &&
+                                f.DataFim == viewModel.DataFim)
+                    .FirstOrDefaultAsync();
+
+                if (fechamentoExistente != null)
+                {
+                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO da SEDE para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}).";
+                    viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                    return View(viewModel);
+                }
+
                 // 1. Buscar fechamentos das congregações selecionados (SE HOUVER)
                 List<FechamentoPeriodo> fechamentosCongregacoes = new List<FechamentoPeriodo>();
 
@@ -849,26 +1064,45 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .ToListAsync();
                 }
 
-                // 2. Calcular totais da SEDE no período
+                // 2. Calcular totais da SEDE no período (APENAS LANÇAMENTOS NÃO INCLUÍDOS EM FECHAMENTOS APROVADOS)
                 var totalEntradasSede = await _context.Entradas
                     .Where(e => e.CentroCustoId == sede.Id &&
                                 e.Data >= viewModel.DataInicio &&
-                                e.Data <= viewModel.DataFim)
+                                e.Data <= viewModel.DataFim &&
+                                (!e.IncluidaEmFechamento || 
+                                 e.FechamentoQueIncluiuId == sede.Id ||
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                     .SumAsync(e => e.Valor);
 
                 var totalSaidasSede = await _context.Saidas
                     .Where(s => s.CentroCustoId == sede.Id &&
                                 s.Data >= viewModel.DataInicio &&
-                                s.Data <= viewModel.DataFim)
+                                s.Data <= viewModel.DataFim &&
+                                (!s.IncluidaEmFechamento || 
+                                 s.FechamentoQueIncluiuId == sede.Id ||
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                     .SumAsync(s => s.Valor);
 
-                // Separar por tipo de caixa (Físico/Digital) para a SEDE
+                // ✅ VERIFICAR SE HÁ LANÇAMENTOS NOVOS
+                var temLancamentosNovos = totalEntradasSede > 0 || totalSaidasSede > 0;
+
+                if (!temLancamentosNovos && !fechamentosCongregacoes.Any())
+                {
+                    TempData["ErrorMessage"] = "Não há lançamentos novos da SEDE nem prestações de congregações para incluir neste fechamento.";
+                    viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                    return View(viewModel);
+                }
+
+                // Separar por tipo de caixa (Físico/Digital) para a SEDE (APENAS LANÇAMENTOS NÃO INCLUÍDOS)
                 var entradasFisicasSede = await _context.Entradas
                     .Include(e => e.MeioDePagamento)
                     .Where(e => e.CentroCustoId == sede.Id &&
                                 e.Data >= viewModel.DataInicio &&
                                 e.Data <= viewModel.DataFim &&
-                                e.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico)
+                                e.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico &&
+                                (!e.IncluidaEmFechamento || 
+                                 e.FechamentoQueIncluiuId == sede.Id ||
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                     .SumAsync(e => e.Valor);
 
                 var entradasDigitaisSede = await _context.Entradas
@@ -876,7 +1110,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .Where(e => e.CentroCustoId == sede.Id &&
                                 e.Data >= viewModel.DataInicio &&
                                 e.Data <= viewModel.DataFim &&
-                                e.MeioDePagamento.TipoCaixa == TipoCaixa.Digital)
+                                e.MeioDePagamento.TipoCaixa == TipoCaixa.Digital &&
+                                (!e.IncluidaEmFechamento || 
+                                 e.FechamentoQueIncluiuId == sede.Id ||
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                     .SumAsync(e => e.Valor);
 
                 var saidasFisicasSede = await _context.Saidas
@@ -884,7 +1121,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .Where(s => s.CentroCustoId == sede.Id &&
                                 s.Data >= viewModel.DataInicio &&
                                 s.Data <= viewModel.DataFim &&
-                                s.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico)
+                                s.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico &&
+                                (!s.IncluidaEmFechamento || 
+                                 s.FechamentoQueIncluiuId == sede.Id ||
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                     .SumAsync(s => s.Valor);
 
                 var saidasDigitaisSede = await _context.Saidas
@@ -892,7 +1132,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .Where(s => s.CentroCustoId == sede.Id &&
                                 s.Data >= viewModel.DataInicio &&
                                 s.Data <= viewModel.DataFim &&
-                                s.MeioDePagamento.TipoCaixa == TipoCaixa.Digital)
+                                s.MeioDePagamento.TipoCaixa == TipoCaixa.Digital &&
+                                (!s.IncluidaEmFechamento || 
+                                 s.FechamentoQueIncluiuId == sede.Id ||
+                                 !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                     .SumAsync(s => s.Valor);
 
                 // 3. Somar valores das congregações APROVADAS (SE HOUVER)
@@ -913,6 +1156,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 else
                 {
                     observacaoFinal += "\n\n✓ Fechamento da SEDE SEM congregações incluídas (fechamento independente).";
+                }
+
+                if (temLancamentosNovos)
+                {
+                    observacaoFinal += $"\n\n✓ Lançamentos novos da SEDE incluídos: {totalEntradasSede:C} em entradas e {totalSaidasSede:C} em saídas.";
                 }
 
                 var fechamentoSede = new FechamentoPeriodo
@@ -954,11 +1202,20 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // 5. Aplicar RATEIOS sobre o TOTAL CONSOLIDADO
                 await AplicarRateiosComLog(fechamentoSede);
 
-                // 6. Salvar fechamento da SEDE
+                // 6. Gerar detalhes do fechamento (APENAS COM LANÇAMENTOS NÃO INCLUÍDOS)
+                await GerarDetalhesFechamento(fechamentoSede);
+
+                // 7. Salvar fechamento da SEDE
                 _context.Add(fechamentoSede);
                 await _context.SaveChangesAsync();
 
-                // 7. Marcar fechamentos das congregações como PROCESSADOS (SE HOUVER)
+                // ✅ 8. MARCAR LANÇAMENTOS DA SEDE COMO INCLUÍDOS
+                if (temLancamentosNovos)
+                {
+                    await MarcarLancamentosComoIncluidos(fechamentoSede);
+                }
+
+                // 9. Marcar fechamentos das congregações como PROCESSADOS (SE HOUVER)
                 if (fechamentosCongregacoes.Any())
                 {
                     foreach (var fechamentoCongregacao in fechamentosCongregacoes)
@@ -977,6 +1234,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var mensagemSucesso = fechamentosCongregacoes.Any()
                     ? $"Fechamento da SEDE criado com sucesso! {fechamentosCongregacoes.Count} prestação(ões) de congregação(ões) incluída(s)."
                     : "Fechamento da SEDE criado com sucesso! (Sem congregações incluídas)";
+
+                if (temLancamentosNovos)
+                {
+                    mensagemSucesso += $" Total de {totalEntradasSede:C} em entradas e {totalSaidasSede:C} em saídas da SEDE foram incluídos.";
+                }
 
                 await _auditService.LogAsync("Criação", "FechamentoPeriodo", mensagemSucesso);
 
@@ -1184,40 +1446,52 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // MÉTODO AUXILIAR: Calcular Totais do Fechamento
         private async Task CalcularTotaisFechamento(FechamentoPeriodo fechamento)
         {
-            // Total de entradas FÍSICAS (Dinheiro)
+            // ✅ Total de entradas FÍSICAS (Dinheiro) - APENAS LANÇAMENTOS NÃO INCLUÍDOS EM FECHAMENTOS APROVADOS
             fechamento.TotalEntradasFisicas = await _context.Entradas
                 .Include(e => e.MeioDePagamento)
                 .Where(e => e.CentroCustoId == fechamento.CentroCustoId &&
                            e.Data >= fechamento.DataInicio &&
                            e.Data <= fechamento.DataFim &&
-                           e.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico)
+                           e.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico &&
+                           (!e.IncluidaEmFechamento || 
+                            e.FechamentoQueIncluiuId == fechamento.Id ||
+                            !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                 .SumAsync(e => (decimal?)e.Valor) ?? 0;
 
-            // Total de entradas DIGITAIS
+            // ✅ Total de entradas DIGITAIS - APENAS LANÇAMENTOS NÃO INCLUÍDOS EM FECHAMENTOS APROVADOS
             fechamento.TotalEntradasDigitais = await _context.Entradas
                 .Include(e => e.MeioDePagamento)
                 .Where(e => e.CentroCustoId == fechamento.CentroCustoId &&
                            e.Data >= fechamento.DataInicio &&
                            e.Data <= fechamento.DataFim &&
-                           e.MeioDePagamento.TipoCaixa == TipoCaixa.Digital)
+                           e.MeioDePagamento.TipoCaixa == TipoCaixa.Digital &&
+                           (!e.IncluidaEmFechamento || 
+                            e.FechamentoQueIncluiuId == fechamento.Id ||
+                            !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                 .SumAsync(e => (decimal?)e.Valor) ?? 0;
 
-            // Total de saídas FÍSICAS
+            // ✅ Total de saídas FÍSICAS - APENAS LANÇAMENTOS NÃO INCLUÍDOS EM FECHAMENTOS APROVADOS
             fechamento.TotalSaidasFisicas = await _context.Saidas
                 .Include(s => s.MeioDePagamento)
                 .Where(s => s.CentroCustoId == fechamento.CentroCustoId &&
                            s.Data >= fechamento.DataInicio &&
                            s.Data <= fechamento.DataFim &&
-                           s.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico)
+                           s.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico &&
+                           (!s.IncluidaEmFechamento || 
+                            s.FechamentoQueIncluiuId == fechamento.Id ||
+                            !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                 .SumAsync(s => (decimal?)s.Valor) ?? 0;
 
-            // Total de saídas DIGITAIS
+            // ✅ Total de saídas DIGITAIS - APENAS LANÇAMENTOS NÃO INCLUÍDOS EM FECHAMENTOS APROVADOS
             fechamento.TotalSaidasDigitais = await _context.Saidas
                 .Include(s => s.MeioDePagamento)
                 .Where(s => s.CentroCustoId == fechamento.CentroCustoId &&
                            s.Data >= fechamento.DataInicio &&
                            s.Data <= fechamento.DataFim &&
-                           s.MeioDePagamento.TipoCaixa == TipoCaixa.Digital)
+                           s.MeioDePagamento.TipoCaixa == TipoCaixa.Digital &&
+                           (!s.IncluidaEmFechamento || 
+                            s.FechamentoQueIncluiuId == fechamento.Id ||
+                            !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                 .SumAsync(s => (decimal?)s.Valor) ?? 0;
 
             // TOTAIS GERAIS
@@ -1275,7 +1549,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 .Include(e => e.Membro)
                 .Where(e => e.CentroCustoId == fechamento.CentroCustoId &&
                            e.Data >= fechamento.DataInicio &&
-                           e.Data <= fechamento.DataFim)
+                           e.Data <= fechamento.DataFim &&
+                           (!e.IncluidaEmFechamento || 
+                            !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                 .ToListAsync();
 
             foreach (var entrada in entradas)
@@ -1303,7 +1579,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 .Include(s => s.Fornecedor)
                 .Where(s => s.CentroCustoId == fechamento.CentroCustoId &&
                            s.Data >= fechamento.DataInicio &&
-                           s.Data <= fechamento.DataFim)
+                           s.Data <= fechamento.DataFim &&
+                           (!s.IncluidaEmFechamento || 
+                            !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
                 .ToListAsync();
 
             foreach (var saida in saidas)
@@ -1323,6 +1601,84 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 fechamento.DetalhesFechamento.Add(detalhe);
             }
+        }
+
+        // ✅ NOVO MÉTODO: Marcar Lançamentos como Incluídos em Fechamento
+        private async Task MarcarLancamentosComoIncluidos(FechamentoPeriodo fechamento)
+        {
+            // Buscar entradas do período que ainda não foram incluídas em fechamentos aprovados
+            var entradas = await _context.Entradas
+                .Where(e => e.CentroCustoId == fechamento.CentroCustoId &&
+                           e.Data >= fechamento.DataInicio &&
+                           e.Data <= fechamento.DataFim &&
+                           (!e.IncluidaEmFechamento || 
+                            e.FechamentoQueIncluiuId == fechamento.Id ||
+                            !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
+                .ToListAsync();
+
+            foreach (var entrada in entradas)
+            {
+                entrada.IncluidaEmFechamento = true;
+                entrada.FechamentoQueIncluiuId = fechamento.Id;
+                entrada.DataInclusaoFechamento = DateTime.Now;
+                _context.Update(entrada);
+            }
+
+            // Buscar saídas do período que ainda não foram incluídas em fechamentos aprovados
+            var saidas = await _context.Saidas
+                .Where(s => s.CentroCustoId == fechamento.CentroCustoId &&
+                           s.Data >= fechamento.DataInicio &&
+                           s.Data <= fechamento.DataFim &&
+                           (!s.IncluidaEmFechamento || 
+                            s.FechamentoQueIncluiuId == fechamento.Id ||
+                            !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
+                .ToListAsync();
+
+            foreach (var saida in saidas)
+            {
+                saida.IncluidaEmFechamento = true;
+                saida.FechamentoQueIncluiuId = fechamento.Id;
+                saida.DataInclusaoFechamento = DateTime.Now;
+                _context.Update(saida);
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation($"Marcados {entradas.Count} entradas e {saidas.Count} saídas como incluídas no fechamento ID {fechamento.Id}");
+        }
+
+        // ✅ NOVO MÉTODO: Desmarcar Lançamentos (para quando fechamento for rejeitado ou excluído)
+        private async Task DesmarcarLancamentosComoIncluidos(int fechamentoId)
+        {
+            // Desmarcar entradas
+            var entradas = await _context.Entradas
+                .Where(e => e.FechamentoQueIncluiuId == fechamentoId)
+                .ToListAsync();
+
+            foreach (var entrada in entradas)
+            {
+                entrada.IncluidaEmFechamento = false;
+                entrada.FechamentoQueIncluiuId = null;
+                entrada.DataInclusaoFechamento = null;
+                _context.Update(entrada);
+            }
+
+            // Desmarcar saídas
+            var saidas = await _context.Saidas
+                .Where(s => s.FechamentoQueIncluiuId == fechamentoId)
+                .ToListAsync();
+
+            foreach (var saida in saidas)
+            {
+                saida.IncluidaEmFechamento = false;
+                saida.FechamentoQueIncluiuId = null;
+                saida.DataInclusaoFechamento = null;
+                _context.Update(saida);
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation($"Desmarcados {entradas.Count} entradas e {saidas.Count} saídas do fechamento ID {fechamentoId}");
         }
 
         // MÉTODO AUXILIAR: Popular Dropdowns
