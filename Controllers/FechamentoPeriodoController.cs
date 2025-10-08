@@ -189,6 +189,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
             try
             {
                 // ✅ VERIFICAR SE JÁ EXISTE FECHAMENTO APROVADO NO PERÍODO
+                // Para fechamentos DIÁRIOS, permitir se houver lançamentos novos
+                // Para outros tipos (semanal/mensal), bloquear fechamentos duplicados
                 var fechamentoExistente = await _context.FechamentosPeriodo
                     .Where(f => f.CentroCustoId == viewModel.CentroCustoId &&
                                 f.Status == StatusFechamentoPeriodo.Aprovado &&
@@ -198,13 +200,43 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 if (fechamentoExistente != null)
                 {
-                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}). Não é possível criar outro fechamento no mesmo período.";
-                    
-                    if (viewModel.EhSede)
+                    // Para fechamentos NÃO DIÁRIOS, bloquear totalmente
+                    if (viewModel.TipoFechamento != TipoFechamento.Diario)
                     {
-                        viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                        TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}). Não é possível criar outro fechamento no mesmo período.";
+                        
+                        if (viewModel.EhSede)
+                        {
+                            viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                        }
+                        return View(viewModel);
                     }
-                    return View(viewModel);
+                    
+                    // Para fechamentos DIÁRIOS, verificar se há lançamentos novos
+                    // Se não houver, bloquear
+                    var temLancamentosNovosAntesDeCalcular = await _context.Entradas
+                        .AnyAsync(e => e.CentroCustoId == viewModel.CentroCustoId &&
+                                      e.Data >= viewModel.DataInicio &&
+                                      e.Data <= viewModel.DataFim &&
+                                      (!e.IncluidaEmFechamento || 
+                                       !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
+                        || await _context.Saidas
+                        .AnyAsync(s => s.CentroCustoId == viewModel.CentroCustoId &&
+                                      s.Data >= viewModel.DataInicio &&
+                                      s.Data <= viewModel.DataFim &&
+                                      (!s.IncluidaEmFechamento || 
+                                       !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)));
+                    
+                    if (!temLancamentosNovosAntesDeCalcular)
+                    {
+                        TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para o dia {viewModel.DataInicio:dd/MM/yyyy} e não há novos lançamentos desde então.";
+                        
+                        if (viewModel.EhSede)
+                        {
+                            viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                        }
+                        return View(viewModel);
+                    }
                 }
 
                 // Buscar fechamentos das congregações selecionados (apenas se for SEDE)
@@ -1037,6 +1069,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
             try
             {
                 // ✅ VERIFICAR SE JÁ EXISTE FECHAMENTO APROVADO NO PERÍODO
+                // Para fechamentos DIÁRIOS, permitir se houver lançamentos novos
+                // Para outros tipos (semanal/mensal), bloquear fechamentos duplicados
                 var fechamentoExistente = await _context.FechamentosPeriodo
                     .Where(f => f.CentroCustoId == sede.Id &&
                                 f.Status == StatusFechamentoPeriodo.Aprovado &&
@@ -1046,9 +1080,37 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 if (fechamentoExistente != null)
                 {
-                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO da SEDE para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}).";
-                    viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-                    return View(viewModel);
+                    // Para fechamentos NÃO DIÁRIOS, bloquear totalmente
+                    if (viewModel.TipoFechamento != TipoFechamento.Diario)
+                    {
+                        TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO da SEDE para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}).";
+                        viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                        return View(viewModel);
+                    }
+                    
+                    // Para fechamentos DIÁRIOS, verificar se há lançamentos novos
+                    // Se não houver, bloquear
+                    var temLancamentosNovosAntesDeCalcular = await _context.Entradas
+                        .AnyAsync(e => e.CentroCustoId == sede.Id &&
+                                      e.Data >= viewModel.DataInicio &&
+                                      e.Data <= viewModel.DataFim &&
+                                      (!e.IncluidaEmFechamento || 
+                                       e.FechamentoQueIncluiuId == sede.Id ||
+                                       !_context.FechamentosPeriodo.Any(f => f.Id == e.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)))
+                        || await _context.Saidas
+                        .AnyAsync(s => s.CentroCustoId == sede.Id &&
+                                      s.Data >= viewModel.DataInicio &&
+                                      s.Data <= viewModel.DataFim &&
+                                      (!s.IncluidaEmFechamento || 
+                                       s.FechamentoQueIncluiuId == sede.Id ||
+                                       !_context.FechamentosPeriodo.Any(f => f.Id == s.FechamentoQueIncluiuId && f.Status == StatusFechamentoPeriodo.Aprovado)));
+                    
+                    if (!temLancamentosNovosAntesDeCalcular)
+                    {
+                        TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para o dia {viewModel.DataInicio:dd/MM/yyyy} e não há novos lançamentos desde então.";
+                        viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                        return View(viewModel);
+                    }
                 }
 
                 // 1. Buscar fechamentos das congregações selecionados (SE HOUVER)
@@ -1085,7 +1147,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 // ✅ VERIFICAR SE HÁ LANÇAMENTOS NOVOS
                 var temLancamentosNovos = totalEntradasSede > 0 || totalSaidasSede > 0;
-
+                
                 if (!temLancamentosNovos && !fechamentosCongregacoes.Any())
                 {
                     TempData["ErrorMessage"] = "Não há lançamentos novos da SEDE nem prestações de congregações para incluir neste fechamento.";
@@ -1625,8 +1687,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
 
             // Buscar saídas do período que ainda não foram incluídas em fechamentos aprovados
-            var saidas = await _context.Saidas
-                .Where(s => s.CentroCustoId == fechamento.CentroCustoId &&
+            var saidas = await _context.Saidas                .Where(s => s.CentroCustoId == fechamento.CentroCustoId &&
                            s.Data >= fechamento.DataInicio &&
                            s.Data <= fechamento.DataFim &&
                            (!s.IncluidaEmFechamento || 

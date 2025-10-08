@@ -33,7 +33,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label asp-for="Data" class="form-label">Data <span class="text-danger">*</span></label>
-                            <input asp-for="Data" class="form-control" type="date" />
+                            <input asp-for="Data" class="form-control" type="datetime-local" />
                             <span asp-validation-for="Data" class="text-danger"></span>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -136,10 +136,16 @@
     }
     <script>
         $(document).ready(function() {
-            // Formatar data para hoje se estiver vazia
+            // Formatar data e hora para agora se estiver vazia
             if (!$('#Data').val()) {
-                var today = new Date().toISOString().split('T')[0];
-                $('#Data').val(today);
+                var now = new Date();
+                var year = now.getFullYear();
+                var month = String(now.getMonth() + 1).padStart(2, '0');
+                var day = String(now.getDate()).padStart(2, '0');
+                var hours = String(now.getHours()).padStart(2, '0');
+                var minutes = String(now.getMinutes()).padStart(2, '0');
+                var datetime = year + '-' + month + '-' + day + 'T' + hours + ':' + minutes;
+                $('#Data').val(datetime);
             }
 
             // Validação adicional do valor

@@ -11,7 +11,7 @@ namespace SistemaTesourariaEclesiastica.Models
 
         [Required(ErrorMessage = "A data é obrigatória.")]
         [Display(Name = "Data")]
-        [DataType(DataType.Date)]
+        [DataType(DataType.DateTime)]
         [DataValidation(PermitirDataFutura = true, DiasMaximoFuturo = 30, DiasMaximoPassado = 730, ErrorMessage = "Data deve estar entre 2 anos no passado e 30 dias no futuro.")]
         public DateTime Data { get; set; }
 
