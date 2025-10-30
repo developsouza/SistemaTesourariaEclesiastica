@@ -33,7 +33,7 @@
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label asp-for="Data" class="form-label">Data <span class="text-danger">*</span></label>
-                            <input asp-for="Data" class="form-control" type="datetime-local">
+                            <input asp-for="Data" class="form-control" type="date">
                             <span asp-validation-for="Data" class="text-danger"></span>
                         </div>
 
@@ -137,24 +137,32 @@
     </div>
 
     <div class="col-lg-4">
-        <div class="card bg-light border-0">
-            <div class="card-header bg-transparent">
-                <h6 class="mb-0">
-                    <i class="bi bi-info-circle me-2"></i>Informações
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>Informações
                 </h6>
             </div>
             <div class="card-body">
-                <p class="small mb-2">
-                    <strong>Importante:</strong> Todos os campos marcados com <span class="text-danger">*</span> são obrigatórios.
-                </p>
-                <p class="small mb-2">
-                    <strong>Tipo de Despesa:</strong><br>
-                    • <strong>Fixa:</strong> Despesas recorrentes (aluguel, salários)<br>
-                    • <strong>Variável:</strong> Despesas ocasionais
-                </p>
-                <p class="small mb-0">
-                    <strong>Dica:</strong> Anexe sempre o comprovante para facilitar a auditoria.
-                </p>
+                <div class="mb-3 pb-3 border-bottom border-opacity-25">
+                    <p class="small mb-0">
+                        <strong>Importante:</strong> Todos os campos marcados com <span class="text-danger">*</span> são obrigatórios.
+                    </p>
+                </div>
+
+                <div class="mb-3 pb-3 border-bottom border-opacity-25">
+                    <p class="small mb-0">
+                        <strong>Tipo de Despesa:</strong><br>
+                        <span class="small">• <strong>Fixa:</strong> Despesas recorrentes (aluguel, salários)</span><br>
+                        <span class="small">• <strong>Variável:</strong> Despesas ocasionais</span>
+                    </p>
+                </div>
+
+                <div>
+                    <p class="small mb-0">
+                        <strong>Dica:</strong> Anexe sempre o comprovante para facilitar a auditoria.
+                    </p>
+                </div>
             </div>
         </div>
     </div>
@@ -166,16 +174,14 @@
     }
     <script>
         $(document).ready(function() {
-            // Formatar data e hora para agora se estiver vazia
+            // Formatar data para hoje se estiver vazia
             if (!$('#Data').val()) {
-                var now = new Date();
-                var year = now.getFullYear();
-                var month = String(now.getMonth() + 1).padStart(2, '0');
-                var day = String(now.getDate()).padStart(2, '0');
-                var hours = String(now.getHours()).padStart(2, '0');
-                var minutes = String(now.getMinutes()).padStart(2, '0');
-                var datetime = year + '-' + month + '-' + day + 'T' + hours + ':' + minutes;
-                $('#Data').val(datetime);
+                var today = new Date();
+                var year = today.getFullYear();
+                var month = String(today.getMonth() + 1).padStart(2, '0');
+                var day = String(today.getDate()).padStart(2, '0');
+                var dateString = year + '-' + month + '-' + day;
+                $('#Data').val(dateString);
             }
 
             // Validação do valor

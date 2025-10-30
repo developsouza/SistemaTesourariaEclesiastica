@@ -2,11 +2,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
-using SistemaTesourariaEclesiastica.Attributes;
-using SistemaTesourariaEclesiastica.Enums;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
@@ -73,7 +72,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             // Filtrar centros de custo para dropdown baseado no perfil
             var centrosCustoQuery = _context.CentrosCusto.AsQueryable();
-            
+
             if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
             {
                 // Tesoureiros Locais só veem seu centro de custo
@@ -139,7 +138,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
 
             ViewData["CentroCustoId"] = new SelectList(await centrosCustoQuery.ToListAsync(), "Id", "Nome");
-            
+
             // Se tesoureiro local, pré-selecionar seu centro de custo
             if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral) && user?.CentroCustoId.HasValue == true)
             {
@@ -234,7 +233,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 try
                 {
                     var user = await _userManager.GetUserAsync(User);
-                    
+
                     // Verificar permissões
                     var membroOriginal = await _context.Membros.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
                     if (membroOriginal == null)
@@ -346,7 +345,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 _context.Membros.Remove(membro);
                 await _context.SaveChangesAsync();
-                
+
                 if (user != null)
                 {
                     await _auditService.LogAuditAsync(user.Id, "Excluir", "Membro", membro.Id.ToString(), $"Membro {membro.NomeCompleto} excluído.");

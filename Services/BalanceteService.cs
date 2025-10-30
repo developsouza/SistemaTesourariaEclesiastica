@@ -74,9 +74,9 @@ namespace SistemaTesourariaEclesiastica.Services
                         .Select(f => f.CentroCustoId)
                         .Distinct()
                         .ToList();
-                    
+
                     centrosCustoParaIncluir.AddRange(congregacoesIncluidas);
-                    
+
                     _logger.LogInformation($"Balancete da SEDE incluirá {congregacoesIncluidas.Count} congregações");
                 }
 

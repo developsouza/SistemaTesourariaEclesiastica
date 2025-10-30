@@ -8,7 +8,7 @@ namespace SistemaTesourariaEclesiastica.ViewModels
         public int CentroCustoId { get; set; }
         public string NomeCentroCusto { get; set; } = string.Empty;
         public bool EhSede { get; set; }
-        
+
         // Dados do Fechamento
         public int? Ano { get; set; }
         public int? Mes { get; set; }

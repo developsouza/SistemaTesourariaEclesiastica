@@ -1,6 +1,6 @@
-﻿using SistemaTesourariaEclesiastica.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
-using Microsoft.EntityFrameworkCore;
 
 namespace SistemaTesourariaEclesiastica.Services
 {

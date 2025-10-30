@@ -172,35 +172,60 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 // =====================================================
-                // 7. CALCULAR ESTATÍSTICAS DO MÊS (APENAS APROVADOS)
+                // 7. CALCULAR ESTATÍSTICAS DO MÊS (APENAS LANÇAMENTOS INCLUÍDOS EM FECHAMENTOS APROVADOS/PROCESSADOS)
                 // =====================================================
                 decimal entradasMes = 0, saidasMes = 0, dizimosMes = 0;
 
                 try
                 {
-                    // Total de entradas APROVADAS do mês
-                    if (idsEntradasAprovadasMes.Any())
-                    {
-                        entradasMes = await _context.Entradas
-                            .Where(e => idsEntradasAprovadasMes.Contains(e.Id))
-                            .SumAsync(e => (decimal?)e.Valor) ?? 0;
+                    // ✅ CORRIGIDO: Buscar entradas que foram incluídas em fechamentos aprovados ou processados
+                    var queryEntradasMes = _context.Entradas
+                        .Include(e => e.FechamentoQueIncluiu)
+                        .Where(e => e.Data >= inicioMes &&
+                            e.Data <= fimMes &&
+                     e.IncluidaEmFechamento == true &&
+                           e.FechamentoQueIncluiu != null &&
+                           (e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                           e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado));
 
-                        // Dízimos APROVADOS do mês
-                        dizimosMes = await _context.Entradas
-                            .Include(e => e.PlanoDeContas)
-                            .Where(e => idsEntradasAprovadasMes.Contains(e.Id) &&
-                                       e.PlanoDeContas != null &&
-                                       e.PlanoDeContas.Nome.ToLower().Contains("dízimo"))
-                            .SumAsync(e => (decimal?)e.Valor) ?? 0;
+                    if (centroCustoFiltro.HasValue)
+                    {
+                        queryEntradasMes = queryEntradasMes.Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                     }
 
-                    // Total de saídas APROVADAS do mês
-                    if (idsSaidasAprovadasMes.Any())
+                    entradasMes = await queryEntradasMes.SumAsync(e => (decimal?)e.Valor) ?? 0;
+
+                    // Dízimos do mês (também apenas os aprovados)
+                    dizimosMes = await _context.Entradas
+                 .Include(e => e.PlanoDeContas)
+                                  .Include(e => e.FechamentoQueIncluiu)
+                   .Where(e => e.Data >= inicioMes &&
+                    e.Data <= fimMes &&
+                    e.IncluidaEmFechamento == true &&
+                     e.FechamentoQueIncluiu != null &&
+                  (e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                    e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado) &&
+                    e.PlanoDeContas != null &&
+                  e.PlanoDeContas.Nome.ToLower().Contains("dízimo") &&
+                   (centroCustoFiltro == null || e.CentroCustoId == centroCustoFiltro.Value))
+                        .SumAsync(e => (decimal?)e.Valor) ?? 0;
+
+                    // ✅ CORRIGIDO: Buscar saídas que foram incluídas em fechamentos aprovados ou processados
+                    var querySaidasMes = _context.Saidas
+                   .Include(s => s.FechamentoQueIncluiu)
+                    .Where(s => s.Data >= inicioMes &&
+                    s.Data <= fimMes &&
+                         s.IncluidaEmFechamento == true &&
+                        s.FechamentoQueIncluiu != null &&
+                    (s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                    s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado));
+
+                    if (centroCustoFiltro.HasValue)
                     {
-                        saidasMes = await _context.Saidas
-                            .Where(s => idsSaidasAprovadasMes.Contains(s.Id))
-                            .SumAsync(s => (decimal?)s.Valor) ?? 0;
+                        querySaidasMes = querySaidasMes.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                     }
+
+                    saidasMes = await querySaidasMes.SumAsync(s => (decimal?)s.Valor) ?? 0;
                 }
                 catch (Exception ex)
                 {
@@ -208,59 +233,41 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 // =====================================================
-                // 8. CALCULAR SALDO TOTAL (APROVADOS DE TODOS OS TEMPOS)
+                // 8. CALCULAR SALDO TOTAL (APENAS LANÇAMENTOS INCLUÍDOS EM FECHAMENTOS APROVADOS/PROCESSADOS DE TODOS OS TEMPOS)
                 // =====================================================
                 decimal totalEntradas = 0, totalSaidas = 0;
 
                 try
                 {
-                    // ✅ CORREÇÃO: Buscar TODAS as entradas aprovadas ou processadas (histórico completo)
-                    var queryTodasEntradas = _context.Entradas.AsQueryable();
+                    // ✅ CORRIGIDO: Buscar TODAS as entradas incluídas em fechamentos aprovados ou processados
+                    var queryTodasEntradas = _context.Entradas
+                        .Include(e => e.FechamentoQueIncluiu)
+                       .Where(e => e.IncluidaEmFechamento == true &&
+                      e.FechamentoQueIncluiu != null &&
+                 (e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                  e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado));
 
                     if (centroCustoFiltro.HasValue)
                     {
                         queryTodasEntradas = queryTodasEntradas.Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                     }
 
-                    var idsTodasEntradasAprovadas = await queryTodasEntradas
-                        .Where(e => _context.FechamentosPeriodo.Any(f =>
-                            f.CentroCustoId == e.CentroCustoId &&
-                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
-                            e.Data >= f.DataInicio &&
-                            e.Data <= f.DataFim))
-                        .Select(e => e.Id)
-                        .ToListAsync();
+                    totalEntradas = await queryTodasEntradas.SumAsync(e => (decimal?)e.Valor) ?? 0;
 
-                    if (idsTodasEntradasAprovadas.Any())
-                    {
-                        totalEntradas = await _context.Entradas
-                            .Where(e => idsTodasEntradasAprovadas.Contains(e.Id))
-                            .SumAsync(e => (decimal?)e.Valor) ?? 0;
-                    }
-
-                    // ✅ CORREÇÃO: Buscar TODAS as saídas aprovadas ou processadas (histórico completo)
-                    var queryTodasSaidas = _context.Saidas.AsQueryable();
+                    // ✅ CORRIGIDO: Buscar TODAS as saídas incluídas em fechamentos aprovados ou processados
+                    var queryTodasSaidas = _context.Saidas
+                    .Include(s => s.FechamentoQueIncluiu)
+                      .Where(s => s.IncluidaEmFechamento == true &&
+                  s.FechamentoQueIncluiu != null &&
+                  (s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                 s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado));
 
                     if (centroCustoFiltro.HasValue)
                     {
                         queryTodasSaidas = queryTodasSaidas.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                     }
 
-                    var idsTodasSaidasAprovadas = await queryTodasSaidas
-                        .Where(s => _context.FechamentosPeriodo.Any(f =>
-                            f.CentroCustoId == s.CentroCustoId &&
-                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
-                            s.Data >= f.DataInicio &&
-                            s.Data <= f.DataFim))
-                        .Select(s => s.Id)
-                        .ToListAsync();
-
-                    if (idsTodasSaidasAprovadas.Any())
-                    {
-                        totalSaidas = await _context.Saidas
-                            .Where(s => idsTodasSaidasAprovadas.Contains(s.Id))
-                            .SumAsync(s => (decimal?)s.Valor) ?? 0;
-                    }
+                    totalSaidas = await queryTodasSaidas.SumAsync(s => (decimal?)s.Valor) ?? 0;
                 }
                 catch (Exception ex)
                 {
@@ -270,7 +277,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var saldoTotal = totalEntradas - totalSaidas;
 
                 // =====================================================
-                // 9. DADOS PARA GRÁFICO DE FLUXO DE CAIXA (ÚLTIMOS 6 MESES - APROVADOS)
+                // 9. DADOS PARA GRÁFICO DE FLUXO DE CAIXA (ÚLTIMOS 6 MESES - APENAS APROVADOS)
                 // =====================================================
                 var fluxoCaixaData = new List<object>();
 
@@ -281,53 +288,39 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         var mesInicio = hoje.AddMonths(-i).AddDays(-(hoje.Day - 1));
                         var mesFim = mesInicio.AddMonths(1).AddDays(-1);
 
-                        // ✅ CORREÇÃO: Buscar entradas aprovadas ou processadas deste mês específico
+                        // ✅ CORRIGIDO: Entradas do mês incluídas em fechamentos aprovados/processados
                         var queryEntradasGrafico = _context.Entradas
-                            .Where(e => e.Data >= mesInicio && e.Data <= mesFim);
+                      .Include(e => e.FechamentoQueIncluiu)
+                       .Where(e => e.Data >= mesInicio &&
+                         e.Data <= mesFim &&
+                    e.IncluidaEmFechamento == true &&
+                      e.FechamentoQueIncluiu != null &&
+                       (e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                         e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado));
 
                         if (centroCustoFiltro.HasValue)
                         {
                             queryEntradasGrafico = queryEntradasGrafico.Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                         }
 
-                        var idsEntradasMesGrafico = await queryEntradasGrafico
-                            .Where(e => _context.FechamentosPeriodo.Any(f =>
-                                f.CentroCustoId == e.CentroCustoId &&
-                                (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
-                                e.Data >= f.DataInicio &&
-                                e.Data <= f.DataFim))
-                            .Select(e => e.Id)
-                            .ToListAsync();
+                        var entradasMesGrafico = await queryEntradasGrafico.SumAsync(e => (decimal?)e.Valor) ?? 0;
 
-                        var entradasMesGrafico = idsEntradasMesGrafico.Any()
-                            ? await _context.Entradas
-                                .Where(e => idsEntradasMesGrafico.Contains(e.Id))
-                                .SumAsync(e => (decimal?)e.Valor) ?? 0
-                            : 0;
-
-                        // ✅ CORREÇÃO: Buscar saídas aprovadas ou processadas deste mês específico
+                        // ✅ CORRIGIDO: Saídas do mês incluídas em fechamentos aprovados/processados
                         var querySaidasGrafico = _context.Saidas
-                            .Where(s => s.Data >= mesInicio && s.Data <= mesFim);
+                      .Include(s => s.FechamentoQueIncluiu)
+                        .Where(s => s.Data >= mesInicio &&
+                   s.Data <= mesFim &&
+                        s.IncluidaEmFechamento == true &&
+                       s.FechamentoQueIncluiu != null &&
+                     (s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                   s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado));
 
                         if (centroCustoFiltro.HasValue)
                         {
                             querySaidasGrafico = querySaidasGrafico.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                         }
 
-                        var idsSaidasMesGrafico = await querySaidasGrafico
-                            .Where(s => _context.FechamentosPeriodo.Any(f =>
-                                f.CentroCustoId == s.CentroCustoId &&
-                                (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
-                                s.Data >= f.DataInicio &&
-                                s.Data <= f.DataFim))
-                            .Select(s => s.Id)
-                            .ToListAsync();
-
-                        var saidasMesGrafico = idsSaidasMesGrafico.Any()
-                            ? await _context.Saidas
-                                .Where(s => idsSaidasMesGrafico.Contains(s.Id))
-                                .SumAsync(s => (decimal?)s.Valor) ?? 0
-                            : 0;
+                        var saidasMesGrafico = await querySaidasGrafico.SumAsync(s => (decimal?)s.Valor) ?? 0;
 
                         fluxoCaixaData.Add(new
                         {
@@ -344,7 +337,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 // =====================================================
-                // 10. DESPESAS POR CATEGORIA (ÚLTIMOS 3 MESES - APROVADAS)
+                // 10. DESPESAS POR CATEGORIA (ÚLTIMOS 3 MESES - APENAS APROVADAS)
                 // =====================================================
                 var despesasPorCategoria = new List<object>();
 
@@ -353,38 +346,30 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     var tresMesesAtras = hoje.AddMonths(-3);
 
                     var querySaidasCategoria = _context.Saidas
-                        .Where(s => s.Data >= tresMesesAtras);
+                   .Include(s => s.PlanoDeContas)
+                       .Include(s => s.FechamentoQueIncluiu)
+                .Where(s => s.Data >= tresMesesAtras &&
+                      s.IncluidaEmFechamento == true &&
+                    s.FechamentoQueIncluiu != null &&
+                     (s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                       s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado) &&
+                  s.PlanoDeContas != null);
 
                     if (centroCustoFiltro.HasValue)
                     {
                         querySaidasCategoria = querySaidasCategoria.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                     }
 
-                    // ✅ CORREÇÃO: Incluir fechamentos processados
-                    var idsSaidasCategoria = await querySaidasCategoria
-                        .Where(s => _context.FechamentosPeriodo.Any(f =>
-                            f.CentroCustoId == s.CentroCustoId &&
-                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
-                            s.Data >= f.DataInicio &&
-                            s.Data <= f.DataFim))
-                        .Select(s => s.Id)
-                        .ToListAsync();
-
-                    if (idsSaidasCategoria.Any())
+                    despesasPorCategoria = await querySaidasCategoria
+                   .GroupBy(s => s.PlanoDeContas.Nome)
+                    .Select(g => new
                     {
-                        despesasPorCategoria = await _context.Saidas
-                            .Include(s => s.PlanoDeContas)
-                            .Where(s => idsSaidasCategoria.Contains(s.Id) && s.PlanoDeContas != null)
-                            .GroupBy(s => s.PlanoDeContas.Nome)
-                            .Select(g => new
-                            {
-                                categoria = g.Key ?? "Sem Categoria",
-                                valor = g.Sum(s => s.Valor)
-                            })
-                            .OrderByDescending(x => x.valor)
-                            .Take(5)
-                            .ToListAsync<object>();
-                    }
+                        categoria = g.Key ?? "Sem Categoria",
+                        valor = g.Sum(s => s.Valor)
+                    })
+                   .OrderByDescending(x => x.valor)
+                       .Take(5)
+                    .ToListAsync<object>();
                 }
                 catch (Exception ex)
                 {
@@ -392,92 +377,74 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 // =====================================================
-                // 11. BUSCAR ÚLTIMAS TRANSAÇÕES (10 MAIS RECENTES)
+                // 11. BUSCAR ÚLTIMAS TRANSAÇÕES (10 MAIS RECENTES APROVADAS)
                 // =====================================================
                 var ultimasTransacoes = new List<object>();
 
                 try
                 {
-                    // Buscar últimas entradas aprovadas
+                    // ✅ CORRIGIDO: Últimas entradas incluídas em fechamentos aprovados/processados
                     var queryUltimasEntradas = _context.Entradas
-                        .Include(e => e.PlanoDeContas)
-                        .Include(e => e.CentroCusto)
-                        .AsQueryable();
+                 .Include(e => e.PlanoDeContas)
+                  .Include(e => e.CentroCusto)
+                    .Include(e => e.FechamentoQueIncluiu)
+                      .Where(e => e.IncluidaEmFechamento == true &&
+                 e.FechamentoQueIncluiu != null &&
+                     (e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado));
 
                     if (centroCustoFiltro.HasValue)
                     {
                         queryUltimasEntradas = queryUltimasEntradas.Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                     }
 
-                    var idsUltimasEntradas = await queryUltimasEntradas
-                        .Where(e => _context.FechamentosPeriodo.Any(f =>
-                            f.CentroCustoId == e.CentroCustoId &&
-                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
-                            e.Data >= f.DataInicio &&
-                            e.Data <= f.DataFim))
-                        .OrderByDescending(e => e.Data)
-                        .Take(5)
-                        .Select(e => e.Id)
-                        .ToListAsync();
+                    var ultimasEntradas = await queryUltimasEntradas
+                  .OrderByDescending(e => e.Data)
+                 .Take(5)
+                 .Select(e => new
+                 {
+                     Tipo = "Entrada",
+                     Descricao = e.Descricao ?? e.PlanoDeContas.Nome,
+                     CentroCusto = e.CentroCusto.Nome,
+                     Data = e.Data,
+                     Valor = e.Valor
+                 })
+                   .ToListAsync();
 
-                    var ultimasEntradas = await _context.Entradas
-                        .Include(e => e.PlanoDeContas)
-                        .Include(e => e.CentroCusto)
-                        .Where(e => idsUltimasEntradas.Contains(e.Id))
-                        .OrderByDescending(e => e.Data)
-                        .Select(e => new
-                        {
-                            Tipo = "Entrada",
-                            Descricao = e.Descricao ?? e.PlanoDeContas.Nome,
-                            CentroCusto = e.CentroCusto.Nome,
-                            Data = e.Data,
-                            Valor = e.Valor
-                        })
-                        .ToListAsync();
-
-                    // Buscar últimas saídas aprovadas
+                    // ✅ CORRIGIDO: Últimas saídas incluídas em fechamentos aprovados/processados
                     var queryUltimasSaidas = _context.Saidas
-                        .Include(s => s.PlanoDeContas)
-                        .Include(s => s.CentroCusto)
-                        .AsQueryable();
+                     .Include(s => s.PlanoDeContas)
+                   .Include(s => s.CentroCusto)
+                   .Include(s => s.FechamentoQueIncluiu)
+                .Where(s => s.IncluidaEmFechamento == true &&
+                      s.FechamentoQueIncluiu != null &&
+                (s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                     s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado));
 
                     if (centroCustoFiltro.HasValue)
                     {
                         queryUltimasSaidas = queryUltimasSaidas.Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                     }
 
-                    var idsUltimasSaidas = await queryUltimasSaidas
-                        .Where(s => _context.FechamentosPeriodo.Any(f =>
-                            f.CentroCustoId == s.CentroCustoId &&
-                            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
-                            s.Data >= f.DataInicio &&
-                            s.Data <= f.DataFim))
-                        .OrderByDescending(s => s.Data)
-                        .Take(5)
-                        .Select(s => s.Id)
-                        .ToListAsync();
-
-                    var ultimasSaidas = await _context.Saidas
-                        .Include(s => s.PlanoDeContas)
-                        .Include(s => s.CentroCusto)
-                        .Where(s => idsUltimasSaidas.Contains(s.Id))
-                        .OrderByDescending(s => s.Data)
-                        .Select(s => new
-                        {
-                            Tipo = "Saída",
-                            Descricao = s.Descricao,
-                            CentroCusto = s.CentroCusto.Nome,
-                            Data = s.Data,
-                            Valor = s.Valor
-                        })
-                        .ToListAsync();
+                    var ultimasSaidas = await queryUltimasSaidas
+                     .OrderByDescending(s => s.Data)
+                .Take(5)
+                   .Select(s => new
+                   {
+                       Tipo = "Saída",
+                       Descricao = s.Descricao,
+                       CentroCusto = s.CentroCusto.Nome,
+                       Data = s.Data,
+                       Valor = s.Valor
+                   })
+                  .ToListAsync();
 
                     // Combinar e ordenar por data
                     ultimasTransacoes = ultimasEntradas
-                        .Concat<object>(ultimasSaidas)
-                        .OrderByDescending(t => ((dynamic)t).Data)
+                       .Concat<object>(ultimasSaidas)
+                    .OrderByDescending(t => ((dynamic)t).Data)
                         .Take(10)
-                        .ToList();
+                           .ToList();
                 }
                 catch (Exception ex)
                 {
@@ -492,7 +459,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 try
                 {
                     var seteDiasAtras = DateTime.Now.AddDays(-7);
-                    
+
                     var queryAtividades = _context.LogsAuditoria
                         .Include(l => l.Usuario)
                         .Where(l => l.DataHora >= seteDiasAtras)
@@ -501,7 +468,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     // Se não for admin ou tesoureiro geral, filtrar por centro de custo
                     if (centroCustoFiltro.HasValue)
                     {
-                        queryAtividades = queryAtividades.Where(l => 
+                        queryAtividades = queryAtividades.Where(l =>
                             l.Usuario.CentroCustoId == centroCustoFiltro.Value);
                     }
 
@@ -753,7 +720,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return "check-circle-fill";
             if (acao.Contains("REJECT"))
                 return "x-circle-fill";
-            
+
             return "activity";
         }
     }

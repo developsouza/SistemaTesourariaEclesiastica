@@ -1,6 +1,6 @@
-using System.Text;
 using iText.Html2pdf;
 using SistemaTesourariaEclesiastica.ViewModels;
+using System.Text;
 
 namespace SistemaTesourariaEclesiastica.Helpers
 {
@@ -9,21 +9,21 @@ namespace SistemaTesourariaEclesiastica.Helpers
         public static byte[] GerarPdfBalanceteMensal(BalanceteMensalViewModel model)
         {
             var html = GerarHtmlBalanceteMensal(model);
-            
+
             using var memoryStream = new MemoryStream();
-            
+
             HtmlConverter.ConvertToPdf(html, memoryStream);
-            
+
             return memoryStream.ToArray();
         }
-        
+
         private static string GerarHtmlBalanceteMensal(BalanceteMensalViewModel model)
         {
             var mes = model.DataInicio.ToString("MMMM", new System.Globalization.CultureInfo("pt-BR")).ToUpper();
             var ano = model.DataInicio.Year;
-            
+
             var html = new StringBuilder();
-            
+
             html.AppendLine("<!DOCTYPE html>");
             html.AppendLine("<html>");
             html.AppendLine("<head>");
@@ -154,7 +154,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
-            
+
             // Cabeçalho
             html.AppendLine("<div class='balancete-header'>");
             html.AppendLine("<h1>CONVENÇÃO DE MINISTROS DAS ASSEMBLEIAS DE DEUS</h1>");
@@ -163,14 +163,14 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine("<h1 style='margin-top: 8px;'>Balancete de Verificação de Igrejas Representadas e Congregações</h1>");
             html.AppendLine("<p>Realizado em</p>");
             html.AppendLine("</div>");
-            
+
             // Informações do Período
             html.AppendLine("<div class='periodo-info'>");
             html.AppendLine($"<div class='local'>{model.CentroCustoNome}</div>");
             html.AppendLine("<div class='cidade'>PB</div>");
             html.AppendLine($"<div class='data'>{model.DataInicio.Day} / {mes} / {ano}</div>");
             html.AppendLine("</div>");
-            
+
             // Saldo Mês Anterior
             if (model.SaldoMesAnterior != 0)
             {
@@ -181,7 +181,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                 html.AppendLine("</tr>");
                 html.AppendLine("</table>");
             }
-            
+
             // Receitas Operacionais
             html.AppendLine("<div class='secao-titulo'>RECEITAS OPERACIONAIS</div>");
             html.AppendLine("<table>");
@@ -193,7 +193,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                 html.AppendLine("</tr>");
             }
             html.AppendLine("</table>");
-            
+
             html.AppendLine("<table>");
             html.AppendLine("<tr>");
             html.AppendLine("<td class='item-descricao'><strong>Oferta</strong></td>");
@@ -204,7 +204,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine($"<td class='item-valor valor-positivo'><strong>R$ {model.TotalCredito:N2}</strong></td>");
             html.AppendLine("</tr>");
             html.AppendLine("</table>");
-            
+
             // Imobilizados
             if (model.Imobilizados.Any())
             {
@@ -223,7 +223,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                 html.AppendLine("</tr>");
                 html.AppendLine("</table>");
             }
-            
+
             // Despesas Administrativas
             html.AppendLine("<div class='secao-titulo'>DESPESAS ADMINISTRATIVAS</div>");
             html.AppendLine("<table>");
@@ -235,7 +235,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                 html.AppendLine("</tr>");
             }
             html.AppendLine("</table>");
-            
+
             // Despesas Tributárias
             if (model.DespesasTributarias.Any())
             {
@@ -254,7 +254,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                 html.AppendLine("</tr>");
                 html.AppendLine("</table>");
             }
-            
+
             // Despesas Financeiras
             if (model.DespesasFinanceiras.Any())
             {
@@ -273,7 +273,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                 html.AppendLine("</tr>");
                 html.AppendLine("</table>");
             }
-            
+
             // Recolhimentos
             if (model.Recolhimentos.Any())
             {
@@ -287,7 +287,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                 }
                 html.AppendLine("</table>");
             }
-            
+
             // Totais Finais
             html.AppendLine("<table>");
             html.AppendLine("<tr class='total-row'>");
@@ -295,13 +295,13 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine($"<td class='item-valor valor-negativo'><strong>R$ {model.TotalDebito:N2}</strong></td>");
             html.AppendLine("</tr>");
             html.AppendLine("</table>");
-            
+
             // Saldo Final
             var saldoClass = model.Saldo >= 0 ? "valor-positivo" : "valor-negativo";
             html.AppendLine("<div class='saldo-final'>");
             html.AppendLine($"<h4>SALDO: <span class='{saldoClass}'><strong>R$ {model.Saldo:N2}</strong></span></h4>");
             html.AppendLine("</div>");
-            
+
             // Assinaturas
             html.AppendLine("<div class='assinaturas'>");
             html.AppendLine("<div class='assinatura'>");
@@ -317,16 +317,16 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine("<div class='assinatura-cargo'>Visto do Pastor</div>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
-            
+
             // Rodapé
             html.AppendLine("<div class='rodape'>");
             html.AppendLine($"<p>Relatório gerado em {model.DataGeracao:dd/MM/yyyy HH:mm}</p>");
             html.AppendLine("<p>Sistema Integrado de Gestão de Tesouraria Eclesiástica</p>");
             html.AppendLine("</div>");
-            
+
             html.AppendLine("</body>");
             html.AppendLine("</html>");
-            
+
             return html.ToString();
         }
     }

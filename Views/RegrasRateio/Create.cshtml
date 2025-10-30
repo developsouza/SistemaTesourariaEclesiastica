@@ -10,7 +10,7 @@
             <i class="bi bi-share me-2"></i>
             Nova Regra de Rateio
         </h1>
-        <p class="text-muted mb-0">Configurar nova regra de rateio automático</p>
+        <p class="opacity-75 mb-0">Configurar nova regra de rateio automático</p>
     </div>
     <a asp-action="Index" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-2"></i>
@@ -18,72 +18,111 @@
     </a>
 </div>
 
-<div class="row">
+<div class="row g-4">
+    <!-- Coluna Principal: Formulário -->
     <div class="col-lg-8">
         <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Dados da Regra</h5>
+            <div class="card-header bg-primary bg-opacity-10 border-bottom">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-file-earmark-plus text-primary me-2"></i>
+                    Dados da Regra
+                </h5>
             </div>
             <div class="card-body">
-                <form asp-action="Create" method="post">
-                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-                    
-                    <div class="row g-3">
-                        <div class="col-md-8">
-                            <label asp-for="Nome" class="form-label required"></label>
-                            <input asp-for="Nome" class="form-control" placeholder="Ex: Rateio para Departamento A">
-                            <span asp-validation-for="Nome" class="text-danger"></span>
+                <form asp-action="Create" method="post" id="frmRegraRateio" novalidate>
+                    <!-- Alertas de Erro do Servidor -->
+                    @if (ViewData.ModelState.Any(x => x.Value.Errors.Count > 0))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-exclamation-circle me-3 flex-shrink-0"></i>
+                                <div>
+                                    <h6 class="alert-heading mb-2">Erros na validação</h6>
+                                    <ul class="mb-0 ps-3">
+                                        @foreach (var modelState in ViewData.ModelState.Values)
+                                        {
+                                            @foreach (var error in modelState.Errors)
+                                            {
+                                                <li>@error.ErrorMessage</li>
+                                            }
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
-                        
+                    }
+
+                    <div class="row g-3">
+                        <!-- Campo: Nome -->
+                        <div class="col-md-8">
+                            <label asp-for="Nome" class="form-label">
+                                <span class="text-danger me-1">*</span>Nome da Regra
+                            </label>
+                            <input asp-for="Nome" class="form-control" placeholder="Ex: Rateio para Departamento A">
+                            <span asp-validation-for="Nome" class="invalid-feedback d-block"></span>
+                            <small class="form-text opacity-75">Identifique a regra de forma clara</small>
+                        </div>
+
+                        <!-- Campo: Percentual -->
                         <div class="col-md-4">
-                            <label asp-for="Percentual" class="form-label required"></label>
+                            <label asp-for="Percentual" class="form-label">
+                                <span class="text-danger me-1">*</span>Percentual
+                            </label>
                             <div class="input-group">
                                 <input asp-for="Percentual" class="form-control" type="number" step="0.01" min="0.01" max="100" placeholder="10,00">
                                 <span class="input-group-text">%</span>
                             </div>
-                            <span asp-validation-for="Percentual" class="text-danger"></span>
+                            <span asp-validation-for="Percentual" class="invalid-feedback d-block"></span>
+                            <small class="form-text opacity-75">Entre 0,01% e 100%</small>
                         </div>
-                        
+
+                        <!-- Campo: Centro de Custo Origem -->
                         <div class="col-md-6">
-                            <label asp-for="CentroCustoOrigemId" class="form-label required"></label>
+                            <label asp-for="CentroCustoOrigemId" class="form-label">
+                                <span class="text-danger me-1">*</span>Centro de Custo Origem
+                            </label>
                             <select asp-for="CentroCustoOrigemId" class="form-select" asp-items="ViewBag.CentroCustoOrigemId">
-                                <option value="">Selecione o centro de custo origem</option>
+                                <option value="">-- Selecione --</option>
                             </select>
-                            <span asp-validation-for="CentroCustoOrigemId" class="text-danger"></span>
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Centro de custo que fará o rateio
-                            </div>
+                            <span asp-validation-for="CentroCustoOrigemId" class="invalid-feedback d-block"></span>
+                            <small class="form-text opacity-75">
+                                <i class="bi bi-info-circle me-1"></i>Centro que fará o rateio
+                            </small>
                         </div>
-                        
+
+                        <!-- Campo: Centro de Custo Destino -->
                         <div class="col-md-6">
-                            <label asp-for="CentroCustoDestinoId" class="form-label required"></label>
+                            <label asp-for="CentroCustoDestinoId" class="form-label">
+                                <span class="text-danger me-1">*</span>Centro de Custo Destino
+                            </label>
                             <select asp-for="CentroCustoDestinoId" class="form-select" asp-items="ViewBag.CentroCustoDestinoId">
-                                <option value="">Selecione o centro de custo destino</option>
+                                <option value="">-- Selecione --</option>
                             </select>
-                            <span asp-validation-for="CentroCustoDestinoId" class="text-danger"></span>
-                            <div class="form-text">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Centro de custo que receberá o rateio
-                            </div>
+                            <span asp-validation-for="CentroCustoDestinoId" class="invalid-feedback d-block"></span>
+                            <small class="form-text opacity-75">
+                                <i class="bi bi-info-circle me-1"></i>Centro que receberá o rateio
+                            </small>
                         </div>
-                        
+
+                        <!-- Campo: Descrição -->
                         <div class="col-12">
-                            <label asp-for="Descricao" class="form-label"></label>
-                            <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Descrição detalhada da regra (opcional)"></textarea>
-                            <span asp-validation-for="Descricao" class="text-danger"></span>
+                            <label asp-for="Descricao" class="form-label">Descrição (Opcional)</label>
+                            <textarea asp-for="Descricao" class="form-control" rows="3" placeholder="Descreva os detalhes da regra..."></textarea>
+                            <span asp-validation-for="Descricao" class="invalid-feedback d-block"></span>
                         </div>
                     </div>
-                    
+
                     <hr class="my-4">
-                    
+
+                    <!-- Botões de Ação -->
                     <div class="d-flex justify-content-end gap-2">
                         <a asp-action="Index" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle me-2"></i>
+                            <i class="bi bi-x-lg me-2"></i>
                             Cancelar
                         </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-circle me-2"></i>
+                            <i class="bi bi-check-lg me-2"></i>
                             Criar Regra
                         </button>
                     </div>
@@ -91,118 +130,138 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Coluna Lateral: Cards Informativos -->
     <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
+        <!-- Card: Como Funciona -->
+        <div class="card mb-3">
+            <div class="card-header bg-info bg-opacity-10 border-bottom">
                 <h6 class="card-title mb-0">
-                    <i class="bi bi-info-circle me-2"></i>
+                    <i class="bi bi-lightbulb text-info me-2"></i>
                     Como Funciona
                 </h6>
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <h6 class="alert-heading">
-                        <i class="bi bi-lightbulb me-2"></i>
-                        Aplicação Automática
+                <!-- Seção: Aplicação Automática -->
+                <div class="mb-4">
+                    <h6 class="fw-semibold text-info mb-2">
+                        <i class="bi bi-gear me-1"></i>Aplicação Automática
                     </h6>
-                    <div class="small">
-                        <p class="mb-2">A regra será aplicada automaticamente quando:</p>
-                        <ul class="mb-3">
-                            <li>O fechamento for do centro de custo origem</li>
-                            <li>O centro de custo for "SEDE" ou "GERAL"</li>
-                            <li>A regra estiver ativa</li>
-                        </ul>
-                        
-                        <p class="mb-2"><strong>Cálculo:</strong></p>
-                        <p class="mb-0">Valor do Rateio = Balanço Digital × (Percentual ÷ 100)</p>
+                    <p class="small opacity-75 mb-2">A regra será aplicada quando:</p>
+                    <ul class="small ps-3 mb-0">
+                        <li>O fechamento for do centro de custo <strong>origem</strong></li>
+                        <li>O centro de custo for <strong>"SEDE"</strong> ou <strong>"GERAL"</strong></li>
+                        <li>A regra estiver <strong>ativa</strong></li>
+                    </ul>
+                </div>
+
+                <!-- Seção: Fórmula -->
+                <div class="mb-4 pb-3 border-bottom border-opacity-25">
+                    <h6 class="fw-semibold text-success mb-2">
+                        <i class="bi bi-calculator me-1"></i>Fórmula de Cálculo
+                    </h6>
+                    <div class="p-2 rounded border-start border-4 border-success" style="background-color: var(--bs-secondary-bg);">
+                        <code class="small">Valor Rateado = Balanço Digital × (Percentual ÷ 100)</code>
                     </div>
                 </div>
-                
-                <div class="alert alert-warning">
-                    <h6 class="alert-heading">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        Importante
+
+                <!-- Seção: Exemplo -->
+                <div>
+                    <h6 class="fw-semibold text-warning mb-2">
+                        <i class="bi bi-example me-1"></i>Exemplo Prático
                     </h6>
-                    <ul class="mb-0 small">
-                        <li>Origem e destino devem ser diferentes</li>
-                        <li>Apenas uma regra ativa por combinação</li>
-                        <li>Percentual entre 0,01% e 100%</li>
-                        <li>Aplicação apenas em fechamentos SEDE</li>
-                    </ul>
+                    <div class="small p-2 rounded" style="background-color: var(--bs-secondary-bg);">
+                        <ul class="mb-0 ps-3">
+                            <li>Balanço Digital: <strong>R$ 1.000,00</strong></li>
+                            <li>Percentual: <strong>10%</strong></li>
+                            <li>Resultado: <strong class="text-success">R$ 100,00</strong></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <div class="card mt-3">
-            <div class="card-header">
+
+        <!-- Card: Regras Importantes -->
+        <div class="card">
+            <div class="card-header bg-warning bg-opacity-10 border-bottom">
                 <h6 class="card-title mb-0">
-                    <i class="bi bi-calculator me-2"></i>
-                    Simulador
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    Regras Importantes
                 </h6>
             </div>
             <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Valor Base (R$):</label>
-                    <input type="number" id="valorBase" class="form-control" placeholder="10000" step="0.01">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Percentual (%):</label>
-                    <input type="number" id="percentualSim" class="form-control" placeholder="10" step="0.01">
-                </div>
-                <div class="alert alert-light">
-                    <strong>Valor do Rateio:</strong>
-                    <div id="valorRateio" class="h5 text-primary">R$ 0,00</div>
-                    <strong>Saldo Restante:</strong>
-                    <div id="saldoRestante" class="h6 text-secondary">R$ 0,00</div>
-                </div>
+                <ul class="small ps-3 mb-0">
+                    <li class="mb-2">Origem e destino devem ser <strong>diferentes</strong></li>
+                    <li class="mb-2">Apenas <strong>uma regra ativa</strong> por combinação</li>
+                    <li class="mb-2">Percentual entre <strong>0,01%</strong> e <strong>100%</strong></li>
+                    <li>Aplicação apenas em fechamentos <strong>SEDE</strong></li>
+                </ul>
             </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
     <script>
-        $(document).ready(function() {
-            // Validação para evitar origem = destino
-            $('#CentroCustoOrigemId, #CentroCustoDestinoId').on('change', function() {
-                var origem = $('#CentroCustoOrigemId').val();
-                var destino = $('#CentroCustoDestinoId').val();
-                
-                if (origem && destino && origem === destino) {
-                    alert('O centro de custo destino deve ser diferente do origem.');
-                    $(this).val('');
-                }
-            });
-            
-            // Simulador de cálculo
-            $('#valorBase, #percentualSim, #Percentual').on('input', function() {
-                var valorBase = parseFloat($('#valorBase').val()) || 0;
-                var percentual = parseFloat($('#percentualSim').val()) || parseFloat($('#Percentual').val()) || 0;
-                
-                var valorRateio = valorBase * (percentual / 100);
-                var saldoRestante = valorBase - valorRateio;
-                
-                $('#valorRateio').text(valorRateio.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
-                }));
-                
-                $('#saldoRestante').text(saldoRestante.toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
-                }));
-                
-                // Sincronizar percentual
-                if ($(this).attr('id') === 'Percentual') {
-                    $('#percentualSim').val($(this).val());
-                }
-            });
-            
-            // Foco no primeiro campo
-            $('#Nome').focus();
+                // ===== VALIDAÇÃO DO FORMULÁRIO =====
+                (function() {
+                    class ValidadorFormulario {
+             constructor() {
+             this.$form = $('#frmRegraRateio');
+                            this.$origem = $('#CentroCustoOrigemId');
+           this.$destino = $('#CentroCustoDestinoId');
+            }
+
+        inicializar() {
+        this.validarOrigemDestino();
+                 this.submeterFormulario();
+            }
+
+             validarOrigemDestino() {
+          this.$origem.add(this.$destino).on('change', () => {
+              const origem = this.$origem.val();
+         const destino = this.$destino.val();
+
+          if (origem && destino && origem === destino) {
+            this.$destino.addClass('is-invalid');
+            this.$destino.next('.invalid-feedback')
+          .text('Destino deve ser diferente da origem')
+           .show();
+                    } else {
+                  this.$destino.removeClass('is-invalid');
+          this.$destino.next('.invalid-feedback').hide();
+              }
+           });
+                   }
+
+          submeterFormulario() {
+                this.$form.on('submit', (e) => {
+                if (!this.$form[0].checkValidity()) {
+                  e.preventDefault();
+                 e.stopPropagation();
+                   this.$form.addClass('was-validated');
+             return false;
+         }
         });
+          }
+                    }
+
+                    // Inicializar quando jQuery está disponível
+             if (typeof jQuery !== 'undefined') {
+                    $(document).ready(() => {
+                  const validador = new ValidadorFormulario();
+               validador.inicializar();
+
+                            // Foco no primeiro campo
+            if (!$('#Nome').val()) {
+          $('#Nome').focus();
+          }
+                 });
+               }
+              })();
     </script>
 }
