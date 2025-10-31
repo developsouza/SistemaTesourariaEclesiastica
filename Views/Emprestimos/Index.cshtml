@@ -6,82 +6,89 @@
     var totalEmprestado = Model?.Sum(e => e.ValorTotal) ?? 0;
     var totalDevolvido = Model?.Sum(e => e.ValorDevolvido) ?? 0;
     var saldoDevedor = totalEmprestado - totalDevolvido;
+    var saldoFundo = ViewBag.SaldoFundo ?? 0m;
 }
 
 <!-- Cabeçalho -->
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
     <div>
         <h1 class="h3 mb-1">
-            <i class="bi bi-cash-stack me-2 text-warning"></i>Gestão de Empréstimos
+       <i class="bi bi-cash-stack me-2 text-warning"></i>Gestão de Empréstimos
         </h1>
         <p class="text-muted mb-0 small">Controle do Fundo de Empréstimo</p>
     </div>
+    <div class="btn-group" role="group">
+   <a asp-action="DetalhamentoFundo" class="btn btn-info">
+     <i class="bi bi-bar-chart-line me-2"></i>Detalhamento do Fundo
+        </a>
     <a asp-action="Create" class="btn btn-warning text-dark">
-        <i class="bi bi-plus-circle me-2"></i>Solicitar Empréstimo
-    </a>
+  <i class="bi bi-plus-circle me-2"></i>Solicitar Empréstimo
+     </a>
+    </div>
 </div>
 
 <!-- Cards de Resumo -->
 <div class="row g-3 mb-4">
-    <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card shadow-sm border-0 bg-primary bg-opacity-10 border-start border-primary border-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <small class="text-muted d-block">Total Emprestado</small>
-                        <h4 class="mb-0 fw-bold text-primary">@totalEmprestado.ToString("C2")</h4>
-                    </div>
-                    <div class="flex-shrink-0">
-                        <i class="bi bi-arrow-up-circle text-primary" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+     <div class="card shadow-sm border-start border-primary border-4 h-100">
+     <div class="card-body">
+       <div class="d-flex align-items-center">
+           <div class="flex-grow-1">
+              <small class="text-muted d-block">Total Emprestado</small>
+            <h4 class="mb-0 fw-bold text-primary">@totalEmprestado.ToString("C")</h4>
+             </div>
+ <div class="flex-shrink-0">
+    <i class="bi bi-arrow-up-circle text-primary" style="font-size: 2rem;"></i>
+       </div>
+          </div>
             </div>
         </div>
     </div>
-    <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card shadow-sm border-0 bg-success bg-opacity-10 border-start border-success border-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <small class="text-muted d-block">Total Devolvido</small>
-                        <h4 class="mb-0 fw-bold text-success">@totalDevolvido.ToString("C2")</h4>
-                    </div>
-                    <div class="flex-shrink-0">
-                        <i class="bi bi-arrow-down-circle text-success" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-start border-success border-4 h-100">
+    <div class="card-body">
+     <div class="d-flex align-items-center">
+             <div class="flex-grow-1">
+    <small class="text-muted d-block">Total Devolvido</small>
+           <h4 class="mb-0 fw-bold text-success">@totalDevolvido.ToString("C")</h4>
+           </div>
+        <div class="flex-shrink-0">
+                <i class="bi bi-arrow-down-circle text-success" style="font-size: 2rem;"></i>
+           </div>
+           </div>
+        </div>
         </div>
     </div>
-    <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card shadow-sm border-0 bg-danger bg-opacity-10 border-start border-danger border-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <small class="text-muted d-block">Saldo Devedor</small>
-                        <h4 class="mb-0 fw-bold text-danger">@saldoDevedor.ToString("C2")</h4>
-                    </div>
-                    <div class="flex-shrink-0">
-                        <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-start border-danger border-4 h-100">
+    <div class="card-body">
+     <div class="d-flex align-items-center">
+        <div class="flex-grow-1">
+   <small class="text-muted d-block">Saldo Devedor</small>
+   <h4 class="mb-0 fw-bold text-danger">@saldoDevedor.ToString("C")</h4>
             </div>
-        </div>
+    <div class="flex-shrink-0">
+ <i class="bi bi-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
     </div>
-    <div class="col-12 col-sm-6 col-lg-3">
-        <div class="card shadow-sm border-0 bg-info bg-opacity-10 border-start border-info border-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <small class="text-muted d-block">Empréstimos Ativos</small>
-                        <h4 class="mb-0 fw-bold text-info">@(Model?.Count(e => e.SaldoDevedor > 0 && e.Status == StatusEmprestimo.Ativo) ?? 0)</h4>
-                    </div>
-                    <div class="flex-shrink-0">
-                        <i class="bi bi-clock-history text-info" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
+ </div>
+  </div>
+    </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-start border-success border-4 h-100">
+     <div class="card-body">
+    <div class="d-flex align-items-center">
+        <div class="flex-grow-1">
+  <small class="text-muted d-block">Saldo Disponível</small>
+            <h4 class="mb-0 fw-bold text-success">@saldoFundo.ToString("C")</h4>
+        <small class="text-muted">para empréstimos</small>
+    </div>
+ <div class="flex-shrink-0">
+           <i class="bi bi-piggy-bank text-success" style="font-size: 2rem;"></i>
+         </div>
+   </div>
+     </div>
+   </div>
     </div>
 </div>
 
@@ -89,36 +96,36 @@
 <div class="card shadow-sm mb-4">
     <div class="card-body">
         <form method="get" class="row g-3">
-            <div class="col-12 col-md-10">
-                <label class="form-label small fw-semibold">Status</label>
-                <select name="status" class="form-select">
-                    <option value="">Todos</option>
-                    <option value="Ativo">Ativos (Com saldo devedor)</option>
-                    <option value="Quitado">Quitados</option>
-                </select>
-            </div>
-            <div class="col-12 col-md-2 d-flex align-items-end gap-2">
-                <button type="submit" class="btn btn-outline-primary flex-fill">
-                    <i class="bi bi-search"></i>
-                    <span class="d-none d-md-inline ms-1">Filtrar</span>
-                </button>
-                <a asp-action="Index" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-clockwise"></i>
-                </a>
-            </div>
+ <div class="col-12 col-md-10">
+     <label class="form-label small fw-semibold">Status</label>
+ <select name="status" class="form-select">
+           <option value="">Todos</option>
+        <option value="Ativo">Ativos (Com saldo devedor)</option>
+ <option value="Quitado">Quitados</option>
+     </select>
+       </div>
+  <div class="col-12 col-md-2 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-outline-primary flex-fill">
+  <i class="bi bi-search"></i>
+              <span class="d-none d-md-inline ms-1">Filtrar</span>
+      </button>
+             <a asp-action="Index" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-clockwise"></i>
+          </a>
+      </div>
         </form>
-    </div>
+  </div>
 </div>
 
 <!-- Resultados -->
 <div class="card shadow-sm">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
         <h5 class="mb-0 fw-semibold">
-            <i class="bi bi-list-ul me-2 text-warning"></i>
-            @(Model != null ? Model.Count() : 0) empréstimo(s) encontrado(s)
+  <i class="bi bi-list-ul me-2 text-warning"></i>
+     @(Model != null ? Model.Count() : 0) empréstimo(s) encontrado(s)
         </h5>
         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
-            <i class="bi bi-printer me-1"></i>Imprimir
+   <i class="bi bi-printer me-1"></i>Imprimir
         </button>
     </div>
 
@@ -126,115 +133,122 @@
         @if (Model != null && Model.Any())
         {
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-3">Data</th>
-                            <th class="d-none d-lg-table-cell">Justificativa</th>
-                            <th class="text-end">Valor Total</th>
-                            <th class="text-end d-none d-xl-table-cell">Valor Devolvido</th>
-                            <th class="text-end">Saldo Devedor</th>
-                            <th class="d-none d-md-table-cell">Progresso</th>
-                            <th>Status</th>
-                            <th class="text-center" style="width: 140px;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model)
-                        {
-                            var percentualDevolvido = item.PercentualDevolvido;
-                            var isQuitado = item.Status == StatusEmprestimo.Quitado || item.SaldoDevedor <= 0;
+  <table class="table table-hover align-middle mb-0">
+             <thead class="table-light">
+             <tr>
+             <th class="ps-3">Data</th>
+             <th class="d-none d-lg-table-cell">Justificativa</th>
+        <th class="text-end">Valor Total</th>
+     <th class="text-end d-none d-xl-table-cell">Valor Devolvido</th>
+    <th class="text-end">Saldo Devedor</th>
+   <th class="d-none d-md-table-cell">Progresso</th>
+  <th>Status</th>
+      <th class="text-center" style="width: 140px;">Ações</th>
+     </tr>
+            </thead>
+       <tbody>
+       @foreach (var item in Model)
+     {
+      var percentualDevolvido = item.PercentualDevolvido;
+    var isQuitado = item.Status == StatusEmprestimo.Quitado || item.SaldoDevedor <= 0;
 
-                            <tr class="@(isQuitado ? "table-success bg-opacity-10" : "")">
-                                <td class="ps-3">
-                                    <div class="fw-semibold">@item.DataEmprestimo.ToString("dd/MM/yy")</div>
-                                    <small class="text-muted d-lg-none">
-                                        @(item.Justificativa.Length > 30 ? item.Justificativa.Substring(0, 30) + "..." : item.Justificativa)
-                                    </small>
-                                </td>
-                                <td class="d-none d-lg-table-cell">
-                                    <span class="text-muted">
-                                        @(item.Justificativa.Length > 50 ? item.Justificativa.Substring(0, 50) + "..." : item.Justificativa)
-                                    </span>
-                                </td>
-                                <td class="text-end">
-                                    <span class="fw-bold text-primary">@item.ValorTotal.ToString("C2")</span>
-                                </td>
-                                <td class="text-end d-none d-xl-table-cell">
-                                    <span class="text-success">@item.ValorDevolvido.ToString("C2")</span>
-                                </td>
-                                <td class="text-end">
-                                    <span class="fw-bold @(isQuitado ? "text-success" : "text-danger")">
-                                        @item.SaldoDevedor.ToString("C2")
-                                    </span>
-                                </td>
-                                <td class="d-none d-md-table-cell" style="width: 150px;">
-                                    <div class="progress" style="height: 20px;">
-                                        <div class="progress-bar @(isQuitado ? "bg-success" : "bg-warning")"
-                                             role="progressbar"
-                                             style="width: @percentualDevolvido%"
-                                             aria-valuenow="@percentualDevolvido"
-                                             aria-valuemin="0"
-                                             aria-valuemax="100">
-                                            <small>@percentualDevolvido.ToString("F0")%</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    @if (item.Status == StatusEmprestimo.Quitado)
-                                    {
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle me-1"></i>Quitado
-                                        </span>
-                                    }
-                                    else if (item.Status == StatusEmprestimo.Cancelado)
-                                    {
-                                        <span class="badge bg-secondary">
-                                            <i class="bi bi-x-circle me-1"></i>Cancelado
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-warning text-dark">
-                                            <i class="bi bi-clock me-1"></i>Ativo
-                                        </span>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a asp-action="Details" asp-route-id="@item.Id"
-                                           class="btn btn-outline-info" title="Detalhes">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        @if (item.Status == StatusEmprestimo.Ativo && item.SaldoDevedor > 0)
-                                        {
-                                            <a asp-action="RegistrarDevolucao" asp-route-id="@item.Id"
-                                               class="btn btn-outline-success" title="Registrar Devolução">
-                                                <i class="bi bi-cash-coin"></i>
-                                            </a>
-                                        }
-                                        <a asp-action="Delete" asp-route-id="@item.Id"
-                                           class="btn btn-outline-danger" title="Excluir">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+             <tr class="@(isQuitado ? "table-success bg-opacity-10" : "")">
+           <td class="ps-3">
+             <div class="fw-semibold">@item.DataEmprestimo.ToString("dd/MM/yy")</div>
+   <small class="text-muted d-lg-none">
+          @(item.Justificativa.Length > 30 ? item.Justificativa.Substring(0, 30) + "..." : item.Justificativa)
+          </small>
+   </td>
+              <td class="d-none d-lg-table-cell">
+      <span class="text-muted">
+      @(item.Justificativa.Length > 50 ? item.Justificativa.Substring(0, 50) + "..." : item.Justificativa)
+    </span>
+ </td>
+ <td class="text-end">
+        <span class="fw-bold text-primary">@item.ValorTotal.ToString("C2")</span>
+   </td>
+          <td class="text-end d-none d-xl-table-cell">
+            <span class="text-success">@item.ValorDevolvido.ToString("C2")</span>
+         </td>
+        <td class="text-end">
+        <span class="fw-bold @(isQuitado ? "text-success" : "text-danger")">
+          @item.SaldoDevedor.ToString("C2")
+     </span>
+ </td>
+     <td class="d-none d-md-table-cell" style="width: 150px;">
+    <div class="progress bg-body-secondary" style="height: 22px;">
+            <div class="progress-bar @(isQuitado ? "bg-success" : "bg-warning")"
+          role="progressbar"
+        style="width: @(percentualDevolvido > 100 ? 100 : percentualDevolvido)%"
+          aria-valuenow="@percentualDevolvido"
+       aria-valuemin="0"
+        aria-valuemax="100">
+       <small class="fw-semibold">@percentualDevolvido.ToString("F0")%</small>
+    </div>
+ </div>
+ </td>
+<td>
+             @if (item.Status == StatusEmprestimo.Quitado)
+             {
+  <span class="badge bg-success">
+             <i class="bi bi-check-circle me-1"></i>Quitado
+    </span>
+           }
+         else if (item.Status == StatusEmprestimo.Cancelado)
+           {
+<span class="badge bg-secondary">
+         <i class="bi bi-x-circle me-1"></i>Cancelado
+    </span>
+          }
+    else
+                  {
+           <span class="badge bg-warning text-dark">
+       <i class="bi bi-clock me-1"></i>Ativo
+    </span>
+   }
+      </td>
+              <td>
+        <div class="btn-group btn-group-sm" role="group">
+   <a asp-action="Details" asp-route-id="@item.Id"
+    class="btn btn-outline-info" title="Detalhes">
+     <i class="bi bi-eye"></i>
+       </a>
+        @if (item.Status == StatusEmprestimo.Ativo && item.SaldoDevedor > 0)
+          {
+         <button type="button"
+       class="btn btn-outline-success"
+        title="Registrar Devolução"
+     data-bs-toggle="modal"
+    data-bs-target="#modalDevolucao"
+         data-emprestimo-id="@item.Id"
+            data-saldo-devedor="@item.SaldoDevedor">
+      <i class="bi bi-cash-coin"></i>
+        </button>
+    }
+ <button type="button"
+    class="btn btn-outline-danger"
+     title="Excluir"
+                onclick="confirmarExclusao(@item.Id)">
+           <i class="bi bi-trash"></i>
+     </button>
+              </div>
+      </td>
+                 </tr>
+                 }
+     </tbody>
+     </table>
+    </div>
         }
         else
-        {
-            <div class="text-center py-5">
-                <i class="bi bi-cash-stack text-muted" style="font-size: 4rem;"></i>
-                <h5 class="mt-3 text-muted">Nenhum empréstimo encontrado</h5>
-                <p class="text-muted">Não há empréstimos cadastrados com os filtros aplicados.</p>
-                <a asp-action="Create" class="btn btn-warning text-dark mt-2">
-                    <i class="bi bi-plus-circle me-2"></i>Solicitar Primeiro Empréstimo
-                </a>
-            </div>
+    {
+         <div class="text-center py-5">
+   <i class="bi bi-cash-stack text-muted" style="font-size: 4rem;"></i>
+            <h5 class="mt-3 text-muted">Nenhum empréstimo encontrado</h5>
+       <p class="text-muted">Não há empréstimos cadastrados com os filtros aplicados.</p>
+        <a asp-action="Create" class="btn btn-warning text-dark mt-2">
+          <i class="bi bi-plus-circle me-2"></i>Solicitar Primeiro Empréstimo
+       </a>
+       </div>
         }
     </div>
 </div>
@@ -242,11 +256,276 @@
 <!-- Alert informativo -->
 <div class="alert alert-info mt-4 d-flex align-items-start">
     <i class="bi bi-info-circle me-3 fs-5"></i>
-    <div>
-        <h6 class="alert-heading mb-2">Sobre o Fundo de Empréstimo</h6>
-        <p class="mb-0 small">
-            O Fundo de Empréstimo é alimentado automaticamente pelo "dízimo dos dízimos" configurado nos modelos de rateio.
-            Os empréstimos podem ser devolvidos parcial ou integralmente, e o sistema acompanha automaticamente o saldo devedor e percentual de devolução.
-        </p>
+    <div class="flex-grow-1">
+    <h6 class="alert-heading mb-2">Sobre o Fundo de Empréstimo</h6>
+     <p class="mb-2 small">
+   O Fundo de Empréstimo é alimentado automaticamente pelos rateios configurados nos fechamentos.
+         Os empréstimos podem ser devolvidos parcial ou integralmente, e o sistema acompanha automaticamente o saldo devedor e percentual de devolução.
+   </p>
+    <div class="d-flex gap-2 mt-3 flex-wrap">
+         <a asp-action="DetalhamentoFundo" class="btn btn-sm btn-outline-info">
+   <i class="bi bi-bar-chart me-1"></i>
+      Ver Detalhamento do Fundo
+            </a>
+            <a asp-action="DiagnosticoRateios" class="btn btn-sm btn-outline-warning">
+     <i class="bi bi-clipboard-check me-1"></i>
+          Diagnóstico Completo
+</a>
+        </div>
     </div>
 </div>
+
+<!-- Modal de Devolução -->
+<div class="modal fade" id="modalDevolucao" tabindex="-1" aria-labelledby="modalDevolucaoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+  <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalDevolucaoLabel">
+  <i class="bi bi-cash-coin me-2"></i>Registrar Devolução
+              </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+   <form id="formDevolucao">
+   @Html.AntiForgeryToken()
+    <div class="modal-body">
+   <input type="hidden" id="emprestimoId" name="emprestimoId">
+
+          <div class="alert alert-info">
+       <strong>Saldo Devedor:</strong> <span id="saldoDevedor">R$ 0,00</span>
+               </div>
+
+         <div class="mb-3">
+   <label for="valorDevolvido" class="form-label">
+           Valor a Devolver <span class="text-danger">*</span>
+          </label>
+     <div class="input-group">
+        <span class="input-group-text">R$</span>
+            <input type="number" step="0.01" class="form-control" id="valorDevolvido"
+             name="valorDevolvido" required min="0.01" placeholder="0,00">
+      </div>
+  <div class="form-text">Digite o valor da devolução</div>
+          </div>
+
+        <div class="mb-3">
+ <label for="dataDevolucao" class="form-label">
+      Data da Devolução <span class="text-danger">*</span>
+          </label>
+ <input type="date" class="form-control" id="dataDevolucao"
+         name="dataDevolucao" required>
+           </div>
+
+   <div class="mb-3">
+           <label for="observacoes" class="form-label">Observações</label>
+            <textarea class="form-control" id="observacoes" name="observacoes"
+      rows="3" maxlength="300" placeholder="Observações sobre esta devolução (opcional)"></textarea>
+   <div class="form-text"><span id="contadorObsIndex">0</span>/300 caracteres</div>
+     </div>
+  </div>
+       <div class="modal-footer">
+             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+    <i class="bi bi-x-circle me-1"></i>Cancelar
+      </button>
+        <button type="submit" class="btn btn-primary" id="btnSubmitDevolucaoIndex">
+        <i class="bi bi-check-circle me-1"></i>Registrar Devolução
+               </button>
+        </div>
+      </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Contador de caracteres
+     $('#observacoes').on('input', function () {
+            $('#contadorObsIndex').text($(this).val().length);
+      });
+
+        // Configurar modal ao abrir
+   $('#modalDevolucao').on('show.bs.modal', function (event) {
+    var button = $(event.relatedTarget);
+          var emprestimoId = button.data('emprestimo-id');
+            var saldoDevedor = button.data('saldo-devedor');
+
+          $('#emprestimoId').val(emprestimoId);
+      $('#saldoDevedor').text('R$ ' + saldoDevedor.toFixed(2).replace('.', ','));
+            $('#valorDevolvido').attr('max', saldoDevedor);
+
+    // Definir data atual
+      var hoje = new Date().toISOString().split('T')[0];
+            $('#dataDevolucao').val(hoje);
+        });
+
+        // Submit do formulário
+        $('#formDevolucao').on('submit', function (e) {
+    e.preventDefault();
+            e.stopPropagation();
+
+       var $form = $(this);
+            var $btnSubmit = $('#btnSubmitDevolucaoIndex');
+          var emprestimoId = parseInt($('#emprestimoId').val());
+   var valorDevolvido = parseFloat($('#valorDevolvido').val());
+  var dataDevolucao = $('#dataDevolucao').val();
+       var observacoes = $('#observacoes').val().trim();
+       var token = $form.find('input[name="__RequestVerificationToken"]').val();
+            var saldoDevedorMax = parseFloat($('#valorDevolvido').attr('max'));
+
+  // Validação
+            if (!valorDevolvido || valorDevolvido <= 0) {
+        Swal.fire({
+    icon: 'warning',
+       title: 'Atenção',
+     text: 'Informe um valor válido para a devolução.'
+          });
+         return false;
+            }
+
+            if (valorDevolvido > saldoDevedorMax) {
+ Swal.fire({
+          icon: 'error',
+    title: 'Valor Inválido',
+         text: 'O valor da devolução não pode ser maior que o saldo devedor.'
+                });
+              return false;
+      }
+
+   if (!dataDevolucao) {
+    Swal.fire({
+                icon: 'warning',
+           title: 'Atenção',
+           text: 'Informe a data da devolução.'
+   });
+                return false;
+            }
+
+        // Desabilitar botão
+            $btnSubmit.prop('disabled', true)
+     .html('<span class="spinner-border spinner-border-sm me-2"></span>Processando...');
+
+          $.ajax({
+     url: '@Url.Action("RegistrarDevolucao", "Emprestimos")',
+     type: 'POST',
+    cache: false,
+     dataType: 'json',
+  headers: {
+           'RequestVerificationToken': token
+     },
+     data: {
+     __RequestVerificationToken: token,
+          emprestimoId: emprestimoId,
+         valorDevolvido: valorDevolvido,
+           dataDevolucao: dataDevolucao,
+observacoes: observacoes
+                },
+   success: function (response) {
+              console.log('Resposta recebida:', response);
+
+      if (response && response.sucesso) {
+    // Fechar modal
+  var modalElement = document.getElementById('modalDevolucao');
+    if (modalElement) {
+                 var modal = bootstrap.Modal.getInstance(modalElement);
+             if (modal) {
+             modal.hide();
+            } else {
+     modal = new bootstrap.Modal(modalElement);
+    modal.hide();
+        }
+    }
+
+         Swal.fire({
+              icon: 'success',
+            title: 'Sucesso!',
+  text: response.mensagem || 'Devolução registrada com sucesso!',
+     confirmButtonText: 'OK',
+                 confirmButtonColor: '#0d6efd'
+          }).then(() => {
+        location.reload();
+       });
+          } else {
+            $btnSubmit.prop('disabled', false)
+    .html('<i class="bi bi-check-circle me-1"></i>Registrar Devolução');
+        Swal.fire({
+      icon: 'error',
+      title: 'Erro',
+              text: response.mensagem || 'Erro ao processar a devolução.'
+     });
+            }
+     },
+          error: function (xhr, status, error) {
+           $btnSubmit.prop('disabled', false)
+  .html('<i class="bi bi-check-circle me-1"></i>Registrar Devolução');
+
+     console.error('Erro AJAX:', {
+                 status: status,
+               error: error,
+      responseText: xhr.responseText,
+          statusCode: xhr.status
+          });
+
+  var mensagemErro = 'Ocorreu um erro ao processar a devolução. Tente novamente.';
+
+            try {
+         if (xhr.responseText) {
+    var errorResponse = JSON.parse(xhr.responseText);
+            if (errorResponse.mensagem) {
+       mensagemErro = errorResponse.mensagem;
+    }
+         }
+           } catch (e) {
+     console.error('Erro ao parsear resposta:', e);
+ }
+
+   Swal.fire({
+    icon: 'error',
+            title: 'Erro',
+        text: mensagemErro,
+    footer: xhr.status === 400 ? 'Verifique os dados informados' :
+           xhr.status === 500 ? 'Erro interno do servidor' : null
+    });
+          }
+     });
+
+  return false;
+        });
+
+        // Limpar formulário ao fechar modal
+        $('#modalDevolucao').on('hidden.bs.modal', function () {
+   $('#formDevolucao')[0].reset();
+            $('#dataDevolucao').val(new Date().toISOString().split('T')[0]);
+            $('#contadorObsIndex').text('0');
+            $('#btnSubmitDevolucaoIndex').prop('disabled', false)
+    .html('<i class="bi bi-check-circle me-1"></i>Registrar Devolução');
+ });
+
+        // Confirmação de exclusão
+        function confirmarExclusao(id) {
+     Swal.fire({
+      title: 'Confirmar Exclusão?',
+           text: 'Esta ação não poderá ser desfeita!',
+      icon: 'warning',
+       showCancelButton: true,
+     confirmButtonColor: '#dc3545',
+         cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sim, excluir!',
+           cancelButtonText: 'Cancelar'
+      }).then((result) => {
+         if (result.isConfirmed) {
+  // Criar form e submeter
+         var form = document.createElement('form');
+     form.method = 'POST';
+    form.action = '@Url.Action("Delete", "Emprestimos")/' + id;
+
+               var tokenInput = document.createElement('input');
+     tokenInput.type = 'hidden';
+     tokenInput.name = '__RequestVerificationToken';
+      tokenInput.value = $('input[name="__RequestVerificationToken"]').val();
+
+            form.appendChild(tokenInput);
+    document.body.appendChild(form);
+     form.submit();
+      }
+        });
+        }
+    </script>
+}

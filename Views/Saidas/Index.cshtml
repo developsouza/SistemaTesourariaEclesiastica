@@ -74,8 +74,9 @@
             </h5>
             @if (Model != null && Model.Any())
             {
+                var totalIncluidasEmFechamento = Model.Where(s => s.IncluidaEmFechamento).Sum(s => s.Valor);
                 <small class="text-danger fw-semibold">
-                    Total: @Model.Sum(s => s.Valor).ToString("C2")
+                    Total Prestado: @totalIncluidasEmFechamento.ToString("C2")
                 </small>
             }
         </div>
@@ -92,11 +93,13 @@
                     <thead class="table-light">
                         <tr>
                             <th class="ps-3">Data</th>
+                            <th>Centro de Custo</th>
                             <th>Descrição</th>
                             <th class="text-end">Valor</th>
                             <th class="d-none d-lg-table-cell">Categoria</th>
                             <th class="d-none d-xl-table-cell">Fornecedor</th>
                             <th class="d-none d-md-table-cell">Tipo</th>
+                            <th class="text-center">Status</th>
                             <th class="text-center" style="width: 140px;">Ações</th>
                         </tr>
                     </thead>
@@ -109,11 +112,25 @@
                                     <small class="text-muted">@item.Data.ToString("HH:mm")</small>
                                 </td>
                                 <td>
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                                        @item.CentroCusto?.Nome
+                                    </span>
+                                </td>
+                                <td>
                                     <div class="fw-semibold">@item.Descricao</div>
                                     <small class="text-muted d-lg-none">@item.PlanoDeContas?.Nome</small>
                                 </td>
                                 <td class="text-end">
-                                    <span class="fw-bold text-danger">@item.Valor.ToString("C2")</span>
+                                    @if (item.IncluidaEmFechamento)
+                                    {
+                                        <span class="fw-bold text-danger">@item.Valor.ToString("C2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted fst-italic" title="Valor será exibido após prestação de contas">
+                                            <i class="bi bi-lock"></i> Pendente
+                                        </span>
+                                    }
                                 </td>
                                 <td class="d-none d-lg-table-cell">
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">
@@ -134,6 +151,20 @@
                                     <span class="badge @(item.TipoDespesa.ToString() == "Fixa" ? "bg-warning" : "bg-secondary")">
                                         @item.TipoDespesa
                                     </span>
+                                </td>
+                                <td class="text-center">
+                                    @if (item.IncluidaEmFechamento)
+                                    {
+                                        <span class="badge bg-success" title="Incluída no fechamento #@item.FechamentoQueIncluiuId em @item.DataInclusaoFechamento?.ToString("dd/MM/yy")">
+                                            <i class="bi bi-check-circle"></i> Prestada
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-clock"></i> Aguardando
+                                        </span>
+                                    }
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">

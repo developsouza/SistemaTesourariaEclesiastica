@@ -202,24 +202,97 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             try
             {
-                var totalEntradasFundo = await _context.ItensRateioFechamento
-                    .Include(i => i.FechamentoPeriodo)
-                    .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado)
-                    .SumAsync(i => i.ValorRateio);
+                _logger.LogInformation("=== INICIANDO CÁLCULO DO SALDO DO FUNDO ===");
 
-                var totalEmprestimos = await _context.Emprestimos
-                    .Where(e => e.Status == StatusEmprestimo.Ativo)
-                    .SumAsync(e => e.SaldoDevedor);
+                // ✅ PASSO 1: Identificar o Centro de Custo FUNDO
+                var centroCustoFundo = await _context.CentrosCusto
+                    .FirstOrDefaultAsync(c => c.Ativo &&
+              (c.Nome.ToUpper().Contains("FUNDO") ||
+      c.Nome.ToUpper().Contains("REPASSE") ||
+          c.Nome.ToUpper().Contains("DÍZIMO") ||
+                   c.Nome.ToUpper().Contains("DIZIMO")));
+                if (centroCustoFundo == null)
+                {
+                    _logger.LogWarning("❌ Centro de Custo FUNDO não encontrado!");
+                    _logger.LogWarning("   Nenhum centro de custo ativo contém: FUNDO, REPASSE ou DÍZIMO");
+                    return 0;
+                }
 
-                var saldoDisponivel = totalEntradasFundo - totalEmprestimos;
+                _logger.LogInformation($"✓ Centro de Custo FUNDO identificado: '{centroCustoFundo.Nome}' (ID: {centroCustoFundo.Id})");
 
-                _logger.LogInformation($"Cálculo Saldo Fundo - Entradas: {totalEntradasFundo:C}, Empréstimos Ativos: {totalEmprestimos:C}, Disponível: {saldoDisponivel:C}");
+                // ✅ PASSO 2: Buscar TODAS as regras de rateio que têm o FUNDO como destino
+                var regrasParaFundo = await _context.RegrasRateio
+                    .Where(r => r.CentroCustoDestinoId == centroCustoFundo.Id && r.Ativo)
+                    .ToListAsync();
+
+                _logger.LogInformation($"✓ Regras de Rateio para o FUNDO encontradas: {regrasParaFundo.Count}");
+                foreach (var regra in regrasParaFundo)
+                {
+                    _logger.LogInformation($"   - Regra ID {regra.Id}: '{regra.Nome}' ({regra.Percentual:F2}%)");
+                }
+
+                if (!regrasParaFundo.Any())
+                {
+                    _logger.LogWarning("⚠ ATENÇÃO: Nenhuma regra de rateio ativa aponta para o FUNDO!");
+                    _logger.LogWarning("   Crie uma regra: SEDE → FUNDO (Ex: 20%)");
+                    return 0;
+                }
+
+                // ✅ PASSO 3: Buscar itens de rateio de fechamentos APROVADOS
+                var itensRateio = await _context.ItensRateioFechamento
+                 .Include(i => i.FechamentoPeriodo)
+                          .Include(i => i.RegraRateio)
+                          .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
+                i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id)
+                 .ToListAsync();
+
+                var quantidadeFechamentos = itensRateio.Select(i => i.FechamentoPeriodoId).Distinct().Count();
+                var totalEntradasFundo = itensRateio.Sum(i => i.ValorRateio);
+
+                _logger.LogInformation($"✓ Fechamentos APROVADOS processados: {quantidadeFechamentos}");
+                _logger.LogInformation($"✓ Total de rateios para o FUNDO: {totalEntradasFundo:C}");
+
+                if (itensRateio.Any())
+                {
+                    _logger.LogInformation("Detalhamento dos rateios:");
+                    foreach (var item in itensRateio.OrderByDescending(i => i.FechamentoPeriodo.DataAprovacao))
+                    {
+                        _logger.LogInformation($"   - Fechamento #{item.FechamentoPeriodoId} " +
+                        $"({item.FechamentoPeriodo.DataAprovacao:dd/MM/yyyy}): {item.ValorRateio:C} " +
+                    $"({item.Percentual:F2}% de {item.ValorBase:C})");
+                    }
+                }
+
+                // ✅ PASSO 4: Calcular total de empréstimos ativos
+                var emprestimosAtivos = await _context.Emprestimos
+               .Include(e => e.Devolucoes)
+                  .Where(e => e.Status == StatusEmprestimo.Ativo)
+                        .ToListAsync();
+
+                var totalEmprestimos = emprestimosAtivos.Sum(e => e.ValorTotal);
+                var totalDevolvido = emprestimosAtivos.Sum(e => e.ValorDevolvido);
+                var saldoDevedorAtivos = totalEmprestimos - totalDevolvido;
+
+                _logger.LogInformation($"✓ Empréstimos ativos: {emprestimosAtivos.Count}");
+                _logger.LogInformation($"   - Total emprestado: {totalEmprestimos:C}");
+                _logger.LogInformation($"   - Total devolvido: {totalDevolvido:C}");
+                _logger.LogInformation($"   - Saldo devedor: {saldoDevedorAtivos:C}");
+
+                // ✅ PASSO 5: Calcular saldo disponível
+                var saldoDisponivel = totalEntradasFundo - saldoDevedorAtivos;
+
+                _logger.LogInformation("=== RESUMO DO CÁLCULO ===");
+                _logger.LogInformation($"Total em Rateios (Entradas no Fundo): {totalEntradasFundo:C}");
+                _logger.LogInformation($"Empréstimos Ativos (Saldo Devedor):    - {saldoDevedorAtivos:C}");
+                _logger.LogInformation($"────────────────────────────────────────");
+                _logger.LogInformation($"SALDO DISPONÍVEL PARA EMPRÉSTIMOS:     {saldoDisponivel:C}");
+                _logger.LogInformation("=== FIM DO CÁLCULO ===");
 
                 return saldoDisponivel;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao calcular saldo do fundo");
+                _logger.LogError(ex, "❌ Erro ao calcular saldo do fundo");
                 return 0;
             }
         }
@@ -229,28 +302,86 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             try
             {
-                var totalEntradasFundo = await _context.ItensRateioFechamento
-                    .Include(i => i.FechamentoPeriodo)
-                    .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado)
-                    .SumAsync(i => i.ValorRateio);
+                // Identificar o Centro de Custo FUNDO
+                var centroCustoFundo = await _context.CentrosCusto
+                  .FirstOrDefaultAsync(c => c.Ativo &&
+                 (c.Nome.ToUpper().Contains("FUNDO") ||
+                       c.Nome.ToUpper().Contains("REPASSE") ||
+                              c.Nome.ToUpper().Contains("DÍZIMO") ||
+                              c.Nome.ToUpper().Contains("DIZIMO")));
 
+                if (centroCustoFundo == null)
+                {
+                    return new
+                    {
+                        centroCustoFundoEncontrado = false,
+                        nomeCentroCustoFundo = "NÃO ENCONTRADO",
+                        totalEntradasFundo = 0m,
+                        quantidadeFechamentosAprovados = 0,
+                        quantidadeEmprestimosAtivos = 0,
+                        totalEmprestimosAtivos = 0m,
+                        saldoDevedorAtivos = 0m,
+                        devolucoesEmprestimosAtivos = 0m,
+                        quantidadeEmprestimosQuitados = 0,
+                        totalQuitado = 0m,
+                        saldoDisponivel = 0m,
+                        percentualComprometido = 0m,
+                        mensagemErro = "Centro de Custo FUNDO não encontrado. Crie um centro com nome contendo: FUNDO, REPASSE ou DÍZIMO"
+                    };
+                }
+
+                // Buscar rateios para o fundo
+                var itensRateio = await _context.ItensRateioFechamento
+                  .Include(i => i.FechamentoPeriodo)
+         .Include(i => i.RegraRateio)
+           .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
+              i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id)
+               .ToListAsync();
+
+                var totalEntradasFundo = itensRateio.Sum(i => i.ValorRateio);
+                var quantidadeFechamentosAprovados = itensRateio
+               .Select(i => i.FechamentoPeriodoId)
+                .Distinct()
+     .Count();
+
+                // Empréstimos ativos
                 var emprestimosAtivos = await _context.Emprestimos
+                    .Include(e => e.Devolucoes)
                     .Where(e => e.Status == StatusEmprestimo.Ativo)
-                    .ToListAsync();
+                 .ToListAsync();
 
-                var saldoDevedorAtivos = emprestimosAtivos.Sum(e => e.SaldoDevedor);
-                var totalDevolvido = emprestimosAtivos.Sum(e => e.ValorDevolvido);
+                var totalEmprestimosAtivos = emprestimosAtivos.Sum(e => e.ValorTotal);
+                var devolucoesEmprestimosAtivos = emprestimosAtivos.Sum(e => e.ValorDevolvido);
+                var saldoDevedorAtivos = totalEmprestimosAtivos - devolucoesEmprestimosAtivos;
+
+                // Empréstimos quitados
+                var emprestimosQuitados = await _context.Emprestimos
+                                .Where(e => e.Status == StatusEmprestimo.Quitado)
+                            .ToListAsync();
+
+                var quantidadeEmprestimosQuitados = emprestimosQuitados.Count;
+                var totalQuitado = emprestimosQuitados.Sum(e => e.ValorTotal);
+
+                var saldoDisponivel = totalEntradasFundo - saldoDevedorAtivos;
+                var percentualComprometido = totalEntradasFundo > 0
+                  ? Math.Round((saldoDevedorAtivos / totalEntradasFundo) * 100, 2)
+                    : 0;
 
                 return new
                 {
+                    centroCustoFundoEncontrado = true,
+                    nomeCentroCustoFundo = centroCustoFundo.Nome,
                     totalEntradasFundo,
+                    quantidadeFechamentosAprovados,
                     quantidadeEmprestimosAtivos = emprestimosAtivos.Count,
+                    totalEmprestimosAtivos,
                     saldoDevedorAtivos,
-                    totalDevolvido,
-                    saldoDisponivel = totalEntradasFundo - saldoDevedorAtivos,
-                    percentualComprometido = totalEntradasFundo > 0
-                        ? Math.Round((saldoDevedorAtivos / totalEntradasFundo) * 100, 2)
-                        : 0
+                    devolucoesEmprestimosAtivos,
+                    quantidadeEmprestimosQuitados,
+                    totalQuitado,
+                    saldoDisponivel,
+                    percentualComprometido,
+                    mensagemErro = (string?)null
                 };
             }
             catch (Exception ex)
@@ -288,18 +419,334 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             var detalhamento = await ObterDetalhamentoSaldoFundo();
 
-            var historico = await _context.ItensRateioFechamento
-                .Include(i => i.FechamentoPeriodo)
-                    .ThenInclude(f => f.CentroCusto)
-                .Include(i => i.RegraRateio)
-                    .ThenInclude(r => r.CentroCustoDestino)
-                .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado)
-                .OrderByDescending(i => i.FechamentoPeriodo.DataAprovacao)
-                .Take(20)
+            // ✅ CORREÇÃO: Buscar o Centro de Custo FUNDO primeiro
+            var centroCustoFundo = await _context.CentrosCusto
+           .FirstOrDefaultAsync(c => c.Ativo &&
+         (c.Nome.ToUpper().Contains("FUNDO") ||
+     c.Nome.ToUpper().Contains("REPASSE") ||
+ c.Nome.ToUpper().Contains("DÍZIMO") ||
+c.Nome.ToUpper().Contains("DIZIMO")));
+
+ // ✅ CORREÇÃO: Filtrar APENAS rateios para o FUNDO de empréstimos
+       var historico = new List<ItemRateioFechamento>();
+
+    if (centroCustoFundo != null)
+     {
+       historico = await _context.ItensRateioFechamento
+   .Include(i => i.FechamentoPeriodo)
+   .ThenInclude(f => f.CentroCusto)
+          .Include(i => i.RegraRateio)
+      .ThenInclude(r => r.CentroCustoDestino)
+             .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
+     i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id) // ✅ FILTRO ESSENCIAL
+      .OrderByDescending(i => i.FechamentoPeriodo.DataAprovacao)
+        .Take(20)
+          .ToListAsync();
+    }
+
+       ViewBag.Detalhamento = detalhamento;
+        ViewBag.Historico = historico;
+
+       return View();
+        }
+
+        // ✅ NOVO: Diagnóstico Completo do Sistema de Rateios e Fundo
+        [HttpGet]
+        public async Task<IActionResult> DiagnosticoRateios()
+        {
+            var diagnostico = new System.Text.StringBuilder();
+            diagnostico.AppendLine("=== DIAGNÓSTICO COMPLETO DO SISTEMA DE RATEIOS E FUNDO ===");
+            diagnostico.AppendLine($"Data/Hora: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
+            diagnostico.AppendLine("");
+
+            try
+            {
+                // 1. Verificar Centro de Custo FUNDO
+                diagnostico.AppendLine("1. CENTRO DE CUSTO FUNDO");
+                var centroCustoFundo = await _context.CentrosCusto
+                     .FirstOrDefaultAsync(c => c.Ativo &&
+              (c.Nome.ToUpper().Contains("FUNDO") ||
+            c.Nome.ToUpper().Contains("REPASSE") ||
+          c.Nome.ToUpper().Contains("DÍZIMO") ||
+                 c.Nome.ToUpper().Contains("DIZIMO")));
+
+                if (centroCustoFundo != null)
+                {
+                    diagnostico.AppendLine($"   ✓ Encontrado: '{centroCustoFundo.Nome}' (ID: {centroCustoFundo.Id})");
+                    diagnostico.AppendLine($"   ✓ Tipo: {centroCustoFundo.Tipo}");
+                    diagnostico.AppendLine($"   ✓ Ativo: {centroCustoFundo.Ativo}");
+                }
+                else
+                {
+                    diagnostico.AppendLine("   ❌ NÃO ENCONTRADO!");
+                    diagnostico.AppendLine("   AÇÃO NECESSÁRIA: Criar um Centro de Custo com nome contendo: FUNDO, REPASSE ou DÍZIMO");
+                }
+                diagnostico.AppendLine("");
+
+                // 2. Verificar Centro de Custo SEDE
+                diagnostico.AppendLine("2. CENTRO DE CUSTO SEDE");
+                var centroCustoSede = await _context.CentrosCusto
+              .FirstOrDefaultAsync(c => c.Ativo &&
+                    (c.Nome.ToUpper().Contains("SEDE") ||
+            c.Nome.ToUpper().Contains("GERAL") ||
+           c.Nome.ToUpper().Contains("PRINCIPAL") ||
+                          c.Nome.ToUpper().Contains("CENTRAL")));
+
+                if (centroCustoSede != null)
+                {
+                    diagnostico.AppendLine($"✓ Encontrado: '{centroCustoSede.Nome}' (ID: {centroCustoSede.Id})");
+                    diagnostico.AppendLine($"   ✓ Tipo: {centroCustoSede.Tipo}");
+                    diagnostico.AppendLine($"   ✓ Ativo: {centroCustoSede.Ativo}");
+                }
+                else
+                {
+                    diagnostico.AppendLine("   ❌ NÃO ENCONTRADO!");
+                    diagnostico.AppendLine("   AÇÃO NECESSÁRIA: Criar um Centro de Custo com nome contendo: SEDE ou GERAL");
+                }
+                diagnostico.AppendLine("");
+
+                // 3. Verificar Regras de Rateio
+                diagnostico.AppendLine("3. REGRAS DE RATEIO PARA O FUNDO");
+                if (centroCustoFundo != null)
+                {
+                    var regrasParaFundo = await _context.RegrasRateio
+                          .Include(r => r.CentroCustoOrigem)
+                             .Include(r => r.CentroCustoDestino)
+                         .Where(r => r.CentroCustoDestinoId == centroCustoFundo.Id)
+                           .ToListAsync();
+
+                    if (regrasParaFundo.Any())
+                    {
+                        diagnostico.AppendLine($"   ✓ Total de regras encontradas: {regrasParaFundo.Count}");
+                        foreach (var regra in regrasParaFundo)
+                        {
+                            var status = regra.Ativo ? "ATIVA" : "INATIVA";
+                            diagnostico.AppendLine($"   - [{status}] '{regra.Nome}':");
+                            diagnostico.AppendLine($"     Origem: {regra.CentroCustoOrigem.Nome} (ID: {regra.CentroCustoOrigemId})");
+                            diagnostico.AppendLine($"     Destino: {regra.CentroCustoDestino.Nome} (ID: {regra.CentroCustoDestinoId})");
+                            diagnostico.AppendLine($"  Percentual: {regra.Percentual:F2}%");
+                        }
+                    }
+                    else
+                    {
+                        diagnostico.AppendLine("   ❌ NENHUMA REGRA ENCONTRADA!");
+                        diagnostico.AppendLine("   AÇÃO NECESSÁRIA: Criar uma Regra de Rateio:");
+                        if (centroCustoSede != null)
+                        {
+                            diagnostico.AppendLine($" - Origem: {centroCustoSede.Nome}");
+                        }
+                        else
+                        {
+                            diagnostico.AppendLine($"     - Origem: (SEDE)");
+                        }
+                        diagnostico.AppendLine($"     - Destino: {centroCustoFundo.Nome}");
+                        diagnostico.AppendLine($"     - Percentual: 20% (exemplo)");
+                    }
+                }
+                else
+                {
+                    diagnostico.AppendLine("   ⚠ Não é possível verificar regras sem o Centro de Custo FUNDO");
+                }
+                diagnostico.AppendLine("");
+
+                // 4. Verificar Fechamentos Aprovados
+                diagnostico.AppendLine("4. FECHAMENTOS APROVADOS");
+                var fechamentosAprovados = await _context.FechamentosPeriodo
+                .Include(f => f.CentroCusto)
+             .Include(f => f.ItensRateio)
+                 .Where(f => f.Status == StatusFechamentoPeriodo.Aprovado)
+                  .OrderByDescending(f => f.DataAprovacao)
+                  .ToListAsync();
+
+                diagnostico.AppendLine($"   ✓ Total de fechamentos aprovados: {fechamentosAprovados.Count}");
+
+                if (fechamentosAprovados.Any())
+                {
+                    var comRateios = fechamentosAprovados.Count(f => f.ItensRateio.Any());
+                    var semRateios = fechamentosAprovados.Count(f => !f.ItensRateio.Any());
+
+                    diagnostico.AppendLine($"   ✓ Com rateios: {comRateios}");
+                    diagnostico.AppendLine($"   ⚠ Sem rateios: {semRateios}");
+
+                    diagnostico.AppendLine("");
+                    diagnostico.AppendLine("   Últimos 5 fechamentos aprovados:");
+                    foreach (var fechamento in fechamentosAprovados.Take(5))
+                    {
+                        var totalRateios = fechamento.ItensRateio.Sum(i => i.ValorRateio);
+                        var status = fechamento.ItensRateio.Any() ? "✓ TEM RATEIOS" : "⚠ SEM RATEIOS";
+                        diagnostico.AppendLine($"   - [{status}] {fechamento.CentroCusto.Nome} - {fechamento.DataInicio:dd/MM/yyyy}:");
+                        diagnostico.AppendLine($"     Receitas: {fechamento.TotalEntradas:C}");
+                        diagnostico.AppendLine($"     Rateios: {totalRateios:C} ({fechamento.ItensRateio.Count} item(ns))");
+                    }
+                }
+                else
+                {
+                    diagnostico.AppendLine("   ⚠ Nenhum fechamento aprovado encontrado");
+                    diagnostico.AppendLine("   AÇÃO NECESSÁRIA: Criar e aprovar fechamentos para gerar rateios");
+                }
+                diagnostico.AppendLine("");
+
+                // 5. Verificar Rateios Aplicados ao FUNDO
+                if (centroCustoFundo != null)
+                {
+                    diagnostico.AppendLine("5. RATEIOS APLICADOS AO FUNDO");
+                    var itensRateioFundo = await _context.ItensRateioFechamento
+                          .Include(i => i.FechamentoPeriodo)
+                     .Include(i => i.RegraRateio)
+                       .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
+                     i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id)
+                              .OrderByDescending(i => i.FechamentoPeriodo.DataAprovacao)
+                         .ToListAsync();
+
+                    var totalRateios = itensRateioFundo.Sum(i => i.ValorRateio);
+
+                    diagnostico.AppendLine($"   ✓ Total de rateios para o fundo: {totalRateios:C}");
+                    diagnostico.AppendLine($"   ✓ Quantidade de itens: {itensRateioFundo.Count}");
+
+                    if (itensRateioFundo.Any())
+                    {
+                        diagnostico.AppendLine("");
+                        diagnostico.AppendLine("   Últimos 5 rateios:");
+                        foreach (var item in itensRateioFundo.Take(5))
+                        {
+                            diagnostico.AppendLine($"   - Fechamento #{item.FechamentoPeriodoId} ({item.FechamentoPeriodo.DataAprovacao:dd/MM/yyyy}):");
+                            diagnostico.AppendLine($"     Valor Base: {item.ValorBase:C}");
+                            diagnostico.AppendLine($"     Percentual: {item.Percentual:F2}%");
+                            diagnostico.AppendLine($"     Valor Rateado: {item.ValorRateio:C}");
+                        }
+                    }
+                    else
+                    {
+                        diagnostico.AppendLine("   ❌ NENHUM RATEIO ENCONTRADO!");
+                        diagnostico.AppendLine("   POSSÍVEIS CAUSAS:");
+                        diagnostico.AppendLine("     1. Não há fechamentos aprovados");
+                        diagnostico.AppendLine("     2. Os fechamentos não têm regras de rateio configuradas");
+                        diagnostico.AppendLine("     3. As regras de rateio não apontam para o FUNDO");
+                    }
+                }
+                else
+                {
+                    diagnostico.AppendLine("5. RATEIOS APLICADOS AO FUNDO");
+                    diagnostico.AppendLine("   ⚠ Não é possível verificar sem o Centro de Custo FUNDO");
+                }
+                diagnostico.AppendLine("");
+
+                // 6. Verificar Empréstimos
+                diagnostico.AppendLine("6. EMPRÉSTIMOS");
+                var emprestimosAtivos = await _context.Emprestimos
+                         .Include(e => e.Devolucoes)
+                 .Where(e => e.Status == StatusEmprestimo.Ativo)
                 .ToListAsync();
 
-            ViewBag.Detalhamento = detalhamento;
-            ViewBag.Historico = historico;
+                var totalEmprestado = emprestimosAtivos.Sum(e => e.ValorTotal);
+                var totalDevolvido = emprestimosAtivos.Sum(e => e.ValorDevolvido);
+                var saldoDevedor = totalEmprestado - totalDevolvido;
+
+                diagnostico.AppendLine($"   ✓ Empréstimos ativos: {emprestimosAtivos.Count}");
+                diagnostico.AppendLine($"   ✓ Total emprestado: {totalEmprestado:C}");
+                diagnostico.AppendLine($"   ✓ Total devolvido: {totalDevolvido:C}");
+                diagnostico.AppendLine($"   ✓ Saldo devedor: {saldoDevedor:C}");
+                diagnostico.AppendLine("");
+
+                // 7. Cálculo Final
+                diagnostico.AppendLine("7. CÁLCULO DO SALDO DISPONÍVEL");
+                if (centroCustoFundo != null)
+                {
+                    var totalRateiosFundo = await _context.ItensRateioFechamento
+                .Include(i => i.FechamentoPeriodo)
+                        .Include(i => i.RegraRateio)
+                      .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
+                 i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id)
+                          .SumAsync(i => i.ValorRateio);
+
+                    var saldoDisponivel = totalRateiosFundo - saldoDevedor;
+
+                    diagnostico.AppendLine($"   Total de Rateios para o Fundo:    {totalRateiosFundo:C}");
+                    diagnostico.AppendLine($"   Saldo Devedor de Empréstimos:    - {saldoDevedor:C}");
+                    diagnostico.AppendLine($"   ────────────────────────────────────");
+                    diagnostico.AppendLine($"   SALDO DISPONÍVEL:      {saldoDisponivel:C}");
+
+                    if (saldoDisponivel <= 0)
+                    {
+                        diagnostico.AppendLine("");
+                        diagnostico.AppendLine("   ⚠ SALDO ZERADO OU NEGATIVO!");
+                        if (totalRateiosFundo <= 0)
+                        {
+                            diagnostico.AppendLine("   CAUSA: Não há rateios contabilizados no fundo");
+                            diagnostico.AppendLine("   SOLUÇÃO:");
+                            diagnostico.AppendLine("     1. Verifique se há fechamentos aprovados");
+                            diagnostico.AppendLine("     2. Verifique se as regras de rateio estão ativas");
+                            diagnostico.AppendLine("     3. Verifique se os fechamentos são da SEDE/GERAL");
+                        }
+                        else if (saldoDevedor >= totalRateiosFundo)
+                        {
+                            diagnostico.AppendLine("   CAUSA: Empréstimos consomem todo o saldo do fundo");
+                            diagnostico.AppendLine("   SOLUÇÃO: Aguardar devoluções ou novos rateios");
+                        }
+                    }
+                }
+                else
+                {
+                    diagnostico.AppendLine("   ⚠ Não é possível calcular sem o Centro de Custo FUNDO");
+                }
+                diagnostico.AppendLine("");
+
+                // 8. Recomendações
+                diagnostico.AppendLine("8. RECOMENDAÇÕES");
+                var recomendacoes = new List<string>();
+
+                if (centroCustoFundo == null)
+                {
+                    recomendacoes.Add("❌ CRÍTICO: Criar Centro de Custo FUNDO");
+                }
+
+                if (centroCustoSede == null)
+                {
+                    recomendacoes.Add("❌ CRÍTICO: Criar Centro de Custo SEDE");
+                }
+
+                if (centroCustoFundo != null)
+                {
+                    var temRegras = await _context.RegrasRateio
+                             .AnyAsync(r => r.CentroCustoDestinoId == centroCustoFundo.Id && r.Ativo);
+
+                    if (!temRegras)
+                    {
+                        recomendacoes.Add("❌ CRÍTICO: Criar Regra de Rateio SEDE → FUNDO");
+                    }
+                }
+
+                if (!fechamentosAprovados.Any())
+                {
+                    recomendacoes.Add("⚠ Criar e aprovar fechamentos da SEDE");
+                }
+
+                if (fechamentosAprovados.Any() && !fechamentosAprovados.Any(f => f.ItensRateio.Any()))
+                {
+                    recomendacoes.Add("⚠ Os fechamentos não estão gerando rateios - verificar configuração");
+                }
+
+                if (recomendacoes.Any())
+                {
+                    foreach (var rec in recomendacoes)
+                    {
+                        diagnostico.AppendLine($"   {rec}");
+                    }
+                }
+                else
+                {
+                    diagnostico.AppendLine("   ✓ Sistema configurado corretamente!");
+                }
+
+                ViewBag.Diagnostico = diagnostico.ToString();
+            }
+            catch (Exception ex)
+            {
+                diagnostico.AppendLine("");
+                diagnostico.AppendLine($"❌ ERRO no diagnóstico: {ex.Message}");
+                _logger.LogError(ex, "Erro no diagnóstico de rateios");
+                ViewBag.Diagnostico = diagnostico.ToString();
+            }
 
             return View();
         }
@@ -310,8 +757,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var emprestimo = await _context.Emprestimos
-                .Include(e => e.Devolucoes)
-                .FirstOrDefaultAsync(e => e.Id == id);
+         .Include(e => e.Devolucoes)
+             .FirstOrDefaultAsync(e => e.Id == id);
 
             if (emprestimo == null)
             {

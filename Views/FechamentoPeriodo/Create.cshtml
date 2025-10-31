@@ -8,7 +8,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-0">
-                <i class="bi bi-@(Model.EhSede ? "building" : "calendar-check") me-2 text-primary"></i>
+                <i class="bi bi-@(Model.EhSede ? " building" : "calendar-check") me-2 text-primary"></i>
                 @(Model.EhSede ? "Fechamento de Período - SEDE" : "Fechamento de Período")
             </h1>
             <p class="text-muted mb-0">
@@ -70,7 +70,7 @@
 
         <div class="row g-4">
             <!-- Coluna Esquerda - Dados do Fechamento -->
-            <div class="@(Model.EhSede && Model.FechamentosDisponiveis.Any() ? "col-lg-5" : "col-lg-12")">
+            <div class="@(Model.EhSede && Model.FechamentosDisponiveis.Any() ? " col-lg-5" : "col-lg-12")">
                 <div class="card shadow-sm">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
@@ -186,49 +186,212 @@
                                 <strong>@Model.FechamentosDisponiveis.Count</strong> prestação(ões) aprovada(s) e disponível(is) para processamento.
                             </div>
 
-                            <div class="table-responsive">
-                                <table class="table table-hover table-sm">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th width="50">
-                                                <input type="checkbox" id="selectAll" class="form-check-input" checked />
-                                            </th>
-                                            <th>Congregação</th>
-                                            <th>Período</th>
-                                            <th class="text-end">Balanço Físico</th>
-                                            <th class="text-end">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @for (int i = 0; i < Model.FechamentosDisponiveis.Count; i++)
-                                        {
-                                            var item = Model.FechamentosDisponiveis[i];
-                                            <tr>
-                                                <td>
-                                                    <input type="checkbox"
-                                                           name="FechamentosIncluidos"
-                                                           value="@item.Id"
-                                                           class="form-check-input fechamento-checkbox"
-                                                           checked="@item.Selecionado" />
-                                                </td>
-                                                <td>
-                                                    <strong>@item.NomeCongregacao</strong>
-                                                    <br><small class="text-muted">Aprovado em: @item.DataAprovacao.ToString("dd/MM/yyyy")</small>
-                                                </td>
-                                                <td>
-                                                    @item.DataInicio.ToString("dd/MM/yyyy") -
-                                                    @item.DataFim.ToString("dd/MM/yyyy")
-                                                </td>
-                                                <td class="text-end">
-                                                    <span class="badge bg-warning text-dark">@item.BalancoFisico.ToString("C")</span>
-                                                </td>
-                                                <td class="text-end">
-                                                    <strong>@item.TotalEntradas.ToString("C")</strong>
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
+                            <div class="accordion" id="accordionPrestacoes">
+                                @for (int i = 0; i < Model.FechamentosDisponiveis.Count; i++)
+                                {
+                                    var item = Model.FechamentosDisponiveis[i];
+                                    var accordionId = $"collapse{i}";
+                                    var headingId = $"heading{i}";
+
+                                    <div class="accordion-item mb-2">
+                                        <h2 class="accordion-header" id="@headingId">
+                                            <button class="accordion-button collapsed" type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#@accordionId"
+                                                    aria-expanded="false"
+                                                    aria-controls="@accordionId">
+                                                <div class="w-100 d-flex justify-content-between align-items-center pe-3">
+                                                    <div class="d-flex align-items-center">
+                                                        <input type="checkbox"
+                                                               name="FechamentosIncluidos"
+                                                               value="@item.Id"
+                                                               class="form-check-input fechamento-checkbox me-3"
+                                                               checked="@item.Selecionado"
+                                                               onclick="event.stopPropagation();" />
+                                                        <div>
+                                                            <strong>@item.NomeCongregacao</strong>
+                                                            <br>
+                                                            <small class="text-muted">
+                                                                @item.DataInicio.ToString("dd/MM/yyyy") - @item.DataFim.ToString("dd/MM/yyyy")
+                                                                | Aprovado em: @item.DataAprovacao.ToString("dd/MM/yyyy")
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <div>
+                                                            <span class="badge bg-success">Entradas: @item.TotalEntradas.ToString("C")</span>
+                                                            <span class="badge bg-danger">Saídas: @item.TotalSaidas.ToString("C")</span>
+                                                        </div>
+                                                        <div class="mt-1">
+                                                            <span class="badge bg-warning text-dark">Balanço Físico: @item.BalancoFisico.ToString("C")</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        </h2>
+                                        <div id="@accordionId" class="accordion-collapse collapse"
+                                             aria-labelledby="@headingId"
+                                             data-bs-parent="#accordionPrestacoes">
+                                            <div class="accordion-body">
+                                                <!-- Detalhes de Entradas -->
+                                                @if (item.DetalhesEntradas.Any())
+                                                {
+                                                    <div class="mb-3">
+                                                        <h6 class="text-success fw-bold mb-2">
+                                                            <i class="bi bi-arrow-down-circle me-1"></i>
+                                                            Entradas (@item.DetalhesEntradas.Count)
+                                                        </h6>
+                                                        <div class="table-responsive">
+                                                            <table class="table table-sm table-hover">
+                                                                <thead class="table-light">
+                                                                    <tr>
+                                                                        <th>Data</th>
+                                                                        <th>Descrição</th>
+                                                                        <th>Fonte</th>
+                                                                        <th>Meio Pgto</th>
+                                                                        <th class="text-end">Valor</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @foreach (var detalhe in item.DetalhesEntradas)
+                                                                    {
+                                                                        <tr>
+                                                                            <td class="small">@detalhe.Data.ToString("dd/MM/yy")</td>
+                                                                            <td class="small">
+                                                                                <strong>@detalhe.Descricao</strong>
+                                                                                @if (!string.IsNullOrEmpty(detalhe.MembroOuFornecedor))
+                                                                                {
+                                                                                    <br>
+                                                                
+                                                                                    <small class="text-muted">@detalhe.MembroOuFornecedor</small>
+                                                                                }
+                                                                            </td>
+                                                                            <td class="small">
+                                                                                <span class="badge bg-success bg-opacity-10 text-success">
+                                                                                    @detalhe.PlanoContas
+                                                                                </span>
+                                                                            </td>
+                                                                            <td class="small text-muted">@detalhe.MeioPagamento</td>
+                                                                            <td class="text-end small">
+                                                                                <strong class="text-success">@detalhe.Valor.ToString("C")</strong>
+                                                                            </td>
+                                                                        </tr>
+                                                                    }
+                                                                </tbody>
+                                                                <tfoot class="table-light">
+                                                                    <tr>
+                                                                        <td colspan="4" class="text-end fw-bold">Total:</td>
+                                                                        <td class="text-end fw-bold text-success">
+                                                                            @item.DetalhesEntradas.Sum(d => d.Valor).ToString("C")
+                                                                        </td>
+                                                                    </tr>
+                                                                </tfoot>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                }
+
+                                                <!-- Detalhes de Saídas -->
+                                                @if (item.DetalhesSaidas.Any())
+                                                {
+                                                    <div>
+                                                        <h6 class="text-danger fw-bold mb-2">
+                                                            <i class="bi bi-arrow-up-circle me-1"></i>
+                                                            Saídas (@item.DetalhesSaidas.Count)
+                                                        </h6>
+                                                        <div class="table-responsive">
+                                                            <table class="table table-sm table-hover">
+                                                                <thead class="table-light">
+                                                                    <tr>
+                                                                        <th>Data</th>
+                                                                        <th>Descrição</th>
+                                                                        <th>Categoria</th>
+                                                                        <th>Meio Pgto</th>
+                                                                        <th class="text-end">Valor</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @foreach (var detalhe in item.DetalhesSaidas)
+                                                                    {
+                                                                        <tr>
+                                                                            <td class="small">@detalhe.Data.ToString("dd/MM/yy")</td>
+                                                                            <td class="small">
+                                                                                <strong>@detalhe.Descricao</strong>
+                                                                                @if (!string.IsNullOrEmpty(detalhe.MembroOuFornecedor))
+                                                                                {
+                                                                                    <br>
+                                                                
+                                                                                    <small class="text-muted">@detalhe.MembroOuFornecedor</small>
+                                                                                }
+                                                                            </td>
+                                                                            <td class="small">
+                                                                                <span class="badge bg-danger bg-opacity-10 text-danger">
+                                                                                    @detalhe.PlanoContas
+                                                                                </span>
+                                                                            </td>
+                                                                            <td class="small text-muted">@detalhe.MeioPagamento</td>
+                                                                            <td class="text-end small">
+                                                                                <strong class="text-danger">@detalhe.Valor.ToString("C")</strong>
+                                                                            </td>
+                                                                        </tr>
+                                                                    }
+                                                                </tbody>
+                                                                <tfoot class="table-light">
+                                                                    <tr>
+                                                                        <td colspan="4" class="text-end fw-bold">Total:</td>
+                                                                        <td class="text-end fw-bold text-danger">
+                                                                            @item.DetalhesSaidas.Sum(d => d.Valor).ToString("C")
+                                                                        </td>
+                                                                    </tr>
+                                                                </tfoot>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                }
+
+                                                @if (!item.DetalhesEntradas.Any() && !item.DetalhesSaidas.Any())
+                                                {
+                                                    <div class="alert alert-info small mb-0">
+                                                        <i class="bi bi-info-circle me-1"></i>
+                                                        Nenhum detalhe disponível para esta prestação.
+                                                    </div>
+                                                }
+
+                                                <!-- Resumo do Balanço -->
+                                                <div class="mt-3 p-3 bg-light rounded">
+                                                    <div class="row text-center">
+                                                        <div class="col-6">
+                                                            <small class="text-muted d-block">Balanço Físico</small>
+                                                            <strong class="text-warning">@item.BalancoFisico.ToString("C")</strong>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <small class="text-muted d-block">Balanço Digital</small>
+                                                            <strong class="text-info">@item.BalancoDigital.ToString("C")</strong>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Resumo Geral -->
+                            <div class="mt-3 p-3 bg-light rounded">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <small class="text-muted d-block mb-1">Total Entradas</small>
+                                        <strong class="text-success fs-5">@Model.FechamentosDisponiveis.Sum(f => f.TotalEntradas).ToString("C")</strong>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block mb-1">Total Saídas</small>
+                                        <strong class="text-danger fs-5">@Model.FechamentosDisponiveis.Sum(f => f.TotalSaidas).ToString("C")</strong>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block mb-1">Balanço Físico Total</small>
+                                        <strong class="text-warning fs-5">@Model.FechamentosDisponiveis.Sum(f => f.BalancoFisico).ToString("C")</strong>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -261,50 +424,50 @@
 
     <script>
         $(document).ready(function() {
-            // Popular anos
-            var anoAtual = new Date().getFullYear();
-            for (var i = anoAtual + 1; i >= anoAtual - 5; i--) {
-                $('#selectAno').append($('<option>', {
-                    value: i,
-                    text: i,
-                    selected: i === anoAtual
-                }));
-            }
+        // Popular anos
+        var anoAtual = new Date().getFullYear();
+        for (var i = anoAtual + 1; i >= anoAtual - 5; i--) {
+        $('#selectAno').append($('<option>', {
+        value: i,
+        text: i,
+        selected: i === anoAtual
+        }));
+        }
 
-            // Definir mês atual
-            var mesAtual = new Date().getMonth() + 1;
-            $('#selectMes').val(mesAtual);
+        // Definir mês atual
+        var mesAtual = new Date().getMonth() + 1;
+        $('#selectMes').val(mesAtual);
 
-            // Definir data atual
-            var hoje = new Date().toISOString().split('T')[0];
-            $('#dataFechamentoDiario').val(hoje);
+        // Definir data atual
+        var hoje = new Date().toISOString().split('T')[0];
+        $('#dataFechamentoDiario').val(hoje);
 
-            // Alternar entre Diário, Semanal e Mensal
-            $('#tipoFechamento').change(function() {
-                var tipo = $(this).val();
+        // Alternar entre Diário, Semanal e Mensal
+        $('#tipoFechamento').change(function() {
+        var tipo = $(this).val();
 
-                $('#camposDiario, #camposSemanal, #camposMensal').hide();
+        $('#camposDiario, #camposSemanal, #camposMensal').hide();
 
-                if (tipo == '1') { // Diário
-                    $('#camposDiario').show();
-                } else if (tipo == '2') { // Semanal
-                    $('#camposSemanal').show();
-                } else { // Mensal
-                    $('#camposMensal').show();
-                }
-            });
+        if (tipo == '1') { // Diário
+        $('#camposDiario').show();
+        } else if (tipo == '2') { // Semanal
+        $('#camposSemanal').show();
+        } else { // Mensal
+        $('#camposMensal').show();
+        }
+        });
 
-            // Select All para congregações
-            $('#selectAll').change(function() {
-                $('.fechamento-checkbox').prop('checked', $(this).prop('checked'));
-            });
+        // Select All para congregações
+        $('#selectAll').change(function() {
+        $('.fechamento-checkbox').prop('checked', $(this).prop('checked'));
+        });
 
-            // Desmarcar "Select All" se algum item for desmarcado
-            $('.fechamento-checkbox').change(function() {
-                if (!$(this).prop('checked')) {
-                    $('#selectAll').prop('checked', false);
-                }
-            });
+        // Desmarcar "Select All" se algum item for desmarcado
+        $('.fechamento-checkbox').change(function() {
+        if (!$(this).prop('checked')) {
+        $('#selectAll').prop('checked', false);
+        }
+        });
         });
     </script>
 }

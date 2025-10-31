@@ -9,9 +9,9 @@
         <div class="col-lg-10 offset-lg-1">
             <!-- Cabeçalho -->
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="fas fa-file-invoice-dollar"></i> Detalhes do Empréstimo #@Model.Id.ToString("D3")</h2>
-                <a asp-action="Index" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Voltar
+                <h2><i class="bi bi-file-earmark-text"></i> Detalhes do Empréstimo #@Model.Id.ToString("D3")</h2>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Voltar
                 </a>
             </div>
 
@@ -22,15 +22,15 @@
                         @switch (Model.Status)
                         {
                             case SistemaTesourariaEclesiastica.Models.StatusEmprestimo.Ativo:
-                                <i class="fas fa-exclamation-circle"></i>
+                                <i class="bi bi-exclamation-circle"></i>
                                 <text> Status: Ativo</text>
                                 break;
                             case SistemaTesourariaEclesiastica.Models.StatusEmprestimo.Quitado:
-                                <i class="fas fa-check-circle"></i>
+                                <i class="bi bi-check-circle"></i>
                                 <text> Status: Quitado</text>
                                 break;
                             case SistemaTesourariaEclesiastica.Models.StatusEmprestimo.Cancelado:
-                                <i class="fas fa-ban"></i>
+                                <i class="bi bi-ban"></i>
                                 <text> Status: Cancelado</text>
                                 break;
                         }
@@ -39,44 +39,44 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="text-muted">Data do Empréstimo</label>
+                            <label class="text-muted small">Data do Empréstimo</label>
                             <h5>@Model.DataEmprestimo.ToString("dd/MM/yyyy")</h5>
                         </div>
                         @if (Model.DataQuitacao.HasValue)
                         {
                             <div class="col-md-6 mb-3">
-                                <label class="text-muted">Data de Quitação</label>
+                                <label class="text-muted small">Data de Quitação</label>
                                 <h5 class="text-success">@Model.DataQuitacao.Value.ToString("dd/MM/yyyy")</h5>
                             </div>
                         }
                     </div>
 
                     <div class="mb-3">
-                        <label class="text-muted">Justificativa</label>
-                        <p class="border p-3 bg-light rounded">@Model.Justificativa</p>
+                        <label class="text-muted small">Justificativa</label>
+                        <div class="border rounded p-3 bg-body-secondary">@Model.Justificativa</div>
                     </div>
 
                     <hr>
 
                     <!-- Resumo Financeiro -->
-                    <div class="row text-center">
+                    <div class="row text-center g-3">
                         <div class="col-md-4">
-                            <div class="p-3 bg-primary bg-opacity-10 rounded">
-                                <label class="text-muted d-block">Valor Total</label>
-                                <h3 class="text-primary mb-0">R$ @Model.ValorTotal.ToString("N2")</h3>
+                            <div class="p-3 border border-primary rounded bg-primary bg-opacity-10">
+                                <label class="text-muted d-block small">Valor Total</label>
+                                <h3 class="text-primary mb-0">@Model.ValorTotal.ToString("C")</h3>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="p-3 bg-success bg-opacity-10 rounded">
-                                <label class="text-muted d-block">Valor Devolvido</label>
-                                <h3 class="text-success mb-0">R$ @Model.ValorDevolvido.ToString("N2")</h3>
+                            <div class="p-3 border border-success rounded bg-success bg-opacity-10">
+                                <label class="text-muted d-block small">Valor Devolvido</label>
+                                <h3 class="text-success mb-0">@Model.ValorDevolvido.ToString("C")</h3>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="p-3 @(Model.SaldoDevedor > 0 ? "bg-danger" : "bg-success") bg-opacity-10 rounded">
-                                <label class="text-muted d-block">Saldo Devedor</label>
+                            <div class="p-3 border @(Model.SaldoDevedor > 0 ? "border-danger" : "border-success") rounded @(Model.SaldoDevedor > 0 ? "bg-danger" : "bg-success") bg-opacity-10">
+                                <label class="text-muted d-block small">Saldo Devedor</label>
                                 <h3 class="@(Model.SaldoDevedor > 0 ? "text-danger" : "text-success") mb-0">
-                                    R$ @Model.SaldoDevedor.ToString("N2")
+                                    @Model.SaldoDevedor.ToString("C")
                                 </h3>
                             </div>
                         </div>
@@ -84,7 +84,7 @@
 
                     <!-- Barra de Progresso -->
                     <div class="mt-4">
-                        <label class="text-muted d-block mb-2">Progresso de Quitação</label>
+                        <label class="text-muted d-block mb-2 small">Progresso de Quitação</label>
                         <div class="progress" style="height: 35px;">
                             <div class="progress-bar @(Model.PercentualDevolvido == 100 ? "bg-success" : "bg-info") progress-bar-striped progress-bar-animated"
                                  role="progressbar"
@@ -102,24 +102,24 @@
             <!-- Card de Histórico de Devoluções -->
             <div class="card shadow-sm">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-history"></i> Histórico de Devoluções</h5>
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Histórico de Devoluções</h5>
                 </div>
                 <div class="card-body">
                     @if (!Model.Devolucoes.Any())
                     {
                         <div class="alert alert-warning text-center">
-                            <i class="fas fa-info-circle"></i> Nenhuma devolução registrada ainda.
+                            <i class="bi bi-info-circle"></i> Nenhuma devolução registrada ainda.
                         </div>
                     }
                     else
                     {
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover align-middle">
                                 <thead class="table-light">
                                     <tr>
                                         <th>#</th>
                                         <th>Data</th>
-                                        <th>Valor Devolvido</th>
+                                        <th class="text-end">Valor Devolvido</th>
                                         <th>Observações</th>
                                     </tr>
                                 </thead>
@@ -131,7 +131,7 @@
                                             <tr>
                                                 <td><strong>@contador</strong></td>
                                                 <td>@devolucao.DataDevolucao.ToString("dd/MM/yyyy")</td>
-                                                <td class="text-success"><strong>R$ @devolucao.ValorDevolvido.ToString("N2")</strong></td>
+                                                <td class="text-success text-end"><strong>@devolucao.ValorDevolvido.ToString("C")</strong></td>
                                                 <td>
                                                     @if (string.IsNullOrWhiteSpace(devolucao.Observacoes))
                                                     {
@@ -150,7 +150,7 @@
                                 <tfoot class="table-light">
                                     <tr>
                                         <td colspan="2" class="text-end"><strong>Total Devolvido:</strong></td>
-                                        <td class="text-success"><strong>R$ @Model.ValorDevolvido.ToString("N2")</strong></td>
+                                        <td class="text-success text-end"><strong>@Model.ValorDevolvido.ToString("C")</strong></td>
                                         <td></td>
                                     </tr>
                                 </tfoot>
@@ -168,7 +168,7 @@
                             class="btn btn-primary btn-lg"
                             data-bs-toggle="modal"
                             data-bs-target="#modalDevolucaoDetails">
-                        <i class="fas fa-coins"></i> Registrar Nova Devolução
+                        <i class="bi bi-cash-coin"></i> Registrar Nova Devolução
                     </button>
                 </div>
             }
@@ -176,47 +176,52 @@
     </div>
 </div>
 
-<!-- Modal de Devolução (Details) -->
-<div class="modal fade" id="modalDevolucaoDetails" tabindex="-1">
+<!-- Modal de Devolução -->
+<div class="modal fade" id="modalDevolucaoDetails" tabindex="-1" aria-labelledby="modalDevolucaoLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="fas fa-coins"></i> Registrar Devolução</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="modalDevolucaoLabel"><i class="bi bi-cash-coin"></i> Registrar Devolução</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formDevolucaoDetails">
+                @Html.AntiForgeryToken()
                 <div class="modal-body">
                     <input type="hidden" id="emprestimoIdDetails" name="emprestimoId" value="@Model.Id">
 
                     <div class="alert alert-info">
-                        <strong>Saldo Devedor:</strong> R$ <span id="saldoDevedorDetails">@Model.SaldoDevedor.ToString("N2")</span>
+                        <strong>Saldo Devedor:</strong> <span id="saldoDevedorDetails">@Model.SaldoDevedor.ToString("C")</span>
                     </div>
 
                     <div class="mb-3">
-                        <label for="valorDevolvido" class="form-label">Valor a Devolver *</label>
+                        <label for="valorDevolvidoDetails" class="form-label">Valor a Devolver <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text">R$</span>
                             <input type="number" step="0.01" class="form-control" id="valorDevolvidoDetails"
-                                   name="valorDevolvido" required min="0.01" max="@Model.SaldoDevedor">
+                                   name="valorDevolvido" required min="0.01" max="@Model.SaldoDevedor" placeholder="0,00">
                         </div>
+                        <div class="form-text">Máximo: @Model.SaldoDevedor.ToString("C")</div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="dataDevolucao" class="form-label">Data da Devolução *</label>
+                        <label for="dataDevolucaoDetails" class="form-label">Data da Devolução <span class="text-danger">*</span></label>
                         <input type="date" class="form-control" id="dataDevolucaoDetails"
                                name="dataDevolucao" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="observacoes" class="form-label">Observações</label>
+                        <label for="observacoesDetails" class="form-label">Observações</label>
                         <textarea class="form-control" id="observacoesDetails" name="observacoes"
-                                  rows="3" maxlength="300"></textarea>
+                                  rows="3" maxlength="300" placeholder="Observações sobre esta devolução (opcional)"></textarea>
+                        <div class="form-text"><span id="contadorObs">0</span>/300 caracteres</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Registrar Devolução
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="btnSubmitDevolucao">
+                        <i class="bi bi-check-circle"></i> Registrar Devolução
                     </button>
                 </div>
             </form>
@@ -226,58 +231,168 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
-            // Configurar data atual como padrão
-            $('#dataDevolucaoDetails').val(new Date().toISOString().split('T')[0]);
+                $(document).ready(function() {
+           // Configurar data atual como padrão
+        var hoje = new Date().toISOString().split('T')[0];
+              $('#dataDevolucaoDetails').val(hoje);
 
-            // Submit do formulário de devolução
-            $('#formDevolucaoDetails').submit(function(e) {
-                e.preventDefault();
-
-                var emprestimoId = $('#emprestimoIdDetails').val();
-                var valorDevolvido = parseFloat($('#valorDevolvidoDetails').val());
-                var dataDevolucao = $('#dataDevolucaoDetails').val();
-                var observacoes = $('#observacoesDetails').val();
-
-                $.ajax({
-                    url: '@Url.Action("RegistrarDevolucao", "Emprestimos")',
-                    type: 'POST',
-                    data: {
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val(),
-                        emprestimoId: emprestimoId,
-                        valorDevolvido: valorDevolvido,
-                        dataDevolucao: dataDevolucao,
-                        observacoes: observacoes
-                    },
-                    success: function(response) {
-                        if (response.sucesso) {
-                            $('#modalDevolucaoDetails').modal('hide');
-
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Sucesso!',
-                                text: response.mensagem,
-                                confirmButtonText: 'OK'
-                            }).then(() => {
-                                location.reload();
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Erro',
-                                text: response.mensagem
-                            });
-                        }
-                    },
-                    error: function() {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Erro',
-                            text: 'Ocorreu um erro ao processar a devolução.'
-                        });
-                    }
-                });
+            // Contador de caracteres
+           $('#observacoesDetails').on('input', function() {
+         $('#contadorObs').text($(this).val().length);
             });
+
+          // Submit do formulário de devolução
+        $('#formDevolucaoDetails').on('submit', function(e) {
+              e.preventDefault();
+         e.stopPropagation();
+
+          var $form = $(this);
+          var $btnSubmit = $('#btnSubmitDevolucao');
+               var emprestimoId = parseInt($('#emprestimoIdDetails').val());
+         var valorDevolvido = parseFloat($('#valorDevolvidoDetails').val());
+           var dataDevolucao = $('#dataDevolucaoDetails').val();
+            var observacoes = $('#observacoesDetails').val().trim();
+               var token = $form.find('input[name="__RequestVerificationToken"]').val();
+
+        // Validação
+            if (!valorDevolvido || valorDevolvido <= 0) {
+        Swal.fire({
+                 icon: 'warning',
+              title: 'Atenção',
+                text: 'Informe um valor válido para a devolução.'
+         });
+           return false;
+         }
+
+          if (valorDevolvido > @Model.SaldoDevedor) {
+           Swal.fire({
+           icon: 'error',
+           title: 'Valor Inválido',
+               text: 'O valor da devolução não pode ser maior que o saldo devedor.'
+           });
+          return false;
+         }
+
+            if (!dataDevolucao) {
+             Swal.fire({
+                  icon: 'warning',
+                 title: 'Atenção',
+                   text: 'Informe a data da devolução.'
+                   });
+                        return false;
+        }
+
+         // Desabilitar botão e mostrar loading
+              $btnSubmit.prop('disabled', true)
+                   .html('<span class="spinner-border spinner-border-sm me-2"></span>Processando...');
+
+              // Fazer requisição AJAX sem depender da configuração global
+                $.ajax({
+             url: '@Url.Action("RegistrarDevolucao", "Emprestimos")',
+                    type: 'POST',
+                    cache: false,
+            dataType: 'json',
+                    headers: {
+         'RequestVerificationToken': token
+             },
+           data: {
+            __RequestVerificationToken: token,
+               emprestimoId: emprestimoId,
+            valorDevolvido: valorDevolvido,
+             dataDevolucao: dataDevolucao,
+                 observacoes: observacoes
+        },
+              success: function(response) {
+                console.log('Resposta recebida:', response);
+
+            if (response && response.sucesso) {
+          // Fechar modal
+                   var modalElement = document.getElementById('modalDevolucaoDetails');
+              if (modalElement) {
+           var modal = bootstrap.Modal.getInstance(modalElement);
+               if (modal) {
+           modal.hide();
+               } else {
+                   // Se não existe instância, criar e fechar
+                  modal = new bootstrap.Modal(modalElement);
+           modal.hide();
+                      }
+              }
+
+         Swal.fire({
+               icon: 'success',
+             title: 'Sucesso!',
+            text: response.mensagem || 'Devolução registrada com sucesso!',
+                     confirmButtonText: 'OK',
+                confirmButtonColor: '#0d6efd'
+              }).then(() => {
+          location.reload();
+                   });
+                   } else {
+             $btnSubmit.prop('disabled', false)
+               .html('<i class="bi bi-check-circle"></i> Registrar Devolução');
+        Swal.fire({
+        icon: 'error',
+             title: 'Erro',
+              text: response.mensagem || 'Erro ao processar a devolução.'
         });
+                      }
+          },
+               error: function(xhr, status, error) {
+                $btnSubmit.prop('disabled', false)
+            .html('<i class="bi bi-check-circle"></i> Registrar Devolução');
+
+             console.error('Erro AJAX:', {
+          status: status,
+                    error: error,
+                     responseText: xhr.responseText,
+            statusCode: xhr.status
+               });
+
+                 var mensagemErro = 'Ocorreu um erro ao processar a devolução. Tente novamente.';
+
+          // Tentar extrair mensagem de erro do servidor
+                   try {
+                     if (xhr.responseText) {
+                 var errorResponse = JSON.parse(xhr.responseText);
+                 if (errorResponse.mensagem) {
+               mensagemErro = errorResponse.mensagem;
+                }
+          }
+                } catch (e) {
+           console.error('Erro ao parsear resposta:', e);
+              }
+
+                  Swal.fire({
+         icon: 'error',
+                 title: 'Erro',
+           text: mensagemErro,
+                 footer: xhr.status === 400 ? 'Verifique os dados informados' :
+                xhr.status === 500 ? 'Erro interno do servidor' : null
+            });
+                 }
+             });
+
+                    return false;
+           });
+
+           // Limpar formulário ao fechar modal
+            $('#modalDevolucaoDetails').on('hidden.bs.modal', function () {
+                $('#formDevolucaoDetails')[0].reset();
+            $('#dataDevolucaoDetails').val(new Date().toISOString().split('T')[0]);
+               $('#contadorObs').text('0');
+             $('#btnSubmitDevolucao').prop('disabled', false)
+               .html('<i class="bi bi-check-circle"></i> Registrar Devolução');
+                    });
+
+             // Prevenir múltiplos submits
+                 $form.on('submit', function(e) {
+             if ($btnSubmit.prop('disabled')) {
+               e.preventDefault();
+               e.stopPropagation();
+                   return false;
+         }
+                  });
+                });
     </script>
 }

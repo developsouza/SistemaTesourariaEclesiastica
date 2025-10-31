@@ -23,5 +23,9 @@ namespace SistemaTesourariaEclesiastica.ViewModels
 
         // IDs dos fechamentos selecionados para incluir (apenas para SEDE)
         public List<int> FechamentosIncluidos { get; set; } = new List<int>();
+
+        // ? NOVO: Lançamentos da SEDE que serão incluídos no fechamento
+        public List<DetalhePrestacaoContas> LancamentosSedeEntradas { get; set; } = new List<DetalhePrestacaoContas>();
+        public List<DetalhePrestacaoContas> LancamentosSedeSaidas { get; set; } = new List<DetalhePrestacaoContas>();
     }
 }

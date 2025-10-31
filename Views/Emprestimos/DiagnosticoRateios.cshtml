@@ -152,23 +152,23 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
-            // Destacar problemas no texto
-            var diagnosticoText = $('.bg-dark').text();
+              $(document).ready(function() {
+              // Destacar problemas no texto
+                  var diagnosticoText = $('.bg-dark').text();
 
-            if (diagnosticoText.includes('❌')) {
-                $('.card-header.bg-primary')
-                    .removeClass('bg-primary')
-                    .addClass('bg-danger');
-            } else if (diagnosticoText.includes('⚠')) {
-                $('.card-header.bg-primary')
-                    .removeClass('bg-primary')
-                    .addClass('bg-warning text-dark');
-            } else {
-                $('.card-header.bg-primary')
-                    .removeClass('bg-primary')
-                    .addClass('bg-success');
+             if (diagnosticoText.includes('❌')) {
+         $('.card-header.bg-primary')
+          .removeClass('bg-primary')
+               .addClass('bg-danger');
+              } else if (diagnosticoText.includes('⚠')) {
+               $('.card-header.bg-primary')
+          .removeClass('bg-primary')
+               .addClass('bg-warning text-dark');
+                  } else {
+        $('.card-header.bg-primary')
+                 .removeClass('bg-primary')
+           .addClass('bg-success');
             }
-        });
+          });
     </script>
 }

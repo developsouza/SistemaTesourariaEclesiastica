@@ -259,7 +259,7 @@ class SidebarManager {
         this.sidebar.classList.remove('temp-expanded');
         this.content?.classList.add('expanded');
         localStorage.setItem('sidebarCollapsed', 'true');
-        
+
         // Fechar todos os submenus
         this.closeAllSubmenus();
     }
@@ -308,7 +308,7 @@ class SidebarManager {
         document.querySelectorAll('.has-submenu > .nav-link').forEach(menuLink => {
             menuLink.addEventListener('click', (e) => {
                 const parent = menuLink.closest('.has-submenu');
-                
+
                 // Se sidebar está recolhido no desktop
                 if (this.sidebar.classList.contains('collapsed') && window.innerWidth > 991) {
                     e.preventDefault();
@@ -320,8 +320,8 @@ class SidebarManager {
         // Fechar sidebar recolhido ao clicar em links de submenu
         document.querySelectorAll('.submenu .nav-link').forEach(submenuLink => {
             submenuLink.addEventListener('click', () => {
-                if (this.sidebar.classList.contains('collapsed') && 
-                    this.sidebar.classList.contains('temp-expanded') && 
+                if (this.sidebar.classList.contains('collapsed') &&
+                    this.sidebar.classList.contains('temp-expanded') &&
                     window.innerWidth > 991) {
                     // Auto-colapsar após um pequeno delay para permitir navegação
                     setTimeout(() => {
@@ -333,7 +333,7 @@ class SidebarManager {
 
         // Fechar expansão temporária ao clicar fora do sidebar
         document.addEventListener('click', (e) => {
-            if (this.sidebar.classList.contains('collapsed') && 
+            if (this.sidebar.classList.contains('collapsed') &&
                 this.sidebar.classList.contains('temp-expanded') &&
                 !this.sidebar.contains(e.target) &&
                 window.innerWidth > 991) {
@@ -345,13 +345,13 @@ class SidebarManager {
     temporaryExpand(menuItem) {
         // Limpar timeouts anteriores
         clearTimeout(this.autoCollapseTimeout);
-        
+
         // Adicionar classe de expansão temporária
         this.sidebar.classList.add('temp-expanded');
-        
+
         // Fechar todos os submenus
         this.closeAllSubmenus();
-        
+
         // Abrir o submenu clicado após um pequeno delay para animação
         setTimeout(() => {
             if (menuItem) {
@@ -372,10 +372,10 @@ class SidebarManager {
     autoCollapse() {
         // Fechar submenus
         this.closeAllSubmenus();
-        
+
         // Remover expansão temporária
         this.sidebar.classList.remove('temp-expanded');
-        
+
         // Limpar timeout
         clearTimeout(this.autoCollapseTimeout);
     }
@@ -401,7 +401,7 @@ class SubmenuManager {
         document.querySelectorAll('.has-submenu > .nav-link').forEach(item => {
             item.addEventListener('click', (e) => {
                 const sidebar = document.getElementById('sidebar');
-                
+
                 // Se sidebar está recolhido no desktop, não processar aqui
                 // (será tratado pelo SidebarManager)
                 if (sidebar && sidebar.classList.contains('collapsed') && window.innerWidth > 991) {
@@ -409,7 +409,7 @@ class SubmenuManager {
                 }
 
                 e.preventDefault();
-                
+
                 const parent = item.closest('.has-submenu');
                 const submenu = parent.querySelector('.submenu');
 
@@ -457,6 +457,11 @@ class FormManager {
 
     setupFormSubmit() {
         document.querySelectorAll('form').forEach(form => {
+            // Não interceptar formulários que já tem seu próprio handler
+            if (form.hasAttribute('data-ajax') || form.id === 'formDevolucaoDetails') {
+                return;
+            }
+
             form.addEventListener('submit', (e) => {
                 if (form.checkValidity()) {
                     showLoading('Enviando...');
@@ -683,11 +688,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Configuração AJAX com CSRF Token
     if (typeof $ !== 'undefined') {
+        // Remover configuração global que pode causar conflitos
+        // Cada formulário agora gerencia seu próprio token
+
+        // Apenas adicionar header para requests que não tenham token no data
         $.ajaxSetup({
-            beforeSend: (xhr, settings) => {
-                if (!settings.crossDomain) {
+            beforeSend: function (xhr, settings) {
+                // Não interferir se já tem o token nos dados ou é cross-domain
+                if (settings.crossDomain) {
+                    return;
+                }
+
+                // Se a request não tem token no data, pegar do meta tag
+                if (settings.data && !settings.data.includes('__RequestVerificationToken')) {
                     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                    if (token) xhr.setRequestHeader("X-CSRF-Token", token);
+                    if (token) {
+                        xhr.setRequestHeader("X-CSRF-Token", token);
+                    }
                 }
             }
         });

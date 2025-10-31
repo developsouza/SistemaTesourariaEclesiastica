@@ -3,41 +3,42 @@
 @{
     ViewData["Title"] = "Detalhes do Fechamento";
     var podeAprovar = User.IsInRole("Administrador") || User.IsInRole("TesoureiroGeral");
+    var podeVerRateios = User.IsInRole("Administrador") || User.IsInRole("TesoureiroGeral");
     var diferenca = Model.BalancoFisico - Model.BalancoDigital;
-    var balancoTotal = Model.BalancoFisico + Model.BalancoDigital;
+var balancoTotal = Model.BalancoFisico + Model.BalancoDigital;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">
-            <i class="bi bi-file-earmark-text me-2"></i>
-            Detalhes do Fechamento
+ <i class="bi bi-file-earmark-text me-2"></i>
+  Detalhes do Fechamento
         </h1>
         <p class="text-muted mb-0">
-            @if (Model.TipoFechamento == SistemaTesourariaEclesiastica.Enums.TipoFechamento.Diario)
+       @if (Model.TipoFechamento == SistemaTesourariaEclesiastica.Enums.TipoFechamento.Diario)
+         {
+    <span>Fechamento Di·rio - @Model.DataInicio.ToString("dd/MM/yyyy")</span>
+       }
+          else if (Model.TipoFechamento == SistemaTesourariaEclesiastica.Enums.TipoFechamento.Semanal)
             {
-                <span>Fechamento Di√°rio - @Model.DataInicio.ToString("dd/MM/yyyy")</span>
+             <span>Fechamento Semanal - De @Model.DataInicio.ToString("dd/MM/yyyy") atÈ @Model.DataFim.ToString("dd/MM/yyyy")</span>
+    }
+     else
+  {
+    <span>Fechamento Mensal - @Model.Mes.Value.ToString("00")/@Model.Ano</span>
             }
-            else if (Model.TipoFechamento == SistemaTesourariaEclesiastica.Enums.TipoFechamento.Semanal)
-            {
-                <span>Fechamento Semanal - De @Model.DataInicio.ToString("dd/MM/yyyy") at√© @Model.DataFim.ToString("dd/MM/yyyy")</span>
-            }
-            else
-            {
-                <span>Fechamento Mensal - @Model.Mes.Value.ToString("00")/@Model.Ano</span>
-            }
-        </p>
+     </p>
     </div>
     <div>
         <a asp-action="Index" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-2"></i>Voltar
         </a>
-        @if (Model.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Aprovado)
+     @if (Model.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Aprovado)
         {
-            <a asp-action="GerarPdf" asp-route-id="@Model.Id" class="btn btn-danger" target="_blank">
-                <i class="bi bi-file-pdf me-2"></i>Gerar PDF
+<a asp-action="GerarPdf" asp-route-id="@Model.Id" class="btn btn-danger" target="_blank">
+      <i class="bi bi-file-pdf me-2"></i>Gerar PDF
             </a>
-        }
+    }
     </div>
 </div>
 
@@ -45,441 +46,441 @@
 <div class="row mb-4">
     <div class="col-12">
         <div class="card border-@(Model.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Aprovado ? "success" : Model.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Rejeitado ? "danger" : "warning")">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <h5 class="mb-2">
-                            <i class="bi bi-building me-2"></i>
-                            @Model.CentroCusto.Nome
-                        </h5>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <small class="text-muted">
-                                    <i class="bi bi-person me-1"></i>
-                                    Submetido por: <strong>@Model.UsuarioSubmissao.NomeCompleto</strong>
-                                </small>
-                            </div>
-                            <div class="col-md-6">
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar me-1"></i>
-                                    Data: <strong>@Model.DataSubmissao.ToString("dd/MM/yyyy HH:mm")</strong>
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 text-end">
-                        <span class="badge bg-@(Model.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Aprovado ? "success" : Model.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Rejeitado ? "danger" : "warning") fs-5">
-                            @Model.Status.ToString()
-                        </span>
-                    </div>
-                </div>
+        <div class="card-body">
+             <div class="row align-items-center">
+      <div class="col-md-8">
+   <h5 class="mb-2">
+     <i class="bi bi-building me-2"></i>
+        @Model.CentroCusto.Nome
+        </h5>
+   <div class="row">
+         <div class="col-md-6">
+ <small class="text-muted">
+  <i class="bi bi-person me-1"></i>
+       Submetido por: <strong>@Model.UsuarioSubmissao.NomeCompleto</strong>
+          </small>
+              </div>
+               <div class="col-md-6">
+    <small class="text-muted">
+       <i class="bi bi-calendar me-1"></i>
+ Data: <strong>@Model.DataSubmissao.ToString("dd/MM/yyyy HH:mm")</strong>
+   </small>
+               </div>
+        </div>
+             </div>
+          <div class="col-md-4 text-end">
+   <span class="badge bg-@(Model.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Aprovado ? "success" : Model.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Rejeitado ? "danger" : "warning") fs-5">
+         @Model.Status.ToString()
+                </span>
+      </div>
+      </div>
             </div>
         </div>
         @if (Model.FoiProcessadoPelaSede && Model.FechamentoSedeProcessador != null)
-        {
-            <div class="alert alert-info mt-3">
-                <h6 class="alert-heading">
-                    <i class="bi bi-check2-circle me-2"></i>
-                    Inclu√≠do em Fechamento da SEDE
+    {
+   <div class="alert alert-info mt-3">
+       <h6 class="alert-heading">
+        <i class="bi bi-check2-circle me-2"></i>
+  IncluÌdo em Fechamento da SEDE
                 </h6>
-                <p class="mb-1">
-                    Esta presta√ß√£o de contas foi inclu√≠da no fechamento da SEDE em
-                    <strong>@Model.DataProcessamentoPelaSede?.ToString("dd/MM/yyyy HH:mm")</strong>
-                </p>
-                <a asp-action="Details" asp-route-id="@Model.FechamentoSedeProcessadorId" class="btn btn-sm btn-outline-info">
-                    <i class="bi bi-eye me-1"></i>Ver Fechamento da SEDE
-                </a>
+          <p class="mb-1">
+     Esta prestaÁ„o de contas foi incluÌda no fechamento da SEDE em
+         <strong>@Model.DataProcessamentoPelaSede?.ToString("dd/MM/yyyy HH:mm")</strong>
+     </p>
+      <a asp-action="Details" asp-route-id="@Model.FechamentoSedeProcessadorId" class="btn btn-sm btn-outline-info">
+           <i class="bi bi-eye me-1"></i>Ver Fechamento da SEDE
+      </a>
             </div>
         }
 
         @if (Model.FechamentosCongregacoesIncluidos.Any())
         {
             <div class="alert alert-success mt-3">
-                <h6 class="alert-heading">
-                    <i class="bi bi-list-check me-2"></i>
-                    Presta√ß√µes de Congrega√ß√µes Inclu√≠das
+           <h6 class="alert-heading">
+          <i class="bi bi-list-check me-2"></i>
+   PrestaÁıes de CongregaÁıes IncluÌdas
                 </h6>
-                <p class="mb-2">
-                    Este fechamento da SEDE processou <strong>@Model.FechamentosCongregacoesIncluidos.Count</strong> presta√ß√£o(√µes) de congrega√ß√£o(√µes):
-                </p>
-                <ul class="mb-0">
-                    @foreach (var fechamento in Model.FechamentosCongregacoesIncluidos)
-                    {
-                        <li>
-                            <strong>@fechamento.CentroCusto.Nome</strong> -
-                            @fechamento.DataInicio.ToString("dd/MM/yyyy") at√© @fechamento.DataFim.ToString("dd/MM/yyyy")
-                            <a asp-action="Details" asp-route-id="@fechamento.Id" class="btn btn-sm btn-outline-success ms-2">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                        </li>
-                    }
-                </ul>
-            </div>
-        }
+           <p class="mb-2">
+         Este fechamento da SEDE processou <strong>@Model.FechamentosCongregacoesIncluidos.Count</strong> prestaÁ„o(ıes) de congregaÁ„o(ıes):
+       </p>
+     <ul class="mb-0">
+       @foreach (var fechamento in Model.FechamentosCongregacoesIncluidos)
+             {
+ <li>
+        <strong>@fechamento.CentroCusto.Nome</strong> -
+     @fechamento.DataInicio.ToString("dd/MM/yyyy") atÈ @fechamento.DataFim.ToString("dd/MM/yyyy")
+         <a asp-action="Details" asp-route-id="@fechamento.Id" class="btn btn-sm btn-outline-success ms-2">
+    <i class="bi bi-eye"></i>
+  </a>
+            </li>
+}
+       </ul>
+     </div>
+   }
     </div>
 </div>
 
-<!-- Cards de Balan√ßos -->
+<!-- Cards de BalanÁos -->
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card text-center border-primary">
             <div class="card-body">
-                <i class="bi bi-arrow-down-circle text-primary display-4"></i>
-                <h6 class="mt-2 mb-1">Total Entradas</h6>
-                <h4 class="text-primary mb-0">@Model.TotalEntradas.ToString("C")</h4>
-                <small class="text-muted">
-                    F√≠sico: @Model.TotalEntradasFisicas.ToString("C")<br>
-                    Digital: @Model.TotalEntradasDigitais.ToString("C")
-                </small>
+           <i class="bi bi-arrow-down-circle text-primary display-4"></i>
+ <h6 class="mt-2 mb-1">Total Entradas</h6>
+       <h4 class="text-primary mb-0">@Model.TotalEntradas.ToString("C")</h4>
+  <small class="text-muted">
+            FÌsico: @Model.TotalEntradasFisicas.ToString("C")<br>
+        Digital: @Model.TotalEntradasDigitais.ToString("C")
+      </small>
             </div>
-        </div>
+      </div>
     </div>
     <div class="col-md-3">
         <div class="card text-center border-danger">
-            <div class="card-body">
-                <i class="bi bi-arrow-up-circle text-danger display-4"></i>
-                <h6 class="mt-2 mb-1">Total Sa√≠das</h6>
-                <h4 class="text-danger mb-0">@Model.TotalSaidas.ToString("C")</h4>
-                <small class="text-muted">
-                    F√≠sico: @Model.TotalSaidasFisicas.ToString("C")<br>
-                    Digital: @Model.TotalSaidasDigitais.ToString("C")
-                </small>
+         <div class="card-body">
+    <i class="bi bi-arrow-up-circle text-danger display-4"></i>
+                <h6 class="mt-2 mb-1">Total SaÌdas</h6>
+   <h4 class="text-danger mb-0">@Model.TotalSaidas.ToString("C")</h4>
+     <small class="text-muted">
+        FÌsico: @Model.TotalSaidasFisicas.ToString("C")<br>
+        Digital: @Model.TotalSaidasDigitais.ToString("C")
+   </small>
             </div>
-        </div>
+    </div>
     </div>
     <div class="col-md-3">
         <div class="card text-center border-warning">
-            <div class="card-body">
-                <i class="bi bi-cash text-warning display-4"></i>
-                <h6 class="mt-2 mb-1">Balan√ßo F√≠sico</h6>
+      <div class="card-body">
+ <i class="bi bi-cash text-warning display-4"></i>
+                <h6 class="mt-2 mb-1">BalanÁo FÌsico</h6>
                 <h4 class="text-warning mb-0">@Model.BalancoFisico.ToString("C")</h4>
-                <small class="text-muted">A repassar em dinheiro</small>
-            </div>
+  <small class="text-muted">A repassar em dinheiro</small>
+     </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card text-center border-info">
-            <div class="card-body">
-                <i class="bi bi-bank text-info display-4"></i>
-                <h6 class="mt-2 mb-1">Balan√ßo Digital</h6>
-                <h4 class="text-info mb-0">@Model.BalancoDigital.ToString("C")</h4>
-                <small class="text-muted">J√° depositado</small>
-            </div>
+     <div class="card-body">
+      <i class="bi bi-bank text-info display-4"></i>
+     <h6 class="mt-2 mb-1">BalanÁo Digital</h6>
+          <h4 class="text-info mb-0">@Model.BalancoDigital.ToString("C")</h4>
+         <small class="text-muted">J· depositado</small>
+  </div>
         </div>
     </div>
 </div>
 
-<!-- Discrimina√ß√£o Detalhada -->
+<!-- DiscriminaÁ„o Detalhada -->
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header bg-success text-white">
-                <h6 class="mb-0">
-                    <i class="bi bi-cash-coin me-2"></i>
-                    Discrimina√ß√£o do Balan√ßo F√≠sico
-                </h6>
-            </div>
-            <div class="card-body">
-                <table class="table table-sm mb-0">
-                    <tbody>
-                        <tr>
-                            <td><i class="bi bi-plus-circle text-success me-2"></i>Entradas F√≠sicas:</td>
-                            <td class="text-end fw-bold text-success">+ @Model.TotalEntradasFisicas.ToString("C")</td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-dash-circle text-danger me-2"></i>Sa√≠das F√≠sicas:</td>
-                            <td class="text-end fw-bold text-danger">- @Model.TotalSaidasFisicas.ToString("C")</td>
-                        </tr>
-                        <tr class="table-warning">
-                            <td><strong><i class="bi bi-wallet2 me-2"></i>Balan√ßo F√≠sico Total:</strong></td>
-                            <td class="text-end fw-bold fs-5">@Model.BalancoFisico.ToString("C")</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <div class="alert alert-warning mt-3 mb-0">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <small><strong>Este √© o valor em dinheiro</strong> que precisa ser fisicamente repassado para a Sede.</small>
+ <div class="card-header bg-success text-white">
+   <h6 class="mb-0">
+      <i class="bi bi-cash-coin me-2"></i>
+         DiscriminaÁ„o do BalanÁo FÌsico
+         </h6>
+          </div>
+      <div class="card-body">
+<table class="table table-sm mb-0">
+  <tbody>
+      <tr>
+  <td><i class="bi bi-plus-circle text-success me-2"></i>Entradas FÌsicas:</td>
+       <td class="text-end fw-bold text-success">+ @Model.TotalEntradasFisicas.ToString("C")</td>
+      </tr>
+       <tr>
+   <td><i class="bi bi-dash-circle text-danger me-2"></i>SaÌdas FÌsicas:</td>
+    <td class="text-end fw-bold text-danger">- @Model.TotalSaidasFisicas.ToString("C")</td>
+              </tr>
+<tr class="table-warning">
+       <td><strong><i class="bi bi-wallet2 me-2"></i>BalanÁo FÌsico Total:</strong></td>
+                 <td class="text-end fw-bold fs-5">@Model.BalancoFisico.ToString("C")</td>
+            </tr>
+       </tbody>
+          </table>
+ <div class="alert alert-warning mt-3 mb-0">
+    <i class="bi bi-info-circle me-2"></i>
+     <small><strong>Este È o valor em dinheiro</strong> que precisa ser fisicamente repassado para a Sede.</small>
                 </div>
-            </div>
+        </div>
         </div>
     </div>
 
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                <h6 class="mb-0">
-                    <i class="bi bi-bank2 me-2"></i>
-                    Discrimina√ß√£o do Balan√ßo Digital
-                </h6>
-            </div>
-            <div class="card-body">
-                <table class="table table-sm mb-0">
-                    <tbody>
-                        <tr>
-                            <td><i class="bi bi-plus-circle text-success me-2"></i>Entradas Digitais:</td>
-                            <td class="text-end fw-bold text-success">+ @Model.TotalEntradasDigitais.ToString("C")</td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-dash-circle text-danger me-2"></i>Sa√≠das Digitais:</td>
-                            <td class="text-end fw-bold text-danger">- @Model.TotalSaidasDigitais.ToString("C")</td>
-                        </tr>
-                        <tr class="table-secondary">
-                            <td><strong><i class="bi bi-calculator me-2"></i>Subtotal:</strong></td>
-                            <td class="text-end fw-bold">@Model.BalancoDigital.ToString("C")</td>
-                        </tr>
-                        @if (Model.TotalRateios > 0)
-                        {
-                            <tr>
-                                <td><i class="bi bi-share text-danger me-2"></i>Rateios Aplicados:</td>
-                                <td class="text-end fw-bold text-danger">- @Model.TotalRateios.ToString("C")</td>
-                            </tr>
-                            <tr class="table-info">
-                                <td><strong><i class="bi bi-piggy-bank me-2"></i>Saldo Final:</strong></td>
-                                <td class="text-end fw-bold fs-5">@Model.SaldoFinal.ToString("C")</td>
-                            </tr>
-                        }
-                        else
-                        {
-                            <tr class="table-info">
-                                <td><strong><i class="bi bi-piggy-bank me-2"></i>Balan√ßo Digital Total:</strong></td>
-                                <td class="text-end fw-bold fs-5">@Model.BalancoDigital.ToString("C")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-                <div class="alert alert-info mt-3 mb-0">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <small><strong>Este √© o valor eletr√¥nico</strong> (PIX, cart√µes, transfer√™ncias) j√° depositado.</small>
-                </div>
-            </div>
+<div class="card">
+        <div class="card-header bg-info text-white">
+        <h6 class="mb-0">
+  <i class="bi bi-bank2 me-2"></i>
+           DiscriminaÁ„o do BalanÁo Digital
+       </h6>
+   </div>
+   <div class="card-body">
+    <table class="table table-sm mb-0">
+        <tbody>
+     <tr>
+    <td><i class="bi bi-plus-circle text-success me-2"></i>Entradas Digitais:</td>
+     <td class="text-end fw-bold text-success">+ @Model.TotalEntradasDigitais.ToString("C")</td>
+           </tr>
+       <tr>
+           <td><i class="bi bi-dash-circle text-danger me-2"></i>SaÌdas Digitais:</td>
+     <td class="text-end fw-bold text-danger">- @Model.TotalSaidasDigitais.ToString("C")</td>
+   </tr>
+  <tr class="table-secondary">
+              <td><strong><i class="bi bi-calculator me-2"></i>Subtotal:</strong></td>
+            <td class="text-end fw-bold">@Model.BalancoDigital.ToString("C")</td>
+     </tr>
+         @if (Model.TotalRateios > 0)
+  {
+         <tr>
+   <td><i class="bi bi-share text-danger me-2"></i>Rateios Aplicados:</td>
+          <td class="text-end fw-bold text-danger">- @Model.TotalRateios.ToString("C")</td>
+            </tr>
+        <tr class="table-info">
+            <td><strong><i class="bi bi-piggy-bank me-2"></i>Saldo Final:</strong></td>
+        <td class="text-end fw-bold fs-5">@Model.SaldoFinal.ToString("C")</td>
+            </tr>
+             }
+    else
+      {
+          <tr class="table-info">
+    <td><strong><i class="bi bi-piggy-bank me-2"></i>BalanÁo Digital Total:</strong></td>
+    <td class="text-end fw-bold fs-5">@Model.BalancoDigital.ToString("C")</td>
+     </tr>
+            }
+   </tbody>
+      </table>
+       <div class="alert alert-info mt-3 mb-0">
+         <i class="bi bi-info-circle me-2"></i>
+                  <small><strong>Este È o valor eletrÙnico</strong> (PIX, cartıes, transferÍncias) j· depositado.</small>
+        </div>
+          </div>
         </div>
     </div>
 </div>
 
-<!-- Rateios Aplicados -->
-@if (Model.ItensRateio.Any())
+<!-- Rateios Aplicados - APENAS ADMIN E TESOUREIRO GERAL -->
+@if (podeVerRateios && Model.ItensRateio.Any())
 {
     <div class="card mb-4 border-primary">
-        <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">
-                <i class="bi bi-share me-2"></i>
-                Rateios Aplicados sobre o Total de Receitas
-            </h5>
-        </div>
+     <div class="card-header bg-primary text-white">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-share me-2"></i>
+     Rateios Aplicados sobre o Total de Receitas
+    </h5>
+   </div>
         <div class="card-body">
-            <!-- Card explicativo sobre o c√°lculo -->
+         <!-- Card explicativo sobre o c·lculo -->
             <div class="alert alert-info">
-                <h6 class="alert-heading">
-                    <i class="bi bi-calculator me-2"></i>
-                    Base de C√°lculo dos Rateios
-                </h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <table class="table table-sm table-borderless mb-0">
-                            <tbody>
-                                <tr>
-                                    <td><i class="bi bi-arrow-down-circle text-success me-2"></i>Entradas F√≠sicas:</td>
-                                    <td class="text-end"><strong>@Model.TotalEntradasFisicas.ToString("C")</strong></td>
-                                </tr>
-                                <tr>
-                                    <td><i class="bi bi-arrow-down-circle text-success me-2"></i>Entradas Digitais:</td>
-                                    <td class="text-end"><strong>+ @Model.TotalEntradasDigitais.ToString("C")</strong></td>
-                                </tr>
-                                <tr class="border-top">
-                                    <td><strong><i class="bi bi-calculator-fill text-primary me-2"></i>TOTAL DE RECEITAS:</strong></td>
-                                    <td class="text-end"><strong class="text-primary fs-5">@Model.TotalEntradas.ToString("C")</strong></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <p class="mb-0 small">
-                            <i class="bi bi-info-circle me-2"></i>
-                            Os rateios s√£o aplicados sobre o <strong>Total de Receitas</strong>
-                            (soma de todas as entradas), garantindo que o percentual seja
-                            calculado sobre os valores arrecadados.
-                        </p>
-                    </div>
-                </div>
+ <h6 class="alert-heading">
+      <i class="bi bi-calculator me-2"></i>
+              Base de C·lculo dos Rateios
+      </h6>
+       <div class="row">
+          <div class="col-md-6">
+   <table class="table table-sm table-borderless mb-0">
+          <tbody>
+              <tr>
+   <td><i class="bi bi-arrow-down-circle text-success me-2"></i>Entradas FÌsicas:</td>
+     <td class="text-end"><strong>@Model.TotalEntradasFisicas.ToString("C")</strong></td>
+ </tr>
+       <tr>
+    <td><i class="bi bi-arrow-down-circle text-success me-2"></i>Entradas Digitais:</td>
+         <td class="text-end"><strong>+ @Model.TotalEntradasDigitais.ToString("C")</strong></td>
+  </tr>
+                   <tr class="border-top">
+           <td><strong><i class="bi bi-calculator-fill text-primary me-2"></i>TOTAL DE RECEITAS:</strong></td>
+   <td class="text-end"><strong class="text-primary fs-5">@Model.TotalEntradas.ToString("C")</strong></td>
+    </tr>
+          </tbody>
+           </table>
+         </div>
+           <div class="col-md-6">
+      <p class="mb-0 small">
+          <i class="bi bi-info-circle me-2"></i>
+      Os rateios s„o aplicados sobre o <strong>Total de Receitas</strong>
+  (soma de todas as entradas), garantindo que o percentual seja
+      calculado sobre os valores arrecadados.
+  </p>
+         </div>
+   </div>
+      </div>
+
+     <div class="table-responsive">
+            <table class="table table-striped table-hover">
+    <thead class="table-dark">
+  <tr>
+     <th>Regra de Rateio</th>
+    <th>Destino</th>
+       <th class="text-end">Percentual</th>
+        <th class="text-end">Valor Base</th>
+      <th class="text-end">Valor Rateado</th>
+     </tr>
+    </thead>
+    <tbody>
+  @foreach (var rateio in Model.ItensRateio.OrderBy(r => r.RegraRateio.Nome))
+          {
+     <tr>
+         <td>
+        <i class="bi bi-arrow-right-circle me-1 text-primary"></i>
+       @rateio.RegraRateio.Nome
+  </td>
+       <td>
+                   <strong>@rateio.RegraRateio.CentroCustoDestino.Nome</strong>
+         @if (rateio.RegraRateio.CentroCustoDestino.Nome.ToUpper().Contains("FUNDO"))
+                {
+   <span class="badge bg-success ms-1">
+     <i class="bi bi-piggy-bank"></i> FUNDO
+</span>
+   }
+      </td>
+            <td class="text-end">
+ <span class="badge bg-info">@rateio.Percentual.ToString("F2")%</span>
+         </td>
+             <td class="text-end">@rateio.ValorBase.ToString("C")</td>
+   <td class="text-end fw-bold text-primary">@rateio.ValorRateio.ToString("C")</td>
+        </tr>
+        }
+    </tbody>
+            <tfoot class="table-light">
+         <tr>
+ <td colspan="4" class="text-end">
+      <strong>
+  <i class="bi bi-calculator me-2"></i>
+              TOTAL DE RATEIOS:
+          </strong>
+           </td>
+                <td class="text-end fw-bold fs-5 text-danger">
+    @Model.TotalRateios.ToString("C")
+      </td>
+  </tr>
+   <tr class="table-success">
+        <td colspan="4" class="text-end">
+  <strong>
+     <i class="bi bi-piggy-bank me-2"></i>
+              SALDO FINAL (apÛs rateios):
+           </strong>
+                  </td>
+       <td class="text-end fw-bold fs-4 text-success">
+              @Model.SaldoFinal.ToString("C")
+           </td>
+  </tr>
+   </tfoot>
+     </table>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Regra de Rateio</th>
-                            <th>Destino</th>
-                            <th class="text-end">Percentual</th>
-                            <th class="text-end">Valor Base</th>
-                            <th class="text-end">Valor Rateado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var rateio in Model.ItensRateio.OrderBy(r => r.RegraRateio.Nome))
-                        {
-                            <tr>
-                                <td>
-                                    <i class="bi bi-arrow-right-circle me-1 text-primary"></i>
-                                    @rateio.RegraRateio.Nome
-                                </td>
-                                <td>
-                                    <strong>@rateio.RegraRateio.CentroCustoDestino.Nome</strong>
-                                    @if (rateio.RegraRateio.CentroCustoDestino.Nome.ToUpper().Contains("FUNDO"))
-                                    {
-                                        <span class="badge bg-success ms-1">
-                                            <i class="bi bi-piggy-bank"></i> FUNDO
-                                        </span>
-                                    }
-                                </td>
-                                <td class="text-end">
-                                    <span class="badge bg-info">@rateio.Percentual.ToString("F2")%</span>
-                                </td>
-                                <td class="text-end">@rateio.ValorBase.ToString("C")</td>
-                                <td class="text-end fw-bold text-primary">@rateio.ValorRateio.ToString("C")</td>
-                            </tr>
-                        }
-                    </tbody>
-                    <tfoot class="table-light">
-                        <tr>
-                            <td colspan="4" class="text-end">
-                                <strong>
-                                    <i class="bi bi-calculator me-2"></i>
-                                    TOTAL DE RATEIOS:
-                                </strong>
-                            </td>
-                            <td class="text-end fw-bold fs-5 text-danger">
-                                @Model.TotalRateios.ToString("C")
-                            </td>
-                        </tr>
-                        <tr class="table-success">
-                            <td colspan="4" class="text-end">
-                                <strong>
-                                    <i class="bi bi-piggy-bank me-2"></i>
-                                    SALDO FINAL (ap√≥s rateios):
-                                </strong>
-                            </td>
-                            <td class="text-end fw-bold fs-4 text-success">
-                                @Model.SaldoFinal.ToString("C")
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            <!-- Explica√ß√£o detalhada do c√°lculo -->
-            <div class="alert alert-light mt-3">
-                <h6 class="mb-2">
-                    <i class="bi bi-info-circle me-2"></i>
-                    Como o Saldo Final foi Calculado:
-                </h6>
-                <div class="small">
-                    <p class="mb-2">
-                        <strong>1.</strong> Total de Receitas = Entradas F√≠sicas + Entradas Digitais =
-                        <strong>@Model.TotalEntradasFisicas.ToString("C") + @Model.TotalEntradasDigitais.ToString("C") = @Model.TotalEntradas.ToString("C")</strong>
-                    </p>
-                    <p class="mb-2">
-                        <strong>2.</strong> Rateios Aplicados =
-                        <strong>@Model.TotalRateios.ToString("C")</strong>
-                    </p>
-                    <p class="mb-0">
-                        <strong>3.</strong> Saldo Final = Balan√ßo Total - Total de Rateios =
-                        <strong>@balancoTotal.ToString("C") - @Model.TotalRateios.ToString("C") = @Model.SaldoFinal.ToString("C")</strong>
-                    </p>
-                </div>
-            </div>
+     <!-- ExplicaÁ„o detalhada do c·lculo -->
+   <div class="alert alert-light mt-3">
+           <h6 class="mb-2">
+        <i class="bi bi-info-circle me-2"></i>
+           Como o Saldo Final foi Calculado:
+      </h6>
+       <div class="small">
+        <p class="mb-2">
+           <strong>1.</strong> Total de Receitas = Entradas FÌsicas + Entradas Digitais =
+          <strong>@Model.TotalEntradasFisicas.ToString("C") + @Model.TotalEntradasDigitais.ToString("C") = @Model.TotalEntradas.ToString("C")</strong>
+    </p>
+        <p class="mb-2">
+           <strong>2.</strong> Rateios Aplicados =
+    <strong>@Model.TotalRateios.ToString("C")</strong>
+ </p>
+        <p class="mb-0">
+  <strong>3.</strong> Saldo Final = BalanÁo Total - Total de Rateios =
+   <strong>@balancoTotal.ToString("C") - @Model.TotalRateios.ToString("C") = @Model.SaldoFinal.ToString("C")</strong>
+       </p>
+      </div>
+   </div>
         </div>
     </div>
 }
-else
+else if (podeVerRateios && !Model.ItensRateio.Any())
 {
-    <!-- Mensagem quando n√£o h√° rateios -->
+ <!-- Mensagem quando n„o h· rateios - APENAS ADMIN E TESOUREIRO GERAL -->
     <div class="card mb-4 border-warning">
         <div class="card-header bg-warning text-dark">
-            <h6 class="card-title mb-0">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                Sem Rateios Aplicados
+ <h6 class="card-title mb-0">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+      Sem Rateios Aplicados
             </h6>
         </div>
         <div class="card-body">
-            <p class="mb-2">Este fechamento n√£o possui rateios aplicados.</p>
-            <p class="mb-0 small text-muted">
-                <strong>Poss√≠veis motivos:</strong>
-            </p>
+            <p class="mb-2">Este fechamento n„o possui rateios aplicados.</p>
+       <p class="mb-0 small text-muted">
+ <strong>PossÌveis motivos:</strong>
+  </p>
             <ul class="small text-muted mb-0">
-                <li>O centro de custo n√£o √© reconhecido como SEDE/GERAL</li>
-                <li>N√£o h√° regras de rateio ativas configuradas</li>
-                <li>O balan√ßo total era zero ou negativo</li>
-            </ul>
-            <hr>
+       <li>O centro de custo n„o È reconhecido como SEDE/GERAL</li>
+      <li>N„o h· regras de rateio ativas configuradas</li>
+    <li>O balanÁo total era zero ou negativo</li>
+       </ul>
+    <hr>
             <div class="d-grid gap-2 d-md-flex">
-                <a asp-controller="RegrasRateio" asp-action="Index" class="btn btn-outline-primary btn-sm">
-                    <i class="bi bi-gear me-1"></i>
-                    Ver Regras de Rateio
-                </a>
-                <a asp-controller="CentrosCusto" asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-building me-1"></i>
-                    Ver Centros de Custo
-                </a>
-            </div>
+     <a asp-controller="RegrasRateio" asp-action="Index" class="btn btn-outline-primary btn-sm">
+     <i class="bi bi-gear me-1"></i>
+            Ver Regras de Rateio
+      </a>
+       <a asp-controller="CentrosCusto" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+ <i class="bi bi-building me-1"></i>
+        Ver Centros de Custo
+    </a>
+          </div>
         </div>
     </div>
 }
 
-<!-- Observa√ß√µes -->
+<!-- ObservaÁıes -->
 @if (!string.IsNullOrEmpty(Model.Observacoes))
 {
     <div class="card mb-4">
         <div class="card-header">
-            <h6 class="card-title mb-0">
-                <i class="bi bi-chat-left-text me-2"></i>
-                Observa√ß√µes
+    <h6 class="card-title mb-0">
+            <i class="bi bi-chat-left-text me-2"></i>
+           ObservaÁıes
             </h6>
         </div>
         <div class="card-body">
-            <p class="mb-0 white-space-pre-line">@Model.Observacoes</p>
-        </div>
+      <p class="mb-0 white-space-pre-line">@Model.Observacoes</p>
+   </div>
     </div>
 }
 
-<!-- A√ß√µes de Aprova√ß√£o/Rejei√ß√£o -->
+<!-- AÁıes de AprovaÁ„o/RejeiÁ„o -->
 @if (Model.Status == SistemaTesourariaEclesiastica.Enums.StatusFechamentoPeriodo.Pendente && podeAprovar)
 {
     <div class="card shadow-sm">
         <div class="card-header bg-light">
             <h5 class="card-title mb-0">
-                <i class="bi bi-hand-thumbs-up me-2"></i>
-                A√ß√µes de Aprova√ß√£o
+     <i class="bi bi-hand-thumbs-up me-2"></i>
+      AÁıes de AprovaÁ„o
             </h5>
         </div>
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <form asp-action="Aprovar" asp-route-id="@Model.Id" method="post" style="display: inline;">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-success w-100" onclick="return confirm('Tem certeza que deseja APROVAR este fechamento?');">
-                            <i class="bi bi-check-circle-fill me-2"></i>Aprovar Fechamento
-                        </button>
-                    </form>
-                </div>
-                <div class="col-md-6">
-                    <a asp-action="Rejeitar" asp-route-id="@Model.Id" class="btn btn-danger w-100">
-                        <i class="bi bi-x-circle-fill me-2"></i>Rejeitar Fechamento
-                    </a>
-                </div>
+  <div class="row g-3">
+   <div class="col-md-6">
+           <form asp-action="Aprovar" asp-route-id="@Model.Id" method="post" style="display: inline;">
+                 @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-success w-100" onclick="return confirm('Tem certeza que deseja APROVAR este fechamento?');">
+   <i class="bi bi-check-circle-fill me-2"></i>Aprovar Fechamento
+         </button>
+ </form>
+    </div>
+        <div class="col-md-6">
+     <a asp-action="Rejeitar" asp-route-id="@Model.Id" class="btn btn-danger w-100">
+                <i class="bi bi-x-circle-fill me-2"></i>Rejeitar Fechamento
+        </a>
             </div>
-            <div class="alert alert-info mt-3 mb-0">
-                <i class="bi bi-info-circle me-2"></i>
-                <strong>Aprovar:</strong> Confirma o fechamento e aplica os rateios definitivamente.<br>
-                <strong>Rejeitar:</strong> Devolve o fechamento para revis√£o do tesoureiro local com justificativa.
+            </div>
+  <div class="alert alert-info mt-3 mb-0">
+         <i class="bi bi-info-circle me-2"></i>
+     <strong>Aprovar:</strong> Confirma o fechamento e aplica os rateios definitivamente.<br>
+          <strong>Rejeitar:</strong> Devolve o fechamento para revis„o do tesoureiro local com justificativa.
             </div>
         </div>
-    </div>
+  </div>
 }
 
 @section Styles {
     <style>
-        .white-space-pre-line {
-            white-space: pre-line;
+  .white-space-pre-line {
+    white-space: pre-line;
         }
     </style>
 }

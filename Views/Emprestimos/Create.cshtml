@@ -11,23 +11,25 @@
             <!-- Cabeçalho -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white">
-                    <h4 class="mb-0"><i class="fas fa-plus-circle"></i> Solicitar Novo Empréstimo</h4>
+                    <h4 class="mb-0"><i class="bi bi-plus-circle"></i> Solicitar Novo Empréstimo</h4>
                 </div>
                 <div class="card-body">
                     <!-- Alerta de Saldo Disponível -->
                     <div class="alert alert-info d-flex align-items-center" role="alert">
-                        <i class="fas fa-piggy-bank fa-2x me-3"></i>
+                        <i class="bi bi-piggy-bank fs-1 me-3"></i>
                         <div>
                             <strong>Saldo Disponível no Fundo:</strong><br>
-                            <h3 class="mb-0 text-primary">R$ @saldoFundo.ToString("N2")</h3>
+                            <h3 class="mb-0 text-primary">@saldoFundo.ToString("C")</h3>
                         </div>
                     </div>
 
                     @if (saldoFundo <= 0)
                     {
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <strong>Atenção:</strong> Não há saldo disponível no fundo para realizar empréstimos no momento.
+                        <div class="alert alert-danger d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <div>
+                                <strong>Atenção:</strong> Não há saldo disponível no fundo para realizar empréstimos no momento.
+                            </div>
                         </div>
                     }
 
@@ -39,9 +41,9 @@
 
                         <div class="mb-3">
                             <label asp-for="DataEmprestimo" class="form-label"></label>
-                            <input asp-for="DataEmprestimo" class="form-control" type="date" readonly />
+                            <input asp-for="DataEmprestimo" class="form-control" type="date" />
                             <span asp-validation-for="DataEmprestimo" class="text-danger"></span>
-                            <small class="form-text text-muted">A data do empréstimo é automaticamente definida como hoje.</small>
+                            <small class="form-text text-muted">Selecione a data do empréstimo (padrão: hoje).</small>
                         </div>
 
                         <div class="mb-3">
@@ -82,10 +84,10 @@
                         <!-- Botões -->
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                             <a asp-action="Index" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancelar
+                                <i class="bi bi-x-circle"></i> Cancelar
                             </a>
                             <button type="submit" class="btn btn-success" @(saldoFundo <= 0 ? "disabled" : "")>
-                                <i class="fas fa-check"></i> Confirmar Empréstimo
+                                <i class="bi bi-check-circle"></i> Confirmar Empréstimo
                             </button>
                         </div>
                     </form>
@@ -95,12 +97,12 @@
             <!-- Card Informativo -->
             <div class="card border-primary">
                 <div class="card-body">
-                    <h5 class="card-title text-primary"><i class="fas fa-info-circle"></i> Informações Importantes</h5>
-                    <ul>
+                    <h5 class="card-title text-primary"><i class="bi bi-info-circle"></i> Informações Importantes</h5>
+                    <ul class="mb-0">
                         <li>O valor do empréstimo não pode exceder o saldo disponível no fundo.</li>
                         <li>Todo empréstimo deve conter uma justificativa clara.</li>
                         <li>Após aprovado, o empréstimo deve ser devolvido de forma parcial ou integral.</li>
-                        <li>O fundo é alimentado automaticamente com 20% dos dízimos e ofertas da Sede.</li>
+                        <li>O fundo é alimentado automaticamente pelos rateios configurados nos fechamentos da Sede.</li>
                     </ul>
                 </div>
             </div>
@@ -117,9 +119,11 @@
         $(document).ready(function() {
             var saldoFundo = @saldoFundo;
 
-            // Definir data atual
+            // Definir data atual como padrão (mas permitir alteração)
             var hoje = new Date().toISOString().split('T')[0];
-            $('#DataEmprestimo').val(hoje);
+            if (!$('#DataEmprestimo').val()) {
+                $('#DataEmprestimo').val(hoje);
+            }
 
             // Contador de caracteres
             $('#Justificativa').on('input', function() {

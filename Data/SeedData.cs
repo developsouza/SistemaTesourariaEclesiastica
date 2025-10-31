@@ -14,7 +14,7 @@ namespace SistemaTesourariaEclesiastica.Data
         public static async Task Initialize(
           IServiceProvider serviceProvider,
             UserManager<ApplicationUser> userManager,
-RoleManager<IdentityRole> roleManager)
+                RoleManager<IdentityRole> roleManager)
         {
             try
             {
@@ -116,10 +116,10 @@ RoleManager<IdentityRole> roleManager)
 
             // FUNDO (Dízimo dos Dízimos - Repasse para Templo Central)
             var fundo = await context.CentrosCusto.FirstOrDefaultAsync(c =>
-    c.Nome.Contains("FUNDO") ||
-     c.Nome.Contains("Fundo") ||
-  c.Nome.Contains("REPASSE") ||
-        c.Nome.Contains("DÍZIMO"));
+                c.Nome.Contains("FUNDO") ||
+                 c.Nome.Contains("Fundo") ||
+              c.Nome.Contains("REPASSE") ||
+                    c.Nome.Contains("DÍZIMO"));
 
             if (fundo == null)
             {
@@ -147,9 +147,9 @@ RoleManager<IdentityRole> roleManager)
         // 3. CRIAÇÃO DE USUÁRIOS PADRÃO
         // ==========================================
         private static async Task CreateDefaultUsers(
-   UserManager<ApplicationUser> userManager,
-        int sedeCentroCustoId,
-ILogger logger)
+           UserManager<ApplicationUser> userManager,
+                int sedeCentroCustoId,
+        ILogger logger)
         {
             logger.LogInformation("3. Criando Usuários Padrão...");
 
@@ -201,12 +201,12 @@ ILogger logger)
 
         private static async Task CreateTestUser(
          UserManager<ApplicationUser> userManager,
-int centroCustoId,
-            string email,
-       string nomeCompleto,
-   string role,
-   string senha,
-            ILogger logger)
+            int centroCustoId,
+                        string email,
+                   string nomeCompleto,
+               string role,
+               string senha,
+                        ILogger logger)
         {
             if (await userManager.FindByEmailAsync(email) == null)
             {
@@ -243,12 +243,12 @@ int centroCustoId,
             logger.LogInformation("   4.1. Fontes de Renda (Receitas)...");
 
             var receitas = new[]
-         {
-  new { Nome = "Dízimos", Descricao = "Dízimos e ofertas do Templo Central" },
-    new { Nome = "Ofertas", Descricao = "Ofertas diversas" },
-      new { Nome = "Votos", Descricao = "Votos e promessas" },
-     new { Nome = "Ofertas (Círculo de Oração)", Descricao = "Ofertas do Círculo de Oração (Adultos e Mocidade)" },
- new { Nome = "Repasse de Congregação", Descricao = "Repasses financeiros das congregações para a Sede" }
+            {
+                new { Nome = "Dízimos", Descricao = "Dízimos e ofertas do Templo Central" },
+                new { Nome = "Ofertas", Descricao = "Ofertas diversas" },
+                new { Nome = "Votos", Descricao = "Votos e promessas" },
+                new { Nome = "Ofertas (Círculo de Oração)", Descricao = "Ofertas do Círculo de Oração (Adultos e Mocidade)" },
+                new { Nome = "Repasse de Congregação", Descricao = "Repasses financeiros das congregações para a Sede" }
             };
 
             foreach (var receita in receitas)
@@ -277,33 +277,33 @@ int centroCustoId,
             var despesas = new[]
               {
        // Despesas Administrativas
-       new { Nome = "Mat. de Expediente", Descricao = "Material de Expediente" },
-              new { Nome = "Mat. Higiene e Limpeza", Descricao = "Material de Higiene e Limpeza" },
-   new { Nome = "Despesas com Telefone", Descricao = "Despesas com Telefone" },
-     new { Nome = "Despesas com Veículo", Descricao = "Despesas com Veículo" },
-       new { Nome = "Auxílio Oferta", Descricao = "Auxílio Oferta" },
-           new { Nome = "Mão de Obra Qualificada", Descricao = "Mão de Obra Qualificada" },
-   new { Nome = "Despesas com Medicamentos", Descricao = "Despesas com Medicamentos" },
-         new { Nome = "Energia Elétrica (Luz)", Descricao = "Energia Elétrica (Luz)" },
- new { Nome = "Água", Descricao = "Água" },
-    new { Nome = "Despesas Diversas", Descricao = "Despesas Diversas" },
-    new { Nome = "Despesas com Viagens", Descricao = "Despesas com Viagens" },
-         new { Nome = "Material de Construção", Descricao = "Material de Construção" },
-                new { Nome = "Material de Conservação (Tintas, etc.)", Descricao = "Material de Conservação (Tintas, etc.)" },
-       new { Nome = "Despesas com Som (Peças e Acessórios)", Descricao = "Despesas com Som (Peças e Acessórios)" },
- new { Nome = "Aluguel", Descricao = "Aluguel" },
-     new { Nome = "INSS", Descricao = "INSS" },
-       new { Nome = "Pagamento de Inscrição da CGADB", Descricao = "Pagamento de Inscrição da CGADB" },
-    new { Nome = "Previdência Privada", Descricao = "Previdência Privada" },
+        new { Nome = "Mat. de Expediente", Descricao = "Material de Expediente" },
+        new { Nome = "Mat. Higiene e Limpeza", Descricao = "Material de Higiene e Limpeza" },
+        new { Nome = "Despesas com Telefone", Descricao = "Despesas com Telefone" },
+        new { Nome = "Despesas com Veículo", Descricao = "Despesas com Veículo" },
+        new { Nome = "Auxílio Oferta", Descricao = "Auxílio Oferta" },
+        new { Nome = "Mão de Obra Qualificada", Descricao = "Mão de Obra Qualificada" },
+        new { Nome = "Despesas com Medicamentos", Descricao = "Despesas com Medicamentos" },
+        new { Nome = "Energia Elétrica (Luz)", Descricao = "Energia Elétrica (Luz)" },
+        new { Nome = "Água", Descricao = "Água" },
+        new { Nome = "Despesas Diversas", Descricao = "Despesas Diversas" },
+        new { Nome = "Despesas com Viagens", Descricao = "Despesas com Viagens" },
+        new { Nome = "Material de Construção", Descricao = "Material de Construção" },
+        new { Nome = "Material de Conservação (Tintas, etc.)", Descricao = "Material de Conservação (Tintas, etc.)" },
+        new { Nome = "Despesas com Som (Peças e Acessórios)", Descricao = "Despesas com Som (Peças e Acessórios)" },
+        new { Nome = "Aluguel", Descricao = "Aluguel" },
+        new { Nome = "INSS", Descricao = "INSS" },
+        new { Nome = "Pagamento de Inscrição da CGADB", Descricao = "Pagamento de Inscrição da CGADB" },
+        new { Nome = "Previdência Privada", Descricao = "Previdência Privada" },
         
- // Despesas Tributárias
-    new { Nome = "IPTU", Descricao = "IPTU" },
-           new { Nome = "Imposto Predial IPTR", Descricao = "Imposto Predial IPTR" },
+    // Despesas Tributárias
+        new { Nome = "IPTU", Descricao = "IPTU" },
+        new { Nome = "Imposto Predial IPTR", Descricao = "Imposto Predial IPTR" },
  
                 // Despesas Financeiras
         new { Nome = "Imposto Taxas Diversas", Descricao = "Imposto Taxas Diversas" },
-      new { Nome = "Saldo para o mês", Descricao = "Saldo para o mês" }
-      };
+        new { Nome = "Saldo para o mês", Descricao = "Saldo para o mês" }
+        };
 
             foreach (var despesa in despesas)
             {
