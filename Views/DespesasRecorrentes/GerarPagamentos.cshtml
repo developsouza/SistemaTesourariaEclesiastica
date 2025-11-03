@@ -1,0 +1,127 @@
+@{
+    ViewData["Title"] = "Gerar Pagamentos";
+    var despesa = ViewBag.Despesa as SistemaTesourariaEclesiastica.Models.DespesaRecorrente;
+    var mesesGerar = ViewBag.MesesGerar ?? 3;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">
+            <i class="bi bi-plus-circle-dotted text-primary me-2"></i>
+            Gerar Pagamentos
+        </h1>
+        <p class="text-muted mb-0">@despesa?.Nome</p>
+    </div>
+    <a asp-action="Pagamentos" asp-route-id="@despesa?.Id" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-plus me-2"></i>
+                    Configurar Geração de Pagamentos
+                </h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="GerarPagamentosConfirmed" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@despesa?.Id" />
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Informação:</strong> Os pagamentos serão gerados a partir de <strong>@(despesa?.DataInicio?.ToString("dd/MM/yyyy") ?? DateTime.Today.ToString("dd/MM/yyyy"))</strong>
+                        conforme a periodicidade <strong>@Html.DisplayFor(model => despesa.Periodicidade)</strong>.
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="meses" class="form-label fw-semibold">
+                            Quantos períodos deseja gerar?
+                        </label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <select name="meses" id="meses" class="form-select form-select-lg" required>
+                                    <option value="1">1 período</option>
+                                    <option value="2">2 períodos</option>
+                                    <option value="3" selected>3 períodos</option>
+                                    <option value="4">4 períodos</option>
+                                    <option value="5">5 períodos</option>
+                                    <option value="6">6 períodos (semestre)</option>
+                                    <option value="12">12 períodos (ano)</option>
+                                    <option value="24">24 períodos (2 anos)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-success mb-0">
+                                    <strong>Valor por período:</strong> @despesa?.ValorPadrao.ToString("C2")<br>
+                                    <strong>Periodicidade:</strong> @Html.DisplayFor(model => despesa.Periodicidade)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="mb-3">
+                        <h6 class="fw-semibold">Resumo:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Despesa: <strong>@despesa?.Nome</strong></li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Valor Padrão: <strong>@despesa?.ValorPadrao.ToString("C2")</strong></li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Periodicidade: <strong>@Html.DisplayFor(model => despesa.Periodicidade)</strong></li>
+                            <li><i class="bi bi-check-circle text-success me-2"></i>Dia Vencimento: <strong>@(despesa?.DiaVencimento?.ToString() ?? "Conforme data inicial")</strong></li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Importante:</strong> Pagamentos duplicados (mesma data) não serão criados novamente.
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Pagamentos" asp-route-id="@despesa?.Id" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>Gerar Pagamentos
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>Dicas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 pb-3 border-bottom">
+                    <p class="small mb-0">
+                        <strong>Como funciona?</strong><br>
+                        O sistema irá criar vencimentos futuros de acordo com a periodicidade configurada.
+                    </p>
+                </div>
+
+                <div class="mb-3 pb-3 border-bottom">
+                    <p class="small mb-0">
+                        <strong>Exemplos:</strong><br>
+                        • <strong>Semanal:</strong> Todo domingo<br>
+                        • <strong>Mensal:</strong> Todo dia @(despesa?.DiaVencimento ?? 1) do mês
+                    </p>
+                </div>
+
+                <div>
+                    <p class="small mb-0">
+                        <strong>Importante:</strong> Você pode gerar mais períodos a qualquer momento.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

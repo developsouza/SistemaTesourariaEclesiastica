@@ -1,0 +1,310 @@
+@model SistemaTesourariaEclesiastica.Models.DespesaRecorrente
+
+@{
+    ViewData["Title"] = "Detalhes da Despesa Recorrente";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-info-circle text-warning me-2"></i>
+            Detalhes da Despesa Recorrente
+        </h1>
+        <p class="text-muted mb-0">Informações completas da despesa</p>
+    </div>
+    <div>
+        <a asp-action="Pagamentos" asp-route-id="@Model.Id" class="btn btn-success me-2">
+            <i class="bi bi-calendar-check me-2"></i>Gerenciar Pagamentos
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Card Principal -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-text me-2"></i>
+                    Informações Gerais
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 text-muted">Nome da Despesa</dt>
+                    <dd class="col-sm-8 fw-semibold">@Model.Nome</dd>
+
+                    <dt class="col-sm-4 text-muted">Descrição</dt>
+                    <dd class="col-sm-8">
+                        @if (!string.IsNullOrEmpty(Model.Descricao))
+                        {
+                            @Model.Descricao
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">Sem descrição</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Status</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Ativa)
+                        {
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Ativa
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">
+                                <i class="bi bi-x-circle me-1"></i>Inativa
+                            </span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Valor Padrão</dt>
+                    <dd class="col-sm-8">
+                        <span class="fs-5 fw-bold text-warning">@Model.ValorPadrao.ToString("C2")</span>
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Periodicidade</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                            @Html.DisplayFor(model => model.Periodicidade)
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Dia de Vencimento</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.DiaVencimento.HasValue)
+                        {
+                            <span>Dia <strong>@Model.DiaVencimento</strong> de cada período</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">Não especificado</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Card Classificação -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-tags me-2"></i>
+                    Classificação e Fornecedor
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 text-muted">Centro de Custo</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary">
+                            @Model.CentroCusto?.Nome
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Categoria da Despesa</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">
+                            @Model.PlanoDeContas?.Nome
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Fornecedor</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Fornecedor != null)
+                        {
+                            <div>
+                                <strong>@Model.Fornecedor.Nome</strong>
+                                @if (!string.IsNullOrEmpty(Model.Fornecedor.Telefone))
+                                {
+                                    <br />
+                                    <small class="text-muted">
+                                        <i class="bi bi-telephone me-1"></i>@Model.Fornecedor.Telefone
+                                    </small>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">Não especificado</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Meio de Pagamento</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.MeioDePagamento != null)
+                        {
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">
+                                @Model.MeioDePagamento.Nome
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">Não especificado</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Card Período -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-range me-2"></i>
+                    Período de Vigência
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 text-muted">Data de Início</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.DataInicio.HasValue)
+                        {
+                            @Model.DataInicio.Value.ToString("dd/MM/yyyy")
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">Não especificada</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Data de Término</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.DataTermino.HasValue)
+                        {
+                            @Model.DataTermino.Value.ToString("dd/MM/yyyy")
+                        }
+                        else
+                        {
+                            <span class="text-success fst-italic">Sem data de término</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Data de Cadastro</dt>
+                    <dd class="col-sm-8">@Model.DataCadastro.ToString("dd/MM/yyyy HH:mm")</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Card Observações -->
+        @if (!string.IsNullOrEmpty(Model.Observacoes))
+        {
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-square-text me-2"></i>
+                        Observações
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">@Model.Observacoes</p>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Card Ações -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-gear me-2"></i>
+                    Ações
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a asp-action="Pagamentos" asp-route-id="@Model.Id" class="btn btn-success">
+                        <i class="bi bi-calendar-check me-2"></i>Gerenciar Pagamentos
+                    </a>
+                    <a asp-action="GerarPagamentos" asp-route-id="@Model.Id" class="btn btn-primary">
+                        <i class="bi bi-plus-circle-dotted me-2"></i>Gerar Novos Pagamentos
+                    </a>
+                    <hr class="my-2">
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                        <i class="bi bi-pencil me-2"></i>Editar
+                    </a>
+                    <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
+                        <i class="bi bi-trash me-2"></i>Excluir
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Estatísticas -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>
+                    Estatísticas
+                </h6>
+            </div>
+            <div class="card-body">
+                @{
+                    var totalPagamentos = Model.Pagamentos?.Count ?? 0;
+                    var pagamentosPagos = Model.Pagamentos?.Count(p => p.Pago) ?? 0;
+                    var pagamentosAtrasados = Model.Pagamentos?.Count(p => !p.Pago && p.DataVencimento < DateTime.Today) ?? 0;
+                    var totalPago = Model.Pagamentos?.Where(p => p.Pago).Sum(p => p.ValorPago) ?? 0;
+                    var totalPendente = Model.Pagamentos?.Where(p => !p.Pago).Sum(p => p.ValorPrevisto) ?? 0;
+                }
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted">Total de Pagamentos</small>
+                        <strong>@totalPagamentos</strong>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-info" style="width: 100%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted">Pagamentos Realizados</small>
+                        <strong class="text-success">@pagamentosPagos</strong>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-success"
+                             style="width: @(totalPagamentos > 0 ? (pagamentosPagos * 100 / totalPagamentos) : 0)%"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted">Pagamentos Atrasados</small>
+                        <strong class="text-danger">@pagamentosAtrasados</strong>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-danger"
+                             style="width: @(totalPagamentos > 0 ? (pagamentosAtrasados * 100 / totalPagamentos) : 0)%"></div>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Total Pago</small>
+                        <strong class="text-success">@totalPago.ToString("C2")</strong>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Total Pendente</small>
+                        <strong class="text-warning">@totalPendente.ToString("C2")</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

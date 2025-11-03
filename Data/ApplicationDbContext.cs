@@ -29,6 +29,8 @@ namespace SistemaTesourariaEclesiastica.Data
         public DbSet<DetalheFechamento> DetalhesFechamento { get; set; }
         public DbSet<Emprestimo> Emprestimos { get; set; }
         public DbSet<DevolucaoEmprestimo> DevolucaoEmprestimos { get; set; }
+        public DbSet<DespesaRecorrente> DespesasRecorrentes { get; set; }
+        public DbSet<PagamentoDespesaRecorrente> PagamentosDespesasRecorrentes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -437,6 +439,109 @@ namespace SistemaTesourariaEclesiastica.Data
             builder.Entity<Emprestimo>()
                 .HasIndex(e => new { e.Status, e.DataEmprestimo })
                 .HasDatabaseName("IX_Emprestimos_Status_DataEmprestimo");
+
+            // ========================================
+            // 📅 CONFIGURAÇÕES - DESPESAS RECORRENTES
+            // ========================================
+            builder.Entity<DespesaRecorrente>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Nome)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.Descricao)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.ValorPadrao)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.Periodicidade)
+                    .HasConversion<int>()
+                    .IsRequired();
+
+                entity.Property(e => e.Ativa)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.DataCadastro)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.HasOne(e => e.CentroCusto)
+                    .WithMany()
+                    .HasForeignKey(e => e.CentroCustoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.PlanoDeContas)
+                    .WithMany()
+                    .HasForeignKey(e => e.PlanoDeContasId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Fornecedor)
+                    .WithMany()
+                    .HasForeignKey(e => e.FornecedorId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.MeioDePagamento)
+                    .WithMany()
+                    .HasForeignKey(e => e.MeioDePagamentoId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            builder.Entity<PagamentoDespesaRecorrente>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.DataVencimento)
+                    .IsRequired();
+
+                entity.Property(e => e.ValorPrevisto)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.ValorPago)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.Pago)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.SaidaGerada)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.DataRegistro)
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.HasOne(e => e.DespesaRecorrente)
+                    .WithMany(d => d.Pagamentos)
+                    .HasForeignKey(e => e.DespesaRecorrenteId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Saida)
+                    .WithMany()
+                    .HasForeignKey(e => e.SaidaId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // Índices para Despesas Recorrentes
+            builder.Entity<DespesaRecorrente>()
+                .HasIndex(d => d.Ativa)
+                .HasDatabaseName("IX_DespesasRecorrentes_Ativa");
+
+            builder.Entity<DespesaRecorrente>()
+                .HasIndex(d => new { d.CentroCustoId, d.Ativa })
+                .HasDatabaseName("IX_DespesasRecorrentes_CentroCusto_Ativa");
+
+            builder.Entity<PagamentoDespesaRecorrente>()
+                .HasIndex(p => p.Pago)
+                .HasDatabaseName("IX_PagamentosDespesas_Pago");
+
+            builder.Entity<PagamentoDespesaRecorrente>()
+                .HasIndex(p => new { p.DespesaRecorrenteId, p.DataVencimento })
+                .HasDatabaseName("IX_PagamentosDespesas_Despesa_Vencimento");
         }
     }
 }

@@ -1,0 +1,186 @@
+@model SistemaTesourariaEclesiastica.Models.DespesaRecorrente
+
+@{
+    ViewData["Title"] = "Nova Despesa Recorrente";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="bi bi-arrow-repeat text-warning me-2"></i>
+            Nova Despesa Recorrente
+        </h1>
+        <p class="text-muted mb-0">Cadastrar despesa fixa ou periódica</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Dados da Despesa
+                </h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label asp-for="Nome" class="form-label">Nome <span class="text-danger">*</span></label>
+                            <input asp-for="Nome" class="form-control" placeholder="Ex: Zeladoria, Auxílio Oferta" />
+                            <span asp-validation-for="Nome" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Ativa" class="form-label">Status</label>
+                            <div class="form-check form-switch mt-2">
+                                <input asp-for="Ativa" class="form-check-input" type="checkbox" role="switch" />
+                                <label asp-for="Ativa" class="form-check-label">Despesa Ativa</label>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Descricao" class="form-label">Descrição</label>
+                            <textarea asp-for="Descricao" class="form-control" rows="2" placeholder="Descrição detalhada da despesa"></textarea>
+                            <span asp-validation-for="Descricao" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="ValorPadrao" class="form-label">Valor Padrão <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input asp-for="ValorPadrao" class="form-control" type="number" step="0.01" min="0.01" placeholder="0,00" />
+                            </div>
+                            <span asp-validation-for="ValorPadrao" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Periodicidade" class="form-label">Periodicidade <span class="text-danger">*</span></label>
+                            <select asp-for="Periodicidade" class="form-select" asp-items="Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.Periodicidade>()">
+                                <option value="">Selecione</option>
+                            </select>
+                            <span asp-validation-for="Periodicidade" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="DiaVencimento" class="form-label">Dia de Vencimento</label>
+                            <input asp-for="DiaVencimento" class="form-control" type="number" min="1" max="31" placeholder="Ex: 5" />
+                            <span asp-validation-for="DiaVencimento" class="text-danger"></span>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Dia do mês para vencimento (1-31)
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="CentroCustoId" class="form-label">Centro de Custo <span class="text-danger">*</span></label>
+                            <select asp-for="CentroCustoId" class="form-select" asp-items="@((SelectList)ViewData["CentroCustoId"])">
+                                <option value="">Selecione o centro de custo</option>
+                            </select>
+                            <span asp-validation-for="CentroCustoId" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="PlanoDeContasId" class="form-label">Categoria da Despesa <span class="text-danger">*</span></label>
+                            <select asp-for="PlanoDeContasId" class="form-select" asp-items="@((SelectList)ViewData["PlanoDeContasId"])">
+                                <option value="">Selecione a categoria</option>
+                            </select>
+                            <span asp-validation-for="PlanoDeContasId" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="FornecedorId" class="form-label">Fornecedor</label>
+                            <select asp-for="FornecedorId" class="form-select" asp-items="@((SelectList)ViewData["FornecedorId"])">
+                                <option value="">Selecione o fornecedor (opcional)</option>
+                            </select>
+                            <span asp-validation-for="FornecedorId" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="MeioDePagamentoId" class="form-label">Meio de Pagamento Padrão</label>
+                            <select asp-for="MeioDePagamentoId" class="form-select" asp-items="@((SelectList)ViewData["MeioDePagamentoId"])">
+                                <option value="">Selecione (opcional)</option>
+                            </select>
+                            <span asp-validation-for="MeioDePagamentoId" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="DataInicio" class="form-label">Data de Início</label>
+                            <input asp-for="DataInicio" class="form-control" type="date" />
+                            <span asp-validation-for="DataInicio" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="DataTermino" class="form-label">Data de Término</label>
+                            <input asp-for="DataTermino" class="form-control" type="date" />
+                            <span asp-validation-for="DataTermino" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Observacoes" class="form-label">Observações</label>
+                            <textarea asp-for="Observacoes" class="form-control" rows="2" placeholder="Observações gerais"></textarea>
+                            <span asp-validation-for="Observacoes" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-check-circle me-2"></i>Cadastrar Despesa
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>Informações
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 pb-3 border-bottom border-opacity-25">
+                    <p class="small mb-0">
+                        <strong>O que são Despesas Recorrentes?</strong><br>
+                        São despesas fixas que se repetem com frequência definida.
+                    </p>
+                </div>
+
+                <div class="mb-3 pb-3 border-bottom border-opacity-25">
+                    <p class="small mb-0">
+                        <strong>Exemplos:</strong><br>
+                        • Zeladoria semanal<br>
+                        • Auxílio Oferta mensal<br>
+                        • Aluguel mensal<br>
+                        • Contas de água/luz mensais
+                    </p>
+                </div>
+
+                <div>
+                    <p class="small mb-0">
+                        <strong>Dica:</strong> Após cadastrar, você pode gerar os pagamentos futuros automaticamente.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

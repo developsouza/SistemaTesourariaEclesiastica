@@ -76,6 +76,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
             {
                 "/entradas",
                 "/saidas",
+                "/despesasrecorrentes",
                 "/fechamentos",
                 "/usuarios",
                 "/planos",

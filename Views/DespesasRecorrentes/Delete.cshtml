@@ -1,0 +1,301 @@
+@model SistemaTesourariaEclesiastica.Models.DespesaRecorrente
+
+@{
+    ViewData["Title"] = "Excluir Despesa Recorrente";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+<h1 class="h3 mb-0 text-danger">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Excluir Despesa Recorrente
+        </h1>
+   <p class="text-muted mb-0">Confirme a exclusão da despesa fixa</p>
+    </div>
+  <a asp-action="Index" class="btn btn-outline-secondary">
+ <i class="bi bi-arrow-left me-2"></i>Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+   <!-- Alerta de Aviso -->
+   <div class="alert alert-danger border-danger" role="alert">
+  <div class="d-flex">
+          <div class="flex-shrink-0">
+             <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                </div>
+  <div class="flex-grow-1 ms-3">
+ <h5 class="alert-heading mb-2">Atenção! Esta ação não pode ser desfeita.</h5>
+<p class="mb-2">Você está prestes a excluir permanentemente esta despesa recorrente e <strong>todos os seus pagamentos associados</strong>.</p>
+         <hr>
+     <p class="mb-0">
+       <i class="bi bi-info-circle me-2"></i>
+      <strong>Recomendação:</strong> Se deseja apenas parar de gerar novos pagamentos, considere <strong>desativar</strong> a despesa em vez de excluí-la.
+  </p>
+         </div>
+          </div>
+        </div>
+
+  <!-- Card com Informações da Despesa -->
+        <div class="card shadow-sm mb-4">
+      <div class="card-header bg-light">
+      <h5 class="mb-0">
+  <i class="bi bi-file-text me-2"></i>
+  Dados da Despesa a Excluir
+     </h5>
+    </div>
+ <div class="card-body">
+   <dl class="row mb-0">
+  <dt class="col-sm-4 text-muted">Nome da Despesa</dt>
+  <dd class="col-sm-8 fw-semibold fs-5">@Model.Nome</dd>
+
+     <dt class="col-sm-4 text-muted">Descrição</dt>
+   <dd class="col-sm-8">
+         @if (!string.IsNullOrEmpty(Model.Descricao))
+ {
+    @Model.Descricao
+       }
+  else
+       {
+    <span class="text-muted fst-italic">Sem descrição</span>
+}
+      </dd>
+
+         <dt class="col-sm-4 text-muted">Status Atual</dt>
+     <dd class="col-sm-8">
+          @if (Model.Ativa)
+       {
+  <span class="badge bg-success">Ativa</span>
+      }
+       else
+      {
+          <span class="badge bg-secondary">Inativa</span>
+ }
+   </dd>
+
+         <dt class="col-sm-4 text-muted">Valor Padrão</dt>
+       <dd class="col-sm-8">
+         <span class="fs-5 fw-bold text-warning">@Model.ValorPadrao.ToString("C2")</span>
+   </dd>
+
+          <dt class="col-sm-4 text-muted">Periodicidade</dt>
+    <dd class="col-sm-8">
+   <span class="badge bg-info">@Html.DisplayFor(model => model.Periodicidade)</span>
+          </dd>
+
+            <dt class="col-sm-4 text-muted">Centro de Custo</dt>
+   <dd class="col-sm-8">@Model.CentroCusto?.Nome</dd>
+
+        <dt class="col-sm-4 text-muted">Categoria</dt>
+  <dd class="col-sm-8">@Model.PlanoDeContas?.Nome</dd>
+
+    @if (Model.Fornecedor != null)
+      {
+       <dt class="col-sm-4 text-muted">Fornecedor</dt>
+        <dd class="col-sm-8">@Model.Fornecedor.Nome</dd>
+    }
+
+       <dt class="col-sm-4 text-muted">Data de Cadastro</dt>
+      <dd class="col-sm-8">@Model.DataCadastro.ToString("dd/MM/yyyy HH:mm")</dd>
+    </dl>
+            </div>
+        </div>
+
+        <!-- Card com Estatísticas de Pagamentos -->
+   @{
+      var totalPagamentos = Model.Pagamentos?.Count ?? 0;
+      var pagamentosPagos = Model.Pagamentos?.Count(p => p.Pago) ?? 0;
+var pagamentosPendentes = Model.Pagamentos?.Count(p => !p.Pago) ?? 0;
+ var totalPago = Model.Pagamentos?.Where(p => p.Pago).Sum(p => p.ValorPago) ?? 0;
+        }
+
+ @if (totalPagamentos > 0)
+        {
+      <div class="card shadow-sm border-warning mb-4">
+    <div class="card-header bg-warning bg-opacity-10">
+      <h5 class="mb-0 text-warning">
+          <i class="bi bi-exclamation-circle me-2"></i>
+       Impacto da Exclusão
+   </h5>
+        </div>
+      <div class="card-body">
+   <div class="alert alert-warning mb-3">
+       <i class="bi bi-info-circle me-2"></i>
+      <strong>@totalPagamentos pagamento(s)</strong> será(ão) excluído(s) permanentemente junto com esta despesa.
+         </div>
+
+    <div class="row text-center">
+    <div class="col-md-4">
+           <div class="p-3 bg-light rounded">
+     <div class="text-muted small">Total de Pagamentos</div>
+   <div class="fs-4 fw-bold text-info">@totalPagamentos</div>
+        </div>
+        </div>
+  <div class="col-md-4">
+ <div class="p-3 bg-light rounded">
+     <div class="text-muted small">Pagamentos Realizados</div>
+    <div class="fs-4 fw-bold text-success">@pagamentosPagos</div>
+  <small class="text-success">@totalPago.ToString("C2")</small>
+            </div>
+     </div>
+              <div class="col-md-4">
+    <div class="p-3 bg-light rounded">
+     <div class="text-muted small">Pagamentos Pendentes</div>
+   <div class="fs-4 fw-bold text-warning">@pagamentosPendentes</div>
+       </div>
+   </div>
+         </div>
+
+   <div class="mt-3">
+          <p class="mb-0 small text-muted">
+ <i class="bi bi-shield-exclamation me-1"></i>
+          Todos estes registros serão removidos do banco de dados e <strong>não poderão ser recuperados</strong>.
+       </p>
+ </div>
+       </div>
+  </div>
+        }
+
+        <!-- Form de Confirmação -->
+    <div class="card shadow-sm border-danger">
+ <div class="card-body">
+          <form asp-action="Delete" method="post">
+  @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+
+   <div class="mb-4">
+     <h6 class="fw-semibold">Tem certeza que deseja excluir esta despesa recorrente?</h6>
+      <p class="text-muted mb-0">Digite <strong>CONFIRMAR</strong> abaixo para prosseguir com a exclusão:</p>
+         </div>
+
+      <div class="mb-4">
+   <input type="text" id="confirmText" class="form-control" placeholder="Digite CONFIRMAR" required />
+        <div class="form-text text-danger">
+   <i class="bi bi-exclamation-triangle me-1"></i>
+    Esta ação é irreversível
+           </div>
+           </div>
+
+      <div class="d-flex justify-content-between align-items-center">
+   <a asp-action="Index" class="btn btn-secondary">
+   <i class="bi bi-x-circle me-2"></i>Cancelar
+         </a>
+            
+     <div>
+           <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-warning me-2">
+    <i class="bi bi-pencil me-2"></i>Desativar em vez de Excluir
+   </a>
+     <button type="submit" id="btnConfirmDelete" class="btn btn-danger" disabled>
+             <i class="bi bi-trash me-2"></i>Confirmar Exclusão
+         </button>
+     </div>
+</div>
+      </form>
+      </div>
+  </div>
+    </div>
+
+    <!-- Sidebar -->
+ <div class="col-lg-4">
+        <div class="card shadow-sm border-info">
+ <div class="card-header bg-info bg-opacity-10">
+    <h6 class="mb-0 text-info">
+     <i class="bi bi-lightbulb me-2"></i>
+    Alternativas à Exclusão
+       </h6>
+  </div>
+ <div class="card-body">
+          <div class="mb-3">
+    <h6 class="fw-semibold">
+     <i class="bi bi-pause-circle me-2 text-warning"></i>
+     Desativar a Despesa
+   </h6>
+   <p class="small mb-0">
+        Mantém o histórico de pagamentos, mas impede a geração de novos vencimentos. Recomendado para despesas que podem voltar no futuro.
+    </p>
+     </div>
+
+  <hr>
+
+   <div class="mb-3">
+       <h6 class="fw-semibold">
+     <i class="bi bi-calendar-x me-2 text-primary"></i>
+         Definir Data de Término
+      </h6>
+     <p class="small mb-0">
+  Configure uma data de término para a despesa sem perder o histórico existente.
+    </p>
+</div>
+
+   <hr>
+
+    <div>
+     <h6 class="fw-semibold">
+     <i class="bi bi-archive me-2 text-secondary"></i>
+       Manter para Auditoria
+             </h6>
+   <p class="small mb-0">
+ Manter registros históricos é importante para auditorias e relatórios financeiros futuros.
+        </p>
+       </div>
+  </div>
+ <div class="card-footer bg-light">
+   <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary w-100">
+       <i class="bi bi-pencil me-2"></i>Ir para Edição
+   </a>
+          </div>
+  </div>
+
+        <div class="card shadow-sm mt-3 border-danger">
+            <div class="card-header bg-danger bg-opacity-10">
+<h6 class="mb-0 text-danger">
+   <i class="bi bi-shield-x me-2"></i>
+     Consequências da Exclusão
+       </h6>
+ </div>
+     <div class="card-body">
+    <ul class="small mb-0 ps-3">
+    <li class="mb-2">A despesa será <strong>removida permanentemente</strong></li>
+     <li class="mb-2">Todos os <strong>@totalPagamentos pagamento(s)</strong> serão excluídos</li>
+      <li class="mb-2">O histórico de <strong>@totalPago.ToString("C2") pagos</strong> será perdido</li>
+    <li class="mb-2">Saídas já geradas <strong>NÃO serão excluídas</strong></li>
+       <li>Esta ação <strong class="text-danger">não pode ser desfeita</strong></li>
+  </ul>
+ </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+ <script>
+        $(document).ready(function() {
+ // Validação do texto de confirmação
+         $('#confirmText').on('input', function() {
+     var value = $(this).val().trim().toUpperCase();
+ var btnDelete = $('#btnConfirmDelete');
+    
+     if (value === 'CONFIRMAR') {
+          btnDelete.prop('disabled', false);
+        btnDelete.removeClass('btn-secondary').addClass('btn-danger');
+      } else {
+   btnDelete.prop('disabled', true);
+      btnDelete.removeClass('btn-danger').addClass('btn-secondary');
+ }
+        });
+
+            // Confirmação adicional ao submeter
+ $('form').on('submit', function(e) {
+       var confirmText = $('#confirmText').val().trim().toUpperCase();
+         
+    if (confirmText !== 'CONFIRMAR') {
+            e.preventDefault();
+    alert('Por favor, digite CONFIRMAR para prosseguir com a exclusão.');
+              return false;
+        }
+
+        return confirm('ÚLTIMA CONFIRMAÇÃO: Você tem certeza absoluta que deseja excluir esta despesa e todos os seus ' + @totalPagamentos + ' pagamento(s)? Esta ação é IRREVERSÍVEL!');
+ });
+        });
+    </script>
+}
