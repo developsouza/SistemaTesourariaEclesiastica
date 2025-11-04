@@ -16,9 +16,12 @@
         <button class="btn btn-success btn-sm" onclick="exportToExcel()">
             <i class="bi bi-file-excel me-1"></i>Excel
         </button>
-        <button class="btn btn-danger btn-sm" onclick="exportToPdf()">
+        <a asp-action="ExportarEntradasPdf" 
+           asp-route-dataInicio="@ViewBag.DataInicio" 
+     asp-route-dataFim="@ViewBag.DataFim"
+           class="btn btn-danger btn-sm">
             <i class="bi bi-file-pdf me-1"></i>PDF
-        </button>
+        </a>
         <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1"></i>Voltar
         </a>
@@ -185,8 +188,6 @@ else
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
     <script>
         function exportToExcel() {
             const table = document.getElementById("entradasTable");
@@ -194,19 +195,6 @@ else
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Entradas");
             XLSX.writeFile(wb, "EntradasPorPeriodo.xlsx");
-        }
-
-        function exportToPdf() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("Relatório de Entradas por Período", 14, 15);
-            doc.autoTable({
-                html: '#entradasTable',
-                startY: 25,
-                headStyles: { fillColor: [40, 167, 69] },
-                styles: { fontSize: 8 }
-            });
-            doc.save("EntradasPorPeriodo.pdf");
         }
     </script>
 }

@@ -64,11 +64,11 @@ namespace SistemaTesourariaEclesiastica.Data
 
             var roles = new[]
   {
-        "Administrador",
-      "TesoureiroGeral",
-        "TesoureiroLocal",
-          "Pastor"
-          };
+                "Administrador",
+                "TesoureiroGeral",
+                "TesoureiroLocal",
+                "Pastor"
+            };
 
             foreach (var role in roles)
             {
@@ -88,7 +88,7 @@ namespace SistemaTesourariaEclesiastica.Data
         // 2. CRIAÇÃO DE CENTROS DE CUSTO
         // ==========================================
         private static async Task<(CentroCusto sede, CentroCusto fundo)> CreateCentrosCusto(
-      ApplicationDbContext context,
+        ApplicationDbContext context,
                ILogger logger)
         {
             logger.LogInformation("2. Criando Centros de Custo...");
@@ -189,13 +189,13 @@ namespace SistemaTesourariaEclesiastica.Data
             if (environment == "Development")
             {
                 await CreateTestUser(userManager, sedeCentroCustoId, "tesoureiro@tesouraria.com",
-       "Tesoureiro Geral", "TesoureiroGeral", "Tesoureiro@123", logger);
+                "Tesoureiro Geral", "TesoureiroGeral", "Tesoureiro@123", logger);
 
                 await CreateTestUser(userManager, sedeCentroCustoId, "local@tesouraria.com",
-               "Tesoureiro Local", "TesoureiroLocal", "Local@123", logger);
+                "Tesoureiro Local", "TesoureiroLocal", "Local@123", logger);
 
                 await CreateTestUser(userManager, sedeCentroCustoId, "pastor@tesouraria.com",
-           "Pastor da Igreja", "Pastor", "Pastor@123", logger);
+                "Pastor da Igreja", "Pastor", "Pastor@123", logger);
             }
         }
 
@@ -333,15 +333,15 @@ namespace SistemaTesourariaEclesiastica.Data
             logger.LogInformation("5. Criando Meios de Pagamento...");
 
             var meiosDePagamento = new[]
-             {
-    new { Nome = "Dinheiro", Descricao = "Pagamento em dinheiro (espécie)", TipoCaixa = TipoCaixa.Fisico },
-  new { Nome = "PIX", Descricao = "Pagamento via PIX", TipoCaixa = TipoCaixa.Digital },
-      new { Nome = "Transferência Bancária", Descricao = "Transferência bancária", TipoCaixa = TipoCaixa.Digital },
-      new { Nome = "Débito", Descricao = "Cartão de Débito", TipoCaixa = TipoCaixa.Digital },
-     new { Nome = "Crédito", Descricao = "Cartão de Crédito", TipoCaixa = TipoCaixa.Digital },
+            {
+                new { Nome = "Dinheiro", Descricao = "Pagamento em dinheiro (espécie)", TipoCaixa = TipoCaixa.Fisico },
+                new { Nome = "PIX", Descricao = "Pagamento via PIX", TipoCaixa = TipoCaixa.Digital },
+                new { Nome = "Transferência Bancária", Descricao = "Transferência bancária", TipoCaixa = TipoCaixa.Digital },
+                new { Nome = "Débito", Descricao = "Cartão de Débito", TipoCaixa = TipoCaixa.Digital },
+                new { Nome = "Crédito", Descricao = "Cartão de Crédito", TipoCaixa = TipoCaixa.Digital },
                 new { Nome = "Boleto", Descricao = "Pagamento via Boleto Bancário", TipoCaixa = TipoCaixa.Digital },
-         new { Nome = "Cheque", Descricao = "Pagamento em Cheque", TipoCaixa = TipoCaixa.Fisico }
-       };
+                new { Nome = "Cheque", Descricao = "Pagamento em Cheque", TipoCaixa = TipoCaixa.Fisico }
+            };
 
             foreach (var meio in meiosDePagamento)
             {
@@ -367,16 +367,16 @@ namespace SistemaTesourariaEclesiastica.Data
         private static async Task CreateRegrasRateio(
           ApplicationDbContext context,
             int sedeId,
-      int fundoId,
- ILogger logger)
-        {
+                  int fundoId,
+             ILogger logger)
+            {
             logger.LogInformation("6. Criando Regras de Rateio (Dízimo dos Dízimos)...");
 
             // Verificar se já existe regra de rateio SEDE → FUNDO
             var regraExistente = await context.RegrasRateio
-       .FirstOrDefaultAsync(r =>
+            .FirstOrDefaultAsync(r =>
             r.CentroCustoOrigemId == sedeId &&
- r.CentroCustoDestinoId == fundoId);
+            r.CentroCustoDestinoId == fundoId);
 
             if (regraExistente == null)
             {

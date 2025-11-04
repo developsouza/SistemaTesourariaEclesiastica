@@ -12,7 +12,6 @@ using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
 using SistemaTesourariaEclesiastica.ViewModels;
 
-
 namespace SistemaTesourariaEclesiastica.Controllers
 {
     [Authorize(Roles = "Administrador,TesoureiroGeral,Pastor")]
@@ -709,241 +708,326 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
 
         // =====================================================
-        // CONTRIBUIÇÕES POR MEMBRO
+        // CONTRIBUIÇÕES POR MEMBRO - COM DETALHAMENTO
         // =====================================================
-        public async Task<IActionResult> ContribuicoesPorMembro(DateTime? dataInicio, DateTime? dataFim, int? membroId)
+        public async Task<IActionResult> ContribuicoesPorMembro(DateTime? dataInicio, DateTime? dataFim, int? membroId, int? centroCustoId)
         {
-            try
-            {
-                var user = await _userManager.GetUserAsync(User);
-                if (user == null)
-                {
-                    return RedirectToAction("Login", "Account");
-                }
+          try
+         {
+  var user = await _userManager.GetUserAsync(User);
+          if (user == null)
+        {
+         return RedirectToAction("Login", "Account");
+        }
 
                 if (!dataInicio.HasValue)
+     {
+         dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+       }
+         if (!dataFim.HasValue)
                 {
-                    dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-                }
-                if (!dataFim.HasValue)
+  dataFim = DateTime.Now.Date;
+     }
+
+     ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
+       ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
+
+   ViewBag.Membros = new SelectList(
+       await _context.Membros.Where(m => m.Ativo).OrderBy(m => m.NomeCompleto).ToListAsync(),
+          "Id", "NomeCompleto", membroId);
+
+// ✅ NOVO: Dropdown de Centros de Custo para filtro adicional
+         if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.Pastor))
                 {
-                    dataFim = DateTime.Now.Date;
-                }
+ ViewBag.CentrosCusto = new SelectList(
+     await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
+                    "Id", "Nome", centroCustoId);
+      }
+      else
+       {
+     if (user.CentroCustoId.HasValue)
+  {
+  ViewBag.CentrosCusto = new SelectList(
+ await _context.CentrosCusto.Where(c => c.Ativo && c.Id == user.CentroCustoId.Value).ToListAsync(),
+            "Id", "Nome", centroCustoId);
+        }
+      else
+      {
+            ViewBag.CentrosCusto = new SelectList(Enumerable.Empty<CentroCusto>(), "Id", "Nome");
+                 }
+  }
 
-                ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
-                ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
+     // Determinar centro de custo
+      int? centroCustoFiltro = null;
 
-                ViewBag.Membros = new SelectList(
-              await _context.Membros.Where(m => m.Ativo).OrderBy(m => m.NomeCompleto).ToListAsync(),
-                "Id", "NomeCompleto", membroId);
+         // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
+     if (!User.IsInRole(Roles.Administrador) &&
+          !User.IsInRole(Roles.TesoureiroGeral) &&
+    !User.IsInRole(Roles.Pastor))
+       {
+           // Tesoureiro Local: filtro obrigatório
+    centroCustoFiltro = user.CentroCustoId;
 
-                // Determinar centro de custo
-                int? centroCustoFiltro = null;
-
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
-                if (!User.IsInRole(Roles.Administrador) &&
-            !User.IsInRole(Roles.TesoureiroGeral) &&
-          !User.IsInRole(Roles.Pastor))
-                {
-                    // Tesoureiro Local: filtro obrigatório
-                    centroCustoFiltro = user.CentroCustoId;
-
-                    if (!centroCustoFiltro.HasValue)
-                    {
-                        ViewBag.ResumoPorMembro = new List<dynamic>();
-                        return View(new List<Entrada>());
-                    }
-                }
-                // Administrador, TesoureiroGeral e Pastor: sem filtro
+           if (!centroCustoFiltro.HasValue)
+   {
+        ViewBag.ResumoPorMembro = new List<dynamic>();
+           ViewBag.ResumoPorCentroCusto = new List<dynamic>();
+  return View(new List<Entrada>());
+       }
+          }
+     else
+   {
+      // ✅ NOVO: Administrador, TesoureiroGeral e Pastor podem filtrar opcionalmente
+      centroCustoFiltro = centroCustoId;
+        }
 
                 // Buscar IDs de entradas aprovadas
-                var queryEntradasAprovadas = _context.Entradas
-                            .Where(e => e.Data >= dataInicio && e.Data <= dataFim && e.MembroId != null);
+     var queryEntradasAprovadas = _context.Entradas
+            .Where(e => e.Data >= dataInicio && e.Data <= dataFim && e.MembroId != null);
 
-                if (centroCustoFiltro.HasValue)
-                {
-                    queryEntradasAprovadas = queryEntradasAprovadas
-                        .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
+ if (centroCustoFiltro.HasValue)
+       {
+           queryEntradasAprovadas = queryEntradasAprovadas
+              .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                 }
 
-                if (membroId.HasValue)
-                {
-                    queryEntradasAprovadas = queryEntradasAprovadas
-                        .Where(e => e.MembroId == membroId.Value);
-                }
+  if (membroId.HasValue)
+     {
+          queryEntradasAprovadas = queryEntradasAprovadas
+             .Where(e => e.MembroId == membroId.Value);
+      }
 
-                var idsEntradasAprovadas = await queryEntradasAprovadas
-                    .Where(e => _context.FechamentosPeriodo.Any(f =>
-                        f.CentroCustoId == e.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
-                        e.Data >= f.DataInicio &&
-                        e.Data <= f.DataFim))
-                    .Select(e => e.Id)
-                    .ToListAsync();
+           var idsEntradasAprovadas = await queryEntradasAprovadas
+     .Where(e => _context.FechamentosPeriodo.Any(f =>
+            f.CentroCustoId == e.CentroCustoId &&
+       f.Status == StatusFechamentoPeriodo.Aprovado &&
+ e.Data >= f.DataInicio &&
+        e.Data <= f.DataFim))
+       .Select(e => e.Id)
+          .ToListAsync();
 
-                var contribuicoes = idsEntradasAprovadas.Any()
-                    ? await _context.Entradas
-                        .Include(e => e.Membro)
-                        .Include(e => e.PlanoDeContas)
-                        .Include(e => e.CentroCusto)
-                        .Include(e => e.MeioDePagamento)
-                        .Where(e => idsEntradasAprovadas.Contains(e.Id))
-                        .OrderBy(e => e.Membro!.NomeCompleto)
-                        .ThenBy(e => e.Data)
-                        .ToListAsync()
-                    : new List<Entrada>();
+          var contribuicoes = idsEntradasAprovadas.Any()
+    ? await _context.Entradas
+ .Include(e => e.Membro)
+       .Include(e => e.PlanoDeContas)
+   .Include(e => e.CentroCusto)
+               .Include(e => e.MeioDePagamento)
+        .Where(e => idsEntradasAprovadas.Contains(e.Id))
+      .OrderBy(e => e.CentroCusto!.Nome)
+.ThenBy(e => e.Membro!.NomeCompleto)
+        .ThenBy(e => e.Data)
+  .ToListAsync()
+       : new List<Entrada>();
 
-                // Resumo por membro
-                var resumoPorMembro = contribuicoes
-                    .GroupBy(e => new { e.MembroId, e.Membro!.NomeCompleto })
-                    .Select(g => new
-                    {
-                        MembroNome = g.Key.NomeCompleto,
-                        TotalContribuicoes = g.Sum(e => e.Valor),
-                        QuantidadeContribuicoes = g.Count(),
-                        UltimaContribuicao = g.Max(e => e.Data)
-                    })
-                    .OrderByDescending(x => x.TotalContribuicoes)
-                    .ToList();
+      // ✅ NOVO: Resumo por Centro de Custo
+          var resumoPorCentroCusto = contribuicoes
+                    .GroupBy(e => new { e.CentroCustoId, e.CentroCusto!.Nome })
+        .Select(g => new
+      {
+      CentroCustoNome = g.Key.Nome,
+  TotalContribuicoes = g.Sum(e => e.Valor),
+   QuantidadeContribuicoes = g.Count(),
+            QuantidadeMembros = g.Select(e => e.MembroId).Distinct().Count()
+   })
+        .OrderByDescending(x => x.TotalContribuicoes)
+                .ToList();
 
-                ViewBag.ResumoPorMembro = resumoPorMembro;
+              ViewBag.ResumoPorCentroCusto = resumoPorCentroCusto;
 
-                return View(contribuicoes);
+        // Resumo por membro (existente, mantido)
+       var resumoPorMembro = contribuicoes
+   .GroupBy(e => new { e.MembroId, e.Membro!.NomeCompleto, e.CentroCusto!.Nome })
+           .Select(g => new
+     {
+             MembroNome = g.Key.NomeCompleto,
+      CentroCustoNome = g.Key.Nome,
+              TotalContribuicoes = g.Sum(e => e.Valor),
+               QuantidadeContribuicoes = g.Count(),
+       UltimaContribuicao = g.Max(e => e.Data)
+     })
+  .OrderBy(x => x.CentroCustoNome)
+         .ThenByDescending(x => x.TotalContribuicoes)
+ .ToList();
+
+       ViewBag.ResumoPorMembro = resumoPorMembro;
+
+  return View(contribuicoes);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao gerar relatório de contribuições");
-                TempData["Erro"] = "Erro ao processar relatório de contribuições.";
+       catch (Exception ex)
+       {
+        _logger.LogError(ex, "Erro ao gerar relatório de contribuições");
+   TempData["Erro"] = "Erro ao processar relatório de contribuições.";
                 ViewBag.ResumoPorMembro = new List<dynamic>();
-                return View(new List<Entrada>());
-            }
+                ViewBag.ResumoPorCentroCusto = new List<dynamic>();
+          return View(new List<Entrada>());
+       }
         }
 
         // =====================================================
-        // DESPESAS POR CENTRO DE CUSTO
+        // DESPESAS POR CENTRO DE CUSTO - MELHORADO
         // =====================================================
-        public async Task<IActionResult> DespesasPorCentroCusto(DateTime? dataInicio, DateTime? dataFim, int? centroCustoId)
-        {
-            try
-            {
-                var user = await _userManager.GetUserAsync(User);
-                if (user == null)
-                {
-                    return RedirectToAction("Login", "Account");
-                }
+        public async Task<IActionResult> DespesasPorCentroCusto(DateTime? dataInicio, DateTime? dataFim, int? centroCustoId, int? planoContasId)
+     {
+  try
+      {
+         var user = await _userManager.GetUserAsync(User);
+   if (user == null)
+         {
+    return RedirectToAction("Login", "Account");
+       }
 
-                if (!dataInicio.HasValue)
-                {
-                    dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-                }
-                if (!dataFim.HasValue)
-                {
-                    dataFim = DateTime.Now.Date;
-                }
+          if (!dataInicio.HasValue)
+        {
+           dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+              }
+   if (!dataFim.HasValue)
+          {
+       dataFim = DateTime.Now.Date;
+      }
 
                 ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
-                ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
+      ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
 
-                // Configurar dropdown
-                if (User.IsInRole(Roles.Administrador) ||
-               User.IsInRole(Roles.TesoureiroGeral) ||
-                 User.IsInRole(Roles.Pastor))
-                {
-                    ViewBag.CentrosCusto = new SelectList(
-                          await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
-                          "Id", "Nome", centroCustoId);
-                }
-                else
-                {
-                    if (user.CentroCustoId.HasValue)
-                    {
-                        ViewBag.CentrosCusto = new SelectList(
-                             await _context.CentrosCusto.Where(c => c.Ativo && c.Id == user.CentroCustoId.Value).ToListAsync(),
-                        "Id", "Nome", centroCustoId);
-                    }
-                    else
-                    {
-                        ViewBag.CentrosCusto = new SelectList(Enumerable.Empty<CentroCusto>(), "Id", "Nome");
-                    }
-                }
+       // Configurar dropdown
+     if (User.IsInRole(Roles.Administrador) ||
+   User.IsInRole(Roles.TesoureiroGeral) ||
+    User.IsInRole(Roles.Pastor))
+              {
+     ViewBag.CentrosCusto = new SelectList(
+ await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
+  "Id", "Nome", centroCustoId);
+              }
+              else
+             {
+     if (user.CentroCustoId.HasValue)
+       {
+    ViewBag.CentrosCusto = new SelectList(
+            await _context.CentrosCusto.Where(c => c.Ativo && c.Id == user.CentroCustoId.Value).ToListAsync(),
+        "Id", "Nome", centroCustoId);
+            }
+      else
+        {
+ ViewBag.CentrosCusto = new SelectList(Enumerable.Empty<CentroCusto>(), "Id", "Nome");
+    }
+      }
 
-                // Determinar centro de custo
-                int? centroCustoFiltro = null;
+   // ✅ NOVO: Dropdown de Planos de Contas (Despesas)
+    ViewBag.PlanosContas = new SelectList(
+        await _context.PlanosDeContas
+        .Where(p => p.Tipo == TipoPlanoContas.Despesa && p.Ativo)
+   .OrderBy(p => p.Nome)
+    .ToListAsync(),
+"Id", "Nome", planoContasId);
 
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
-                if (!User.IsInRole(Roles.Administrador) &&
-           !User.IsInRole(Roles.TesoureiroGeral) &&
-             !User.IsInRole(Roles.Pastor))
-                {
-                    // Tesoureiro Local: filtro obrigatório
-                    centroCustoFiltro = user.CentroCustoId;
+          // Determinar centro de custo
+           int? centroCustoFiltro = null;
 
-                    if (!centroCustoFiltro.HasValue)
-                    {
-                        ViewBag.ResumoPorCentroCusto = new List<dynamic>();
-                        return View(new List<Saida>());
-                    }
-                }
-                else
-                {
-                    // Administrador, TesoureiroGeral e Pastor: podem filtrar opcionalmente
-                    centroCustoFiltro = centroCustoId;
+           // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
+          if (!User.IsInRole(Roles.Administrador) &&
+                !User.IsInRole(Roles.TesoureiroGeral) &&
+            !User.IsInRole(Roles.Pastor))
+       {
+  // Tesoureiro Local: filtro obrigatório
+          centroCustoFiltro = user.CentroCustoId;
+
+           if (!centroCustoFiltro.HasValue)
+             {
+            ViewBag.ResumoPorCentroCusto = new List<dynamic>();
+          ViewBag.ResumoPorCategoria = new List<dynamic>();
+       return View(new List<Saida>());
+               }
+         }
+    else
+            {
+         // Administrador, TesoureiroGeral e Pastor: podem filtrar opcionalmente
+               centroCustoFiltro = centroCustoId;
                 }
 
                 // Buscar IDs de saídas aprovadas
-                var querySaidasAprovadas = _context.Saidas
-                    .Where(s => s.Data >= dataInicio && s.Data <= dataFim);
+    var querySaidasAprovadas = _context.Saidas
+        .Where(s => s.Data >= dataInicio && s.Data <= dataFim);
 
-                if (centroCustoFiltro.HasValue)
-                {
-                    querySaidasAprovadas = querySaidasAprovadas
-                        .Where(s => s.CentroCustoId == centroCustoFiltro.Value);
+    if (centroCustoFiltro.HasValue)
+   {
+    querySaidasAprovadas = querySaidasAprovadas
+ .Where(s => s.CentroCustoId == centroCustoFiltro.Value);
+      }
+
+        // ✅ NOVO: Filtro adicional por Plano de Contas
+   if (planoContasId.HasValue)
+{
+    querySaidasAprovadas = querySaidasAprovadas
+    .Where(s => s.PlanoDeContasId == planoContasId.Value);
                 }
 
-                var idsSaidasAprovadas = await querySaidasAprovadas
-                    .Where(s => _context.FechamentosPeriodo.Any(f =>
-                        f.CentroCustoId == s.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
-                        s.Data >= f.DataInicio &&
-                        s.Data <= f.DataFim))
-                    .Select(s => s.Id)
-                    .ToListAsync();
+    var idsSaidasAprovadas = await querySaidasAprovadas
+    .Where(s => _context.FechamentosPeriodo.Any(f =>
+       f.CentroCustoId == s.CentroCustoId &&
+            f.Status == StatusFechamentoPeriodo.Aprovado &&
+     s.Data >= f.DataInicio &&
+        s.Data <= f.DataFim))
+             .Select(s => s.Id)
+            .ToListAsync();
 
-                var despesas = idsSaidasAprovadas.Any()
-                    ? await _context.Saidas
-                        .Include(s => s.CentroCusto)
-                        .Include(s => s.PlanoDeContas)
-                        .Include(s => s.Fornecedor)
-                        .Include(s => s.MeioDePagamento)
-                        .Where(s => idsSaidasAprovadas.Contains(s.Id))
-                        .OrderBy(s => s.Data)
-                        .ToListAsync()
-                    : new List<Saida>();
+       var despesas = idsSaidasAprovadas.Any()
+      ? await _context.Saidas
+          .Include(s => s.CentroCusto)
+          .Include(s => s.PlanoDeContas)
+            .Include(s => s.Fornecedor)
+              .Include(s => s.MeioDePagamento)
+      .Where(s => idsSaidasAprovadas.Contains(s.Id))
+  .OrderBy(s => s.CentroCusto!.Nome)
+        .ThenBy(s => s.Data)
+ .ToListAsync()
+      : new List<Saida>();
 
-                // Resumo por centro de custo
-                var resumoPorCentroCusto = despesas
-                    .GroupBy(s => new { s.CentroCustoId, s.CentroCusto!.Nome })
+  // Resumo por centro de custo (mantido)
+   var resumoPorCentroCusto = despesas
+         .GroupBy(s => new { s.CentroCustoId, s.CentroCusto!.Nome })
                     .Select(g => new
-                    {
-                        CentroCustoNome = g.Key.Nome,
-                        TotalDespesas = g.Sum(s => s.Valor),
-                        QuantidadeDespesas = g.Count()
-                    })
-                    .OrderByDescending(x => x.TotalDespesas)
-                    .ToList();
+              {
+           CentroCustoNome = g.Key.Nome,
+    TotalDespesas = g.Sum(s => s.Valor),
+   QuantidadeDespesas = g.Count()
+          })
+      .OrderByDescending(x => x.TotalDespesas)
+ .ToList();
 
-                ViewBag.ResumoPorCentroCusto = resumoPorCentroCusto;
+     ViewBag.ResumoPorCentroCusto = resumoPorCentroCusto;
 
-                return View(despesas);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao gerar relatório de despesas por centro de custo");
-                TempData["Erro"] = "Erro ao processar relatório de despesas.";
-                ViewBag.ResumoPorCentroCusto = new List<dynamic>();
-                return View(new List<Saida>());
-            }
+      // ✅ NOVO: Resumo por Categoria (Plano de Contas) dentro de cada Centro de Custo
+   var resumoPorCategoria = despesas
+       .GroupBy(s => new
+     {
+  s.CentroCustoId,
+      CentroCustoNome = s.CentroCusto!.Nome,
+ s.PlanoDeContasId,
+            CategoriaNome = s.PlanoDeContas!.Nome
+       })
+      .Select(g => new
+   {
+        CentroCustoNome = g.Key.CentroCustoNome,
+         CategoriaNome = g.Key.CategoriaNome,
+            TotalDespesas = g.Sum(s => s.Valor),
+     QuantidadeDespesas = g.Count()
+     })
+  .OrderBy(x => x.CentroCustoNome)
+         .ThenByDescending(x => x.TotalDespesas)
+  .ToList();
+
+      ViewBag.ResumoPorCategoria = resumoPorCategoria;
+
+    return View(despesas);
         }
+      catch (Exception ex)
+   {
+     _logger.LogError(ex, "Erro ao gerar relatório de despesas por centro de custo");
+        TempData["Erro"] = "Erro ao processar relatório de despesas.";
+       ViewBag.ResumoPorCentroCusto = new List<dynamic>();
+   ViewBag.ResumoPorCategoria = new List<dynamic>();
+      return View(new List<Saida>());
+            }
+   }
 
         // =====================================================
         // BALANCETE MENSAL
@@ -1032,34 +1116,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 _logger.LogError(ex, "Erro ao gerar balancete mensal");
                 TempData["ErrorMessage"] = $"Erro ao gerar balancete: {ex.Message}";
                 return RedirectToAction("Index");
-            }
-        }
-
-        [HttpGet]
-        [Authorize(Policy = "Relatorios")]
-        public async Task<IActionResult> BalanceteMensalPdf(int centroCustoId, DateTime dataInicio, DateTime dataFim)
-        {
-            try
-            {
-                var balancete = await _balanceteService.GerarBalanceteMensalAsync(
-                    centroCustoId,
-                    dataInicio,
-                    dataFim);
-
-                var pdfBytes = SistemaTesourariaEclesiastica.Helpers.BalancetePdfHelper.GerarPdfBalanceteMensal(balancete);
-
-                var nomeArquivo = $"Balancete_Mensal_{balancete.CentroCustoNome.Replace(" ", "_")}_{dataInicio:yyyyMM}.pdf";
-
-                await _auditService.LogAsync("Exportação", "Relatório",
-                    $"Balancete mensal PDF: {balancete.CentroCustoNome} - {balancete.Periodo}");
-
-                return File(pdfBytes, "application/pdf", nomeArquivo);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao exportar balancete para PDF");
-                TempData["ErrorMessage"] = $"Erro ao exportar PDF: {ex.Message}";
-                return RedirectToAction("BalanceteMensal", new { centroCustoId, dataInicio, dataFim });
             }
         }
 
@@ -1310,5 +1366,317 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return RedirectToAction("SaidasPorPeriodo");
             }
         }
+
+        // =====================================================
+        // EXPORTAÇÃO PARA PDF - FLUXO DE CAIXA
+   // =====================================================
+        public async Task<IActionResult> ExportarFluxoDeCaixaPdf(DateTime? dataInicio, DateTime? dataFim)
+  {
+            try
+   {
+    var user = await _userManager.GetUserAsync(User);
+          if (user == null)
+        {
+  return RedirectToAction("Login", "Account");
+                }
+
+       if (!dataInicio.HasValue || !dataFim.HasValue)
+     {
+                  TempData["Erro"] = "Período inválido.";
+          return RedirectToAction("FluxoDeCaixa");
+            }
+
+    // Determinar centro de custo
+           int? centroCustoFiltro = null;
+        string? centroCustoNome = null;
+
+       if (!User.IsInRole(Roles.Administrador) &&
+        !User.IsInRole(Roles.TesoureiroGeral) &&
+            !User.IsInRole(Roles.Pastor))
+     {
+       centroCustoFiltro = user.CentroCustoId;
+      if (centroCustoFiltro.HasValue)
+          {
+               var centroCusto = await _context.CentrosCusto.FindAsync(centroCustoFiltro.Value);
+    centroCustoNome = centroCusto?.Nome;
+    }
+         }
+
+             // Buscar IDs aprovados
+      var queryEntradasAprovadas = _context.Entradas
+         .Where(e => e.Data >= dataInicio && e.Data <= dataFim);
+
+      if (centroCustoFiltro.HasValue)
+                {
+        queryEntradasAprovadas = queryEntradasAprovadas
+       .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
+    }
+
+ var idsEntradasAprovadas = await queryEntradasAprovadas
+          .Where(e => _context.FechamentosPeriodo.Any(f =>
+     f.CentroCustoId == e.CentroCustoId &&
+      f.Status == StatusFechamentoPeriodo.Aprovado &&
+             e.Data >= f.DataInicio &&
+               e.Data <= f.DataFim))
+          .Select(e => e.Id)
+  .ToListAsync();
+
+              var querySaidasAprovadas = _context.Saidas
+   .Where(s => s.Data >= dataInicio && s.Data <= dataFim);
+
+       if (centroCustoFiltro.HasValue)
+        {
+           querySaidasAprovadas = querySaidasAprovadas
+            .Where(s => s.CentroCustoId == centroCustoFiltro.Value);
+      }
+
+    var idsSaidasAprovadas = await querySaidasAprovadas
+             .Where(s => _context.FechamentosPeriodo.Any(f =>
+      f.CentroCustoId == s.CentroCustoId &&
+      f.Status == StatusFechamentoPeriodo.Aprovado &&
+     s.Data >= f.DataInicio &&
+    s.Data <= f.DataFim))
+         .Select(s => s.Id)
+        .ToListAsync();
+
+     var entradas = idsEntradasAprovadas.Any()
+      ? await _context.Entradas
+     .Where(e => idsEntradasAprovadas.Contains(e.Id))
+       .OrderBy(e => e.Data)
+           .ToListAsync()
+     : new List<Entrada>();
+
+         var saidas = idsSaidasAprovadas.Any()
+    ? await _context.Saidas
+    .Where(s => idsSaidasAprovadas.Contains(s.Id))
+ .OrderBy(s => s.Data)
+          .ToListAsync()
+          : new List<Saida>();
+
+            var fluxoDeCaixa = new List<FluxoDeCaixaItem>();
+    var entradasAgrupadas = entradas.GroupBy(e => e.Data.Date)
+              .ToDictionary(g => g.Key, g => g.Sum(e => e.Valor));
+  var saidasAgrupadas = saidas.GroupBy(s => s.Data.Date)
+           .ToDictionary(g => g.Key, g => g.Sum(s => s.Valor));
+
+ var todasAsDatas = entradasAgrupadas.Keys.Union(saidasAgrupadas.Keys).OrderBy(d => d).ToList();
+
+            decimal saldoAcumulado = 0;
+         foreach (var data in todasAsDatas)
+     {
+        var totalEntradaDia = entradasAgrupadas.GetValueOrDefault(data, 0);
+        var totalSaidaDia = saidasAgrupadas.GetValueOrDefault(data, 0);
+          saldoAcumulado += totalEntradaDia - totalSaidaDia;
+
+        fluxoDeCaixa.Add(new FluxoDeCaixaItem
+                {
+              Data = data,
+        Entradas = totalEntradaDia,
+           Saidas = totalSaidaDia,
+         SaldoDia = totalEntradaDia - totalSaidaDia,
+              SaldoAcumulado = saldoAcumulado
+            });
+                }
+
+                var pdfBytes = Helpers.RelatorioPdfHelper.GerarPdfFluxoCaixa(
+            fluxoDeCaixa,
+             dataInicio.Value,
+       dataFim.Value,
+     centroCustoNome);
+
+        var nomeArquivo = $"FluxoDeCaixa_{dataInicio:yyyyMMdd}_{dataFim:yyyyMMdd}.pdf";
+
+   await _auditService.LogAsync("Exportação", "Relatório",
+  $"Fluxo de Caixa PDF: {dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}");
+
+      return File(pdfBytes, "application/pdf", nomeArquivo);
+       }
+            catch (Exception ex)
+     {
+                _logger.LogError(ex, "Erro ao exportar fluxo de caixa para PDF");
+TempData["Erro"] = "Erro ao exportar PDF.";
+    return RedirectToAction("FluxoDeCaixa");
+        }
+        }
+
+ // =====================================================
+        // EXPORTAÇÃO PARA PDF - ENTRADAS
+        // =====================================================
+        public async Task<IActionResult> ExportarEntradasPdf(DateTime? dataInicio, DateTime? dataFim)
+        {
+    try
+    {
+       var user = await _userManager.GetUserAsync(User);
+     if (user == null)
+    {
+            return RedirectToAction("Login", "Account");
+   }
+
+      if (!dataInicio.HasValue)
+        {
+                 dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                }
+        if (!dataFim.HasValue)
+     {
+          dataFim = DateTime.Now.Date;
+      }
+
+     int? centroCustoFiltro = null;
+         string? centroCustoNome = null;
+
+             if (!User.IsInRole(Roles.Administrador) &&
+     !User.IsInRole(Roles.TesoureiroGeral) &&
+               !User.IsInRole(Roles.Pastor))
+        {
+    centroCustoFiltro = user.CentroCustoId;
+           if (centroCustoFiltro.HasValue)
+  {
+    var centroCusto = await _context.CentrosCusto.FindAsync(centroCustoFiltro.Value);
+      centroCustoNome = centroCusto?.Nome;
+        }
+   }
+
+        var queryEntradasAprovadas = _context.Entradas
+  .Where(e => e.Data >= dataInicio && e.Data <= dataFim);
+
+if (centroCustoFiltro.HasValue)
+           {
+   queryEntradasAprovadas = queryEntradasAprovadas
+     .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
+      }
+
+          var idsEntradasAprovadas = await queryEntradasAprovadas
+         .Where(e => _context.FechamentosPeriodo.Any(f =>
+         f.CentroCustoId == e.CentroCustoId &&
+   f.Status == StatusFechamentoPeriodo.Aprovado &&
+ e.Data >= f.DataInicio &&
+           e.Data <= f.DataFim))
+       .Select(e => e.Id)
+       .ToListAsync();
+
+  var entradas = idsEntradasAprovadas.Any()
+       ? await _context.Entradas
+        .Include(e => e.Membro)
+     .Include(e => e.CentroCusto)
+       .Include(e => e.PlanoDeContas)
+        .Where(e => idsEntradasAprovadas.Contains(e.Id))
+                     .OrderBy(e => e.Data)
+          .ToListAsync()
+          : new List<Entrada>();
+
+       var total = entradas.Sum(e => e.Valor);
+
+       var pdfBytes = Helpers.RelatorioPdfHelper.GerarPdfEntradas(
+         entradas,
+  dataInicio.Value,
+ dataFim.Value,
+        total,
+  centroCustoNome);
+
+   var nomeArquivo = $"Entradas_{dataInicio:yyyyMMdd}_{dataFim:yyyyMMdd}.pdf";
+
+       await _auditService.LogAsync("Exportação", "Relatório",
+      $"Entradas PDF: {dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}");
+
+          return File(pdfBytes, "application/pdf", nomeArquivo);
+            }
+  catch (Exception ex)
+            {
+_logger.LogError(ex, "Erro ao exportar entradas para PDF");
+     TempData["Erro"] = "Erro ao exportar PDF.";
+        return RedirectToAction("EntradasPorPeriodo");
+       }
+        }
+
+        // =====================================================
+        // EXPORTAÇÃO PARA PDF - SAÍDAS
+        // =====================================================
+        public async Task<IActionResult> ExportarSaidasPdf(DateTime? dataInicio, DateTime? dataFim)
+        {
+            try
+            {
+        var user = await _userManager.GetUserAsync(User);
+    if (user == null)
+  {
+           return RedirectToAction("Login", "Account");
+           }
+
+    if (!dataInicio.HasValue)
+    {
+    dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                }
+      if (!dataFim.HasValue)
+       {
+      dataFim = DateTime.Now.Date;
+      }
+
+                int? centroCustoFiltro = null;
+       string? centroCustoNome = null;
+
+      if (!User.IsInRole(Roles.Administrador) &&
+          !User.IsInRole(Roles.TesoureiroGeral) &&
+            !User.IsInRole(Roles.Pastor))
+                {
+centroCustoFiltro = user.CentroCustoId;
+            if (centroCustoFiltro.HasValue)
+           {
+   var centroCusto = await _context.CentrosCusto.FindAsync(centroCustoFiltro.Value);
+         centroCustoNome = centroCusto?.Nome;
+                 }
+    }
+
+                var querySaidasAprovadas = _context.Saidas
+.Where(s => s.Data >= dataInicio && s.Data <= dataFim);
+
+      if (centroCustoFiltro.HasValue)
+      {
+     querySaidasAprovadas = querySaidasAprovadas
+         .Where(s => s.CentroCustoId == centroCustoFiltro.Value);
+          }
+
+           var idsSaidasAprovadas = await querySaidasAprovadas
+     .Where(s => _context.FechamentosPeriodo.Any(f =>
+         f.CentroCustoId == s.CentroCustoId &&
+     f.Status == StatusFechamentoPeriodo.Aprovado &&
+     s.Data >= f.DataInicio &&
+      s.Data <= f.DataFim))
+        .Select(s => s.Id)
+       .ToListAsync();
+
+                var saidas = idsSaidasAprovadas.Any()
+    ? await _context.Saidas
+             .Include(s => s.Fornecedor)
+   .Include(s => s.CentroCusto)
+     .Include(s => s.PlanoDeContas)
+    .Where(s => idsSaidasAprovadas.Contains(s.Id))
+        .OrderBy(s => s.Data)
+           .ToListAsync()
+    : new List<Saida>();
+
+ var total = saidas.Sum(s => s.Valor);
+
+              var pdfBytes = Helpers.RelatorioPdfHelper.GerarPdfSaidas(
+             saidas,
+         dataInicio.Value,
+          dataFim.Value,
+           total,
+               centroCustoNome);
+
+       var nomeArquivo = $"Saidas_{dataInicio:yyyyMMdd}_{dataFim:yyyyMMdd}.pdf";
+
+              await _auditService.LogAsync("Exportação", "Relatório",
+    $"Saídas PDF: {dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}");
+
+     return File(pdfBytes, "application/pdf", nomeArquivo);
+  }
+    catch (Exception ex)
+{
+    _logger.LogError(ex, "Erro ao exportar saídas para PDF");
+                TempData["Erro"] = "Erro ao exportar PDF.";
+     return RedirectToAction("SaidasPorPeriodo");
+            }
+     }
+
+     // ...existing code continues...
     }
 }

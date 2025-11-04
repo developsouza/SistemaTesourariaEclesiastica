@@ -16,9 +16,13 @@
         <button class="btn btn-success btn-sm" onclick="exportToExcel()">
             <i class="bi bi-file-excel me-1"></i>Excel
         </button>
-        <button class="btn btn-danger btn-sm" onclick="exportToPdf()">
+        @* ✅ NOVO: Botão PDF - substituir JavaScript por Action *@
+        <a asp-action="ExportarFluxoDeCaixaPdf"
+           asp-route-dataInicio="@ViewBag.DataInicio"
+           asp-route-dataFim="@ViewBag.DataFim"
+           class="btn btn-danger btn-sm">
             <i class="bi bi-file-pdf me-1"></i>PDF
-        </button>
+        </a>
         <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1"></i>Voltar
         </a>
@@ -207,19 +211,6 @@ else
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Fluxo de Caixa");
             XLSX.writeFile(wb, "FluxoDeCaixa.xlsx");
-        }
-
-        function exportToPdf() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("Relatório de Fluxo de Caixa", 14, 15);
-            doc.autoTable({
-                html: '#fluxoDeCaixaTable',
-                startY: 25,
-                headStyles: { fillColor: [23, 162, 184] },
-                styles: { fontSize: 8 }
-            });
-            doc.save("FluxoDeCaixa.pdf");
         }
     </script>
 }
