@@ -116,6 +116,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
 
         // GET: FechamentoPeriodo/Create
+        // GET: FechamentoPeriodo/Create
         [HttpGet]
         public async Task<IActionResult> Create()
         {
@@ -144,111 +145,113 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 TipoFechamento = TipoFechamento.Mensal
             };
 
-            // Se for SEDE, buscar fechamentos de congregações disponíveis
-            if (viewModel.EhSede)
-            {
-                var fechamentosComDetalhes = await _context.FechamentosPeriodo
-   .Include(f => f.CentroCusto)
-   .Include(f => f.DetalhesFechamento) // ✅ NOVO: Incluir detalhes
-    .Where(f => f.CentroCusto.Tipo == TipoCentroCusto.Congregacao &&
-   f.Status == StatusFechamentoPeriodo.Aprovado &&
-    f.FoiProcessadoPelaSede == false)
-  .OrderByDescending(f => f.DataAprovacao)
-    .ToListAsync();
+            // ✅ CARREGAR LANÇAMENTOS DO PRÓPRIO CENTRO DE CUSTO (Congregação ou SEDE)
+    // Carregar entradas não incluídas em fechamentos aprovados
+    viewModel.LancamentosSedeEntradas = await _context.Entradas
+        .Include(e => e.PlanoDeContas)
+        .Include(e => e.MeioDePagamento)
+        .Include(e => e.Membro)
+        .Where(e => e.CentroCustoId == centroCusto.Id &&
+                    e.Data >= viewModel.DataInicio &&
+                    e.Data <= viewModel.DataFim &&
+                    !e.IncluidaEmFechamento)
+        .OrderByDescending(e => e.Data)
+        .Select(e => new DetalhePrestacaoContas
+        {
+            Data = e.Data,
+            Descricao = e.Descricao ?? "",
+            Valor = e.Valor,
+            PlanoContas = e.PlanoDeContas != null ? e.PlanoDeContas.Nome : null,
+            MeioPagamento = e.MeioDePagamento != null ? e.MeioDePagamento.Nome : null,
+            MembroOuFornecedor = e.Membro != null ? e.Membro.NomeCompleto : null,
+            Observacoes = e.Observacoes
+        })
+        .ToListAsync();
 
-                viewModel.FechamentosDisponiveis = fechamentosComDetalhes
-             .Select(f => new FechamentoCongregacaoDisponivel
-             {
-                 Id = f.Id,
-                 NomeCongregacao = f.CentroCusto.Nome,
-                 DataInicio = f.DataInicio,
-                 DataFim = f.DataFim,
-                 TotalEntradas = f.TotalEntradas,
-                 TotalSaidas = f.TotalSaidas,
-                 BalancoFisico = f.BalancoFisico,
-                 BalancoDigital = f.BalancoDigital,
-                 DataAprovacao = f.DataAprovacao.Value,
-                 Selecionado = true, // Por padrão, todos selecionados
-
-                 // ✅ NOVO: Carregar detalhes de entradas e saídas
-                 DetalhesEntradas = f.DetalhesFechamento
-              .Where(d => d.TipoMovimento == "Entrada")
-                .OrderByDescending(d => d.Data)
-            .Select(d => new DetalhePrestacaoContas
-            {
-                Data = d.Data,
-                Descricao = d.Descricao ?? "",
-                Valor = d.Valor,
-                PlanoContas = d.PlanoContas,
-                MeioPagamento = d.MeioPagamento,
-                MembroOuFornecedor = d.Membro,
-                Observacoes = d.Observacoes
-            })
-              .ToList(),
-
-                 DetalhesSaidas = f.DetalhesFechamento
-            .Where(d => d.TipoMovimento == "Saida")
-          .OrderByDescending(d => d.Data)
-          .Select(d => new DetalhePrestacaoContas
-          {
-              Data = d.Data,
-              Descricao = d.Descricao ?? "",
-              Valor = d.Valor,
-              PlanoContas = d.PlanoContas,
-              MeioPagamento = d.MeioPagamento,
-              MembroOuFornecedor = d.Fornecedor,
-              Observacoes = d.Observacoes
-          })
-            .ToList()
-             })
-                    .ToList();
-
-                // ✅ NOVO: Carregar lançamentos da SEDE que serão incluídos
-                viewModel.LancamentosSedeEntradas = await _context.Entradas
-                .Include(e => e.PlanoDeContas)
-             .Include(e => e.MeioDePagamento)
-              .Include(e => e.Membro)
-              .Where(e => e.CentroCustoId == centroCusto.Id &&
-                      e.Data >= viewModel.DataInicio &&
-             e.Data <= viewModel.DataFim &&
-           !e.IncluidaEmFechamento)
-                    .OrderByDescending(e => e.Data)
-                   .Select(e => new DetalhePrestacaoContas
-                   {
-                       Data = e.Data,
-                       Descricao = e.Descricao ?? "",
-                       Valor = e.Valor,
-                       PlanoContas = e.PlanoDeContas != null ? e.PlanoDeContas.Nome : null,
-                       MeioPagamento = e.MeioDePagamento != null ? e.MeioDePagamento.Nome : null,
-                       MembroOuFornecedor = e.Membro != null ? e.Membro.NomeCompleto : null,
-                       Observacoes = e.Observacoes
-                   })
-                  .ToListAsync();
-
-                viewModel.LancamentosSedeSaidas = await _context.Saidas
-                      .Include(s => s.PlanoDeContas)
-                  .Include(s => s.MeioDePagamento)
-                 .Include(s => s.Fornecedor)
-                  .Where(s => s.CentroCustoId == centroCusto.Id &&
-                         s.Data >= viewModel.DataInicio &&
-                      s.Data <= viewModel.DataFim &&
+    // Carregar saídas não incluídas em fechamentos aprovados
+    viewModel.LancamentosSedeSaidas = await _context.Saidas
+        .Include(s => s.PlanoDeContas)
+        .Include(s => s.MeioDePagamento)
+        .Include(s => s.Fornecedor)
+        .Where(s => s.CentroCustoId == centroCusto.Id &&
+                    s.Data >= viewModel.DataInicio &&
+                    s.Data <= viewModel.DataFim &&
                     !s.IncluidaEmFechamento)
-                   .OrderByDescending(s => s.Data)
-                .Select(s => new DetalhePrestacaoContas
-                {
-                    Data = s.Data,
-                    Descricao = s.Descricao ?? "",
-                    Valor = s.Valor,
-                    PlanoContas = s.PlanoDeContas != null ? s.PlanoDeContas.Nome : null,
-                    MeioPagamento = s.MeioDePagamento != null ? s.MeioDePagamento.Nome : null,
-                    MembroOuFornecedor = s.Fornecedor != null ? s.Fornecedor.Nome : null,
-                    Observacoes = s.Observacoes
-                })
-                   .ToListAsync();
-            }
+        .OrderByDescending(s => s.Data)
+        .Select(s => new DetalhePrestacaoContas
+        {
+            Data = s.Data,
+            Descricao = s.Descricao ?? "",
+            Valor = s.Valor,
+            PlanoContas = s.PlanoDeContas != null ? s.PlanoDeContas.Nome : null,
+            MeioPagamento = s.MeioDePagamento != null ? s.MeioDePagamento.Nome : null,
+            MembroOuFornecedor = s.Fornecedor != null ? s.Fornecedor.Nome : null,
+            Observacoes = s.Observacoes
+        })
+        .ToListAsync();
 
-            return View(viewModel);
-        }
+    // Se for SEDE, buscar fechamentos de congregações disponíveis
+    if (viewModel.EhSede)
+    {
+        var fechamentosComDetalhes = await _context.FechamentosPeriodo
+            .Include(f => f.CentroCusto)
+            .Include(f => f.DetalhesFechamento)
+            .Where(f => f.CentroCusto.Tipo == TipoCentroCusto.Congregacao &&
+                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        f.FoiProcessadoPelaSede == false)
+            .OrderByDescending(f => f.DataAprovacao)
+            .ToListAsync();
+
+        viewModel.FechamentosDisponiveis = fechamentosComDetalhes
+            .Select(f => new FechamentoCongregacaoDisponivel
+            {
+                Id = f.Id,
+                NomeCongregacao = f.CentroCusto.Nome,
+                DataInicio = f.DataInicio,
+                DataFim = f.DataFim,
+                TotalEntradas = f.TotalEntradas,
+                TotalSaidas = f.TotalSaidas,
+                BalancoFisico = f.BalancoFisico,
+                BalancoDigital = f.BalancoDigital,
+                DataAprovacao = f.DataAprovacao.HasValue ? f.DataAprovacao.Value : DateTime.Now,
+                Selecionado = true,
+
+                // Carregar detalhes de entradas e saídas das congregações
+                DetalhesEntradas = f.DetalhesFechamento
+                    .Where(d => d.TipoMovimento == "Entrada")
+                    .OrderByDescending(d => d.Data)
+                    .Select(d => new DetalhePrestacaoContas
+                    {
+                        Data = d.Data,
+                        Descricao = d.Descricao ?? "",
+                        Valor = d.Valor,
+                        PlanoContas = d.PlanoContas,
+                        MeioPagamento = d.MeioPagamento,
+                        MembroOuFornecedor = d.Membro,
+                        Observacoes = d.Observacoes
+                    })
+                    .ToList(),
+
+                DetalhesSaidas = f.DetalhesFechamento
+                    .Where(d => d.TipoMovimento == "Saida")
+                    .OrderByDescending(d => d.Data)
+                    .Select(d => new DetalhePrestacaoContas
+                    {
+                        Data = d.Data,
+                        Descricao = d.Descricao ?? "",
+                        Valor = d.Valor,
+                        PlanoContas = d.PlanoContas,
+                        MeioPagamento = d.MeioPagamento,
+                        MembroOuFornecedor = d.Fornecedor,
+                        Observacoes = d.Observacoes
+                    })
+                    .ToList()
+            })
+            .ToList();
+    }
+
+    return View(viewModel);
+}
 
         // POST: FechamentoPeriodo/Create
         [HttpPost]
@@ -1686,7 +1689,7 @@ var mensagemSucesso = viewModel.EhSede && fechamentosCongregacoes.Any()
         {
             if (fechamento.TipoFechamento == TipoFechamento.Diario)
                 return fechamento.DataInicio.ToString("dd/MM/yyyy");
-            if (fechamento.TipoFechamento == TipoFechamento.Semanal)
+            if ( fechamento.TipoFechamento == TipoFechamento.Semanal)
                 return $"Semana de {fechamento.DataInicio:dd/MM/yyyy} a {fechamento.DataFim:dd/MM/yyyy}";
             if (fechamento.TipoFechamento == TipoFechamento.Mensal)
                 return $"{fechamento.Mes:00}/{fechamento.Ano}";

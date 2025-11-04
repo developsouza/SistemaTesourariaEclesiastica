@@ -30,7 +30,7 @@ namespace SistemaTesourariaEclesiastica.Attributes
         public const string AdminOnly = Administrador;
         public const string Tesoureiros = Administrador + "," + TesoureiroGeral + "," + TesoureiroLocal;
         public const string TesoureiroGeralEAdmin = Administrador + "," + TesoureiroGeral;
-        public const string TodosComAcessoRelatorios = Administrador + "," + TesoureiroGeral + "," + TesoureiroLocal + "," + Pastor;
+        public const string TodosComAcessoRelatorios = Administrador + "," + TesoureiroGeral + "," + Pastor;
         public const string OperacoesFinanceiras = Administrador + "," + TesoureiroGeral + "," + TesoureiroLocal;
         public const string AprovacaoPrestacoes = Administrador + "," + TesoureiroGeral;
 

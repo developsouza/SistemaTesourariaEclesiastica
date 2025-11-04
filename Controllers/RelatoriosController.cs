@@ -15,7 +15,7 @@ using SistemaTesourariaEclesiastica.ViewModels;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Administrador,TesoureiroGeral,Pastor")]
     public class RelatoriosController : Controller
     {
         private readonly ApplicationDbContext _context;

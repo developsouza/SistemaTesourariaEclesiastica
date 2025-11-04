@@ -352,9 +352,15 @@ UserManager<ApplicationUser> userManager,
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GerarPagamentosConfirmed(int id, int meses)
         {
+            if (meses <= 0 || meses > 24)
+            {
+                TempData["ErrorMessage"] = "O número de meses deve estar entre 1 e 24.";
+                return RedirectToAction(nameof(GerarPagamentos), new { id });
+            }
+
             var despesa = await _context.DespesasRecorrentes
-            .Include(d => d.Pagamentos)
-            .FirstOrDefaultAsync(d => d.Id == id);
+           .Include(d => d.Pagamentos)
+             .FirstOrDefaultAsync(d => d.Id == id);
 
             if (despesa == null)
             {
@@ -366,18 +372,48 @@ UserManager<ApplicationUser> userManager,
                 return Forbid();
             }
 
-            var dataInicio = despesa.DataInicio ?? DateTime.Today;
-            var pagamentosGerados = 0;
-
-            for (int i = 0; i < meses; i++)
+            if (!despesa.Ativa)
             {
-                DateTime dataVencimento = CalcularProximoVencimento(despesa, dataInicio, i);
+                TempData["ErrorMessage"] = "Não é possível gerar pagamentos para uma despesa inativa.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
 
-                // Verificar se já existe pagamento para esta data
+            // Determinar a data base para gerar os novos pagamentos
+            DateTime dataBase;
+            int indiceInicial = 0;
+
+            if (despesa.Pagamentos.Any())
+            {
+                // Se já existem pagamentos, buscar o último vencimento e calcular o próximo
+                var ultimoPagamento = despesa.Pagamentos.OrderByDescending(p => p.DataVencimento).First();
+                dataBase = ultimoPagamento.DataVencimento;
+
+                // Começar do próximo período após o último pagamento
+                indiceInicial = 1;
+            }
+            else
+            {
+                // Se não existem pagamentos, começar da data de início
+                dataBase = despesa.DataInicio ?? DateTime.Today;
+            }
+
+            var pagamentosGerados = 0;
+            var pagamentosJaExistentes = 0;
+            var pagamentosNovos = new List<PagamentoDespesaRecorrente>();
+
+            for (int i = indiceInicial; i < meses + indiceInicial; i++)
+            {
+                DateTime dataVencimento = CalcularProximoVencimento(despesa, dataBase, i);
+
+                // Verificar se está dentro do período de término (se especificado)
+                if (despesa.DataTermino.HasValue && dataVencimento > despesa.DataTermino.Value)
+                {
+                    break; // Não gerar pagamentos além da data de término
+                }
+
+                // Verificar se já existe pagamento para esta data exata
                 var jaExiste = despesa.Pagamentos.Any(p =>
-                  p.DataVencimento.Year == dataVencimento.Year &&
-                p.DataVencimento.Month == dataVencimento.Month &&
-                    p.DataVencimento.Day == dataVencimento.Day);
+                    p.DataVencimento.Date == dataVencimento.Date);
 
                 if (!jaExiste)
                 {
@@ -390,21 +426,43 @@ UserManager<ApplicationUser> userManager,
                         DataRegistro = DateTime.Now
                     };
 
-                    _context.PagamentosDespesasRecorrentes.Add(pagamento);
+                    pagamentosNovos.Add(pagamento);
                     pagamentosGerados++;
+                }
+                else
+                {
+                    pagamentosJaExistentes++;
                 }
             }
 
-            await _context.SaveChangesAsync();
+            // Adicionar todos os pagamentos de uma vez
+            if (pagamentosNovos.Any())
+            {
+                await _context.PagamentosDespesasRecorrentes.AddRangeAsync(pagamentosNovos);
+                await _context.SaveChangesAsync();
+            }
 
             var user = await _userManager.GetUserAsync(User);
             if (user != null)
             {
                 await _auditService.LogAuditAsync(user.Id, "Gerar Pagamentos", "DespesaRecorrente",
-                   despesa.Id.ToString(), $"{pagamentosGerados} pagamentos gerados para '{despesa.Nome}'.");
+              despesa.Id.ToString(),
+                  $"{pagamentosGerados} pagamentos gerados para '{despesa.Nome}'. {pagamentosJaExistentes} já existentes.");
             }
 
-            TempData["SuccessMessage"] = $"{pagamentosGerados} pagamento(s) gerado(s) com sucesso!";
+            if (pagamentosGerados > 0)
+            {
+                TempData["SuccessMessage"] = $"{pagamentosGerados} pagamento(s) gerado(s) com sucesso!";
+                if (pagamentosJaExistentes > 0)
+                {
+                    TempData["InfoMessage"] = $"{pagamentosJaExistentes} pagamento(s) já existia(m) e foram ignorados.";
+                }
+            }
+            else
+            {
+                TempData["InfoMessage"] = "Nenhum pagamento novo foi gerado. Todos os pagamentos já existem.";
+            }
+
             return RedirectToAction(nameof(Pagamentos), new { id = despesa.Id });
         }
 
@@ -452,11 +510,14 @@ UserManager<ApplicationUser> userManager,
         // POST: DespesasRecorrentes/MarcarPago
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarcarPago(int pagamentoId, decimal? valorPago)
+        public async Task<IActionResult> MarcarPago(int pagamentoId, [FromForm] string? valorPago)
         {
             var pagamento = await _context.PagamentosDespesasRecorrentes
             .Include(p => p.DespesaRecorrente)
-                .FirstOrDefaultAsync(p => p.Id == pagamentoId);
+                .ThenInclude(d => d.PlanoDeContas)
+                    .Include(p => p.DespesaRecorrente.MeioDePagamento)
+                   .Include(p => p.DespesaRecorrente.Fornecedor)
+                         .FirstOrDefaultAsync(p => p.Id == pagamentoId);
 
             if (pagamento == null)
             {
@@ -468,20 +529,99 @@ UserManager<ApplicationUser> userManager,
                 return Forbid();
             }
 
+            if (pagamento.Pago)
+            {
+                TempData["InfoMessage"] = "Este pagamento já está marcado como pago.";
+                return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });
+            }
+
+            if (pagamento.SaidaGerada)
+            {
+                TempData["ErrorMessage"] = "Não é possível marcar como pago um pagamento que já gerou uma saída. Use a função 'Gerar Saída' ou desmarque a saída primeiro.";
+                return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });
+            }
+
+            // Converter o valor pago usando cultura invariante (ponto como separador decimal)
+            decimal valorFinal;
+            if (!string.IsNullOrWhiteSpace(valorPago))
+            {
+                // Tentar converter usando cultura invariante (formato americano com ponto)
+                if (!decimal.TryParse(valorPago, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out valorFinal))
+                {
+                    TempData["ErrorMessage"] = $"Valor inválido: '{valorPago}'. Use o formato 100.00";
+                    return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });
+                }
+            }
+            else
+            {
+                valorFinal = pagamento.ValorPrevisto;
+            }
+
+            if (valorFinal <= 0)
+            {
+                TempData["ErrorMessage"] = "O valor pago deve ser maior que zero.";
+                return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Forbid();
+            }
+
+            var despesa = pagamento.DespesaRecorrente;
+
+            // Validar se há meio de pagamento configurado
+            if (!despesa.MeioDePagamentoId.HasValue)
+            {
+                TempData["ErrorMessage"] = "A despesa recorrente não possui meio de pagamento configurado. Configure antes de marcar como pago.";
+                return RedirectToAction(nameof(Edit), new { id = despesa.Id });
+            }
+
+            // Verificar se o meio de pagamento está ativo
+            var meioPagamento = await _context.MeiosDePagamento.FindAsync(despesa.MeioDePagamentoId.Value);
+            if (meioPagamento == null || !meioPagamento.Ativo)
+            {
+                TempData["ErrorMessage"] = "O meio de pagamento configurado está inativo. Atualize a despesa recorrente.";
+                return RedirectToAction(nameof(Edit), new { id = despesa.Id });
+            }
+
+            // Usar a data atual como data de pagamento
+            var dataPagamento = DateTime.Now;
+
+            // Criar a saída automaticamente
+            var saida = new Saida
+            {
+                Data = dataPagamento,
+                Valor = valorFinal,
+                Descricao = $"{despesa.Nome} - {pagamento.DataVencimento:MM/yyyy}",
+                MeioDePagamentoId = despesa.MeioDePagamentoId.Value,
+                CentroCustoId = despesa.CentroCustoId,
+                PlanoDeContasId = despesa.PlanoDeContasId,
+                FornecedorId = despesa.FornecedorId,
+                TipoDespesa = TipoDespesa.Fixa,
+                DataVencimento = pagamento.DataVencimento,
+                Observacoes = $"Gerada automaticamente a partir da despesa recorrente: {despesa.Nome}",
+                UsuarioId = user.Id,
+                DataCriacao = DateTime.Now
+            };
+
+            _context.Saidas.Add(saida);
+            await _context.SaveChangesAsync();
+
+            // Atualizar o pagamento
             pagamento.Pago = true;
-            pagamento.DataPagamento = DateTime.Now;
-            pagamento.ValorPago = valorPago ?? pagamento.ValorPrevisto;
+            pagamento.DataPagamento = dataPagamento;
+            pagamento.ValorPago = valorFinal;
+            pagamento.SaidaGerada = true;
+            pagamento.SaidaId = saida.Id;
 
             await _context.SaveChangesAsync();
 
-            var user = await _userManager.GetUserAsync(User);
-            if (user != null)
-            {
-                await _auditService.LogAuditAsync(user.Id, "Marcar Pago", "PagamentoDespesaRecorrente",
-                   pagamento.Id.ToString(), $"Pagamento de {pagamento.ValorPago:C2} marcado como pago.");
-            }
+            await _auditService.LogAuditAsync(user.Id, "Marcar Pago", "PagamentoDespesaRecorrente",
+              pagamento.Id.ToString(), $"Pagamento de {pagamento.ValorPago:C2} marcado como pago em {pagamento.DataPagamento:dd/MM/yyyy} e saída #{saida.Id} gerada automaticamente.");
 
-            TempData["SuccessMessage"] = "Pagamento marcado como pago com sucesso!";
+            TempData["SuccessMessage"] = $"Pagamento marcado como pago e saída de {saida.Valor:C2} gerada automaticamente!";
             return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });
         }
 
@@ -491,33 +631,62 @@ UserManager<ApplicationUser> userManager,
         public async Task<IActionResult> DesmarcarPago(int pagamentoId)
         {
             var pagamento = await _context.PagamentosDespesasRecorrentes
-               .Include(p => p.DespesaRecorrente)
-           .FirstOrDefaultAsync(p => p.Id == pagamentoId);
+          .Include(p => p.DespesaRecorrente)
+        .Include(p => p.Saida)
+      .FirstOrDefaultAsync(p => p.Id == pagamentoId);
 
-            if (pagamento == null)
+   if (pagamento == null)
             {
-                return NotFound();
+         return NotFound();
+   }
+
+          if (!await CanAccessDespesa(pagamento.DespesaRecorrente))
+      {
+    return Forbid();
             }
 
-            if (!await CanAccessDespesa(pagamento.DespesaRecorrente))
+        if (!pagamento.Pago)
             {
-                return Forbid();
+      TempData["InfoMessage"] = "Este pagamento já está desmarcado.";
+         return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });
             }
 
-            pagamento.Pago = false;
-            pagamento.DataPagamento = null;
-            pagamento.ValorPago = null;
-
-            await _context.SaveChangesAsync();
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user != null)
+            // Se há saída gerada, excluí-la automaticamente
+            if (pagamento.SaidaGerada && pagamento.SaidaId.HasValue)
             {
-                await _auditService.LogAuditAsync(user.Id, "Desmarcar Pago", "PagamentoDespesaRecorrente",
-              pagamento.Id.ToString(), "Pagamento desmarcado.");
+      var saida = await _context.Saidas.FindAsync(pagamento.SaidaId.Value);
+if (saida != null)
+              {
+        // Excluir a saída
+       _context.Saidas.Remove(saida);
+
+   // Registrar auditoria da exclusão da saída
+      var user = await _userManager.GetUserAsync(User);
+   if (user != null)
+     {
+      await _auditService.LogAuditAsync(user.Id, "Excluir Saída (Desmarcar Pago)", "Saida",
+           saida.Id.ToString(), $"Saída de {saida.Valor:C2} excluída automaticamente ao desmarcar pagamento #{pagamentoId}.");
+}
+      }
             }
 
-            TempData["SuccessMessage"] = "Pagamento desmarcado com sucesso!";
+       // Desmarcar o pagamento
+     pagamento.Pago = false;
+ pagamento.DataPagamento = null;
+     pagamento.ValorPago = null;
+            pagamento.SaidaGerada = false;
+            pagamento.SaidaId = null;
+
+   await _context.SaveChangesAsync();
+
+var userAudit = await _userManager.GetUserAsync(User);
+    if (userAudit != null)
+          {
+  await _auditService.LogAuditAsync(userAudit.Id, "Desmarcar Pago", "PagamentoDespesaRecorrente",
+          pagamento.Id.ToString(), "Pagamento desmarcado como não pago e saída automaticamente excluída.");
+         }
+
+            TempData["SuccessMessage"] = "Pagamento desmarcado com sucesso! A saída vinculada foi excluída automaticamente.";
             return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });
         }
 
@@ -527,11 +696,11 @@ UserManager<ApplicationUser> userManager,
         public async Task<IActionResult> GerarSaida(int pagamentoId)
         {
             var pagamento = await _context.PagamentosDespesasRecorrentes
-            .Include(p => p.DespesaRecorrente)
-            .ThenInclude(d => d.PlanoDeContas)
-              .Include(p => p.DespesaRecorrente.MeioDePagamento)
-              .Include(p => p.DespesaRecorrente.Fornecedor)
-            .FirstOrDefaultAsync(p => p.Id == pagamentoId);
+        .Include(p => p.DespesaRecorrente)
+          .ThenInclude(d => d.PlanoDeContas)
+      .Include(p => p.DespesaRecorrente.MeioDePagamento)
+            .Include(p => p.DespesaRecorrente.Fornecedor)
+      .FirstOrDefaultAsync(p => p.Id == pagamentoId);
 
             if (pagamento == null)
             {
@@ -557,12 +726,31 @@ UserManager<ApplicationUser> userManager,
 
             var despesa = pagamento.DespesaRecorrente;
 
+            // Validar se há meio de pagamento configurado
+            if (!despesa.MeioDePagamentoId.HasValue)
+            {
+                TempData["ErrorMessage"] = "A despesa recorrente não possui meio de pagamento configurado. Configure antes de gerar a saída.";
+                return RedirectToAction(nameof(Edit), new { id = despesa.Id });
+            }
+
+            // Verificar se o meio de pagamento está ativo
+            var meioPagamento = await _context.MeiosDePagamento.FindAsync(despesa.MeioDePagamentoId.Value);
+            if (meioPagamento == null || !meioPagamento.Ativo)
+            {
+                TempData["ErrorMessage"] = "O meio de pagamento configurado está inativo. Atualize a despesa recorrente.";
+                return RedirectToAction(nameof(Edit), new { id = despesa.Id });
+            }
+
+            // Usar a data de pagamento se já foi pago, senão usar hoje
+            var dataSaida = pagamento.DataPagamento ?? DateTime.Now;
+            var valorSaida = pagamento.ValorPago ?? pagamento.ValorPrevisto;
+
             var saida = new Saida
             {
-                Data = pagamento.DataPagamento ?? DateTime.Now,
-                Valor = pagamento.ValorPago ?? pagamento.ValorPrevisto,
+                Data = dataSaida,
+                Valor = valorSaida,
                 Descricao = $"{despesa.Nome} - {pagamento.DataVencimento:MM/yyyy}",
-                MeioDePagamentoId = despesa.MeioDePagamentoId ?? 0,
+                MeioDePagamentoId = despesa.MeioDePagamentoId.Value,
                 CentroCustoId = despesa.CentroCustoId,
                 PlanoDeContasId = despesa.PlanoDeContasId,
                 FornecedorId = despesa.FornecedorId,
@@ -576,16 +764,17 @@ UserManager<ApplicationUser> userManager,
             _context.Saidas.Add(saida);
             await _context.SaveChangesAsync();
 
+            // Atualizar o pagamento
             pagamento.SaidaGerada = true;
             pagamento.SaidaId = saida.Id;
             pagamento.Pago = true;
-            pagamento.DataPagamento = saida.Data;
-            pagamento.ValorPago = saida.Valor;
+            pagamento.DataPagamento = dataSaida;
+            pagamento.ValorPago = valorSaida;
 
             await _context.SaveChangesAsync();
 
             await _auditService.LogAuditAsync(user.Id, "Gerar Saída", "PagamentoDespesaRecorrente",
-            pagamento.Id.ToString(), $"Saída #{saida.Id} gerada automaticamente.");
+       pagamento.Id.ToString(), $"Saída #{saida.Id} gerada automaticamente no valor de {saida.Valor:C2}.");
 
             TempData["SuccessMessage"] = $"Saída de {saida.Valor:C2} gerada com sucesso!";
             return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });
@@ -646,44 +835,162 @@ UserManager<ApplicationUser> userManager,
 
         private DateTime CalcularProximoVencimento(DespesaRecorrente despesa, DateTime dataBase, int indice)
         {
-            var dataVencimento = dataBase;
+            DateTime dataVencimento;
 
-            switch (despesa.Periodicidade)
-            {
-                case Periodicidade.Semanal:
-                    dataVencimento = dataBase.AddDays(7 * indice);
-                    break;
-                case Periodicidade.Quinzenal:
-                    dataVencimento = dataBase.AddDays(15 * indice);
-                    break;
-                case Periodicidade.Mensal:
-                    dataVencimento = dataBase.AddMonths(indice);
-                    break;
-                case Periodicidade.Bimestral:
-                    dataVencimento = dataBase.AddMonths(2 * indice);
-                    break;
-                case Periodicidade.Trimestral:
-                    dataVencimento = dataBase.AddMonths(3 * indice);
-                    break;
-                case Periodicidade.Semestral:
-                    dataVencimento = dataBase.AddMonths(6 * indice);
-                    break;
-                case Periodicidade.Anual:
-                    dataVencimento = dataBase.AddYears(indice);
-                    break;
-            }
-
-            // Ajustar dia de vencimento se especificado
+            // Se há dia de vencimento especificado, usar ele como referência
             if (despesa.DiaVencimento.HasValue)
             {
-                var diasNoMes = DateTime.DaysInMonth(dataVencimento.Year, dataVencimento.Month);
-                var dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
-                dataVencimento = new DateTime(dataVencimento.Year, dataVencimento.Month, dia);
+                // Começar do mês da data base
+                int mes = dataBase.Month;
+                int ano = dataBase.Year;
+                int dia = despesa.DiaVencimento.Value;
+
+                switch (despesa.Periodicidade)
+                {
+                    case Periodicidade.Semanal:
+                        // Para semanal, ignorar DiaVencimento e usar apenas incremento de dias
+                        dataVencimento = dataBase.AddDays(7 * indice);
+                        break;
+
+                    case Periodicidade.Quinzenal:
+                        // Para quinzenal, ignorar DiaVencimento e usar apenas incremento de dias
+                        dataVencimento = dataBase.AddDays(15 * indice);
+                        break;
+
+                    case Periodicidade.Mensal:
+                        // Adicionar meses e ajustar o dia
+                        mes = dataBase.Month + indice;
+                        ano = dataBase.Year;
+
+                        // Ajustar ano se necessário
+                        while (mes > 12)
+                        {
+                            mes -= 12;
+                            ano++;
+                        }
+
+                        // Ajustar dia para o máximo de dias do mês
+                        int diasNoMes = DateTime.DaysInMonth(ano, mes);
+                        dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
+
+                        dataVencimento = new DateTime(ano, mes, dia);
+                        break;
+
+                    case Periodicidade.Bimestral:
+                        // Adicionar 2 meses por iteração
+                        mes = dataBase.Month + (indice * 2);
+                        ano = dataBase.Year;
+
+                        while (mes > 12)
+                        {
+                            mes -= 12;
+                            ano++;
+                        }
+
+                        diasNoMes = DateTime.DaysInMonth(ano, mes);
+                        dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
+
+                        dataVencimento = new DateTime(ano, mes, dia);
+                        break;
+
+                    case Periodicidade.Trimestral:
+                        // Adicionar 3 meses por iteração
+                        mes = dataBase.Month + (indice * 3);
+                        ano = dataBase.Year;
+
+                        while (mes > 12)
+                        {
+                            mes -= 12;
+                            ano++;
+                        }
+
+                        diasNoMes = DateTime.DaysInMonth(ano, mes);
+                        dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
+
+                        dataVencimento = new DateTime(ano, mes, dia);
+                        break;
+
+                    case Periodicidade.Semestral:
+                        // Adicionar 6 meses por iteração
+                        mes = dataBase.Month + (indice * 6);
+                        ano = dataBase.Year;
+
+                        while (mes > 12)
+                        {
+                            mes -= 12;
+                            ano++;
+                        }
+
+                        diasNoMes = DateTime.DaysInMonth(ano, mes);
+                        dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
+
+                        dataVencimento = new DateTime(ano, mes, dia);
+                        break;
+
+                    case Periodicidade.Anual:
+                        ano = dataBase.Year + indice;
+                        mes = dataBase.Month;
+
+                        // Para anual, verificar se é 29 de fevereiro em ano não bissexto
+                        if (mes == 2 && despesa.DiaVencimento.Value == 29 && !DateTime.IsLeapYear(ano))
+                        {
+                            dia = 28;
+                        }
+                        else
+                        {
+                            diasNoMes = DateTime.DaysInMonth(ano, mes);
+                            dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
+                        }
+
+                        dataVencimento = new DateTime(ano, mes, dia);
+                        break;
+
+                    default:
+                        dataVencimento = dataBase.AddMonths(indice);
+                        break;
+                }
+            }
+            else
+            {
+                // Se não há dia de vencimento especificado, usar incremento simples
+                switch (despesa.Periodicidade)
+                {
+                    case Periodicidade.Semanal:
+                        dataVencimento = dataBase.AddDays(7 * indice);
+                        break;
+
+                    case Periodicidade.Quinzenal:
+                        dataVencimento = dataBase.AddDays(15 * indice);
+                        break;
+
+                    case Periodicidade.Mensal:
+                        dataVencimento = dataBase.AddMonths(indice);
+                        break;
+
+                    case Periodicidade.Bimestral:
+                        dataVencimento = dataBase.AddMonths(2 * indice);
+                        break;
+
+                    case Periodicidade.Trimestral:
+                        dataVencimento = dataBase.AddMonths(3 * indice);
+                        break;
+
+                    case Periodicidade.Semestral:
+                        dataVencimento = dataBase.AddMonths(6 * indice);
+                        break;
+
+                    case Periodicidade.Anual:
+                        dataVencimento = dataBase.AddYears(indice);
+                        break;
+
+                    default:
+                        dataVencimento = dataBase.AddMonths(indice);
+                        break;
+                }
             }
 
             return dataVencimento;
         }
-
         #endregion
     }
 }

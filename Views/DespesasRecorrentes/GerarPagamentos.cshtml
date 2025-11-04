@@ -2,6 +2,9 @@
     ViewData["Title"] = "Gerar Pagamentos";
     var despesa = ViewBag.Despesa as SistemaTesourariaEclesiastica.Models.DespesaRecorrente;
     var mesesGerar = ViewBag.MesesGerar ?? 3;
+    var ultimoPagamento = despesa?.Pagamentos?.OrderByDescending(p => p.DataVencimento).FirstOrDefault();
+    var dataBase = ultimoPagamento != null ? ultimoPagamento.DataVencimento : (despesa?.DataInicio ?? DateTime.Today);
+    var temPagamentos = despesa?.Pagamentos?.Any() ?? false;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -31,11 +34,23 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@despesa?.Id" />
 
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>Informação:</strong> Os pagamentos serão gerados a partir de <strong>@(despesa?.DataInicio?.ToString("dd/MM/yyyy") ?? DateTime.Today.ToString("dd/MM/yyyy"))</strong>
-                        conforme a periodicidade <strong>@Html.DisplayFor(model => despesa.Periodicidade)</strong>.
-                    </div>
+                    @if (temPagamentos)
+                    {
+                        <div class="alert alert-success">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Próximos pagamentos:</strong> Serão gerados a partir de <strong>@dataBase.AddDays(1).ToString("dd/MM/yyyy")</strong>
+                            (após o último vencimento: @dataBase.ToString("dd/MM/yyyy"))
+                            conforme a periodicidade <strong>@Html.DisplayFor(model => despesa.Periodicidade)</strong>.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Primeira geração:</strong> Os pagamentos serão gerados a partir de <strong>@dataBase.ToString("dd/MM/yyyy")</strong>
+                            conforme a periodicidade <strong>@Html.DisplayFor(model => despesa.Periodicidade)</strong>.
+                        </div>
+                    }
 
                     <div class="mb-4">
                         <label for="meses" class="form-label fw-semibold">
@@ -72,12 +87,17 @@
                             <li><i class="bi bi-check-circle text-success me-2"></i>Valor Padrão: <strong>@despesa?.ValorPadrao.ToString("C2")</strong></li>
                             <li><i class="bi bi-check-circle text-success me-2"></i>Periodicidade: <strong>@Html.DisplayFor(model => despesa.Periodicidade)</strong></li>
                             <li><i class="bi bi-check-circle text-success me-2"></i>Dia Vencimento: <strong>@(despesa?.DiaVencimento?.ToString() ?? "Conforme data inicial")</strong></li>
+                            @if (temPagamentos)
+                            {
+                                <li><i class="bi bi-check-circle text-success me-2"></i>Pagamentos existentes: <strong>@despesa?.Pagamentos?.Count()</strong></li>
+                                <li><i class="bi bi-check-circle text-success me-2"></i>Último vencimento: <strong>@dataBase.ToString("dd/MM/yyyy")</strong></li>
+                            }
                         </ul>
                     </div>
 
                     <div class="alert alert-warning">
                         <i class="bi bi-exclamation-triangle me-2"></i>
-                        <strong>Importante:</strong> Pagamentos duplicados (mesma data) não serão criados novamente.
+                        <strong>Importante:</strong> @(temPagamentos ? "Novos pagamentos serão adicionados após os existentes. " : "")Pagamentos duplicados (mesma data) não serão criados novamente.
                     </div>
 
                     <div class="d-flex justify-content-end gap-2">
@@ -104,21 +124,21 @@
                 <div class="mb-3 pb-3 border-bottom">
                     <p class="small mb-0">
                         <strong>Como funciona?</strong><br>
-                        O sistema irá criar vencimentos futuros de acordo com a periodicidade configurada.
+                        O sistema @(temPagamentos ? "continuará gerando" : "irá criar") vencimentos futuros de acordo com a periodicidade configurada.
                     </p>
                 </div>
 
                 <div class="mb-3 pb-3 border-bottom">
                     <p class="small mb-0">
                         <strong>Exemplos:</strong><br>
-                        • <strong>Semanal:</strong> Todo domingo<br>
+                        • <strong>Semanal:</strong> A cada 7 dias<br>
                         • <strong>Mensal:</strong> Todo dia @(despesa?.DiaVencimento ?? 1) do mês
                     </p>
                 </div>
 
                 <div>
                     <p class="small mb-0">
-                        <strong>Importante:</strong> Você pode gerar mais períodos a qualquer momento.
+                        <strong>Flexibilidade:</strong> Você pode gerar mais períodos a qualquer momento. @(temPagamentos ? "Os novos serão adicionados após os existentes." : "")
                     </p>
                 </div>
             </div>

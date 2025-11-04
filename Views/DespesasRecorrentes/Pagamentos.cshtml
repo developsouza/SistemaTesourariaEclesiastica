@@ -68,7 +68,7 @@
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card bg-success bg-opacity-10 border-success">
+        <div class="card border-success">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
@@ -82,7 +82,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-warning bg-opacity-10 border-warning">
+        <div class="card border-warning">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
@@ -96,7 +96,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-danger bg-opacity-10 border-danger">
+        <div class="card border-danger">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
@@ -109,7 +109,7 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-info bg-opacity-10 border-info">
+        <div class="card border-info">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
@@ -125,7 +125,7 @@
 
 <!-- Lista de Pagamentos -->
 <div class="card shadow-sm">
-    <div class="card-header bg-white py-3">
+    <div class="card-header py-3">
         <h5 class="mb-0 fw-semibold">
             <i class="bi bi-calendar3 me-2"></i>
             Histórico de Pagamentos
@@ -137,7 +137,7 @@
         {
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th class="ps-3">Vencimento</th>
                             <th class="text-end">Valor Previsto</th>
@@ -150,11 +150,21 @@
                     <tbody>
                         @foreach (var item in Model)
                         {
-                            var statusClass = item.Pago ? "table-success" :
-                            (item.DataVencimento < DateTime.Today ? "table-danger" :
-                            (item.DataVencimento == DateTime.Today ? "table-warning" : ""));
+                            var rowClass = "";
+                            if (item.Pago)
+                            {
+                                rowClass = "table-success-subtle";
+                            }
+                            else if (item.DataVencimento < DateTime.Today)
+                            {
+                                rowClass = "table-danger-subtle";
+                            }
+                            else if (item.DataVencimento == DateTime.Today)
+                            {
+                                rowClass = "table-warning-subtle";
+                            }
 
-                            <tr class="@statusClass">
+                            <tr class="@rowClass">
                                 <td class="ps-3">
                                     <div class="fw-semibold">@item.DataVencimento.ToString("dd/MM/yyyy")</div>
                                     @if (item.DiasAtraso.HasValue)
@@ -232,26 +242,6 @@
                                                 data-data-vencimento="@item.DataVencimento.ToString("dd/MM/yyyy")">
                                             <i class="bi bi-check2-circle"></i> Marcar Pago
                                         </button>
-
-                                        <!-- Botão Gerar Saída -->
-                                        if (!item.SaidaGerada)
-                                        {
-                                            <form asp-action="GerarSaida" asp-route-pagamentoId="@item.Id"
-                                                  method="post" class="d-inline">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-sm btn-primary"
-                                                        onclick="return confirm('Deseja gerar uma saída automaticamente para este pagamento?');">
-                                                    <i class="bi bi-arrow-up-circle"></i> Gerar Saída
-                                                </button>
-                                            </form>
-                                        }
-                                        else
-                                        {
-                                            <a asp-controller="Saidas" asp-action="Details" asp-route-id="@item.SaidaId"
-                                               class="btn btn-sm btn-outline-info">
-                                                <i class="bi bi-eye"></i> Ver Saída
-                                            </a>
-                                        }
                                     }
                                     else
                                     {
@@ -309,6 +299,10 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="pagamentoId" name="pagamentoId" />
                 <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Atenção:</strong> Ao confirmar, uma saída será gerada automaticamente no sistema.
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Data de Vencimento</label>
                         <input type="text" id="dataVencimento" class="form-control" readonly />
@@ -318,14 +312,14 @@
                         <input type="text" id="valorPrevisto" class="form-control" readonly />
                     </div>
                     <div class="mb-3">
-                        <label for="valorPago" class="form-label">Valor Pago</label>
+                        <label for="valorPago" class="form-label">Valor Pago <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text">R$</span>
-                            <input type="number" class="form-control" id="valorPago"
-                                   name="valorPago" step="0.01" min="0.01" required />
+                            <input type="text" class="form-control" id="valorPago"
+                                   name="valorPago" required pattern="[0-9]+([,.][0-9]{1,2})?" />
                         </div>
                         <div class="form-text">
-                            Deixe em branco para usar o valor previsto
+                            Valor que foi efetivamente pago
                         </div>
                     </div>
                 </div>
@@ -342,17 +336,83 @@
 
 @section Scripts {
     <script>
-        // Preencher modal com dados do pagamento
+               // Preencher modal com dados do pagamento
                document.getElementById('modalMarcarPago').addEventListener('show.bs.modal', function (event) {
-                   var button = event.relatedTarget;
+        var button = event.relatedTarget;
                    var pagamentoId = button.getAttribute('data-pagamento-id');
-              var valorPrevisto = parseFloat(button.getAttribute('data-valor-previsto'));
+               var valorPrevisto = button.getAttribute('data-valor-previsto');
                    var dataVencimento = button.getAttribute('data-data-vencimento');
 
-                   document.getElementById('pagamentoId').value = pagamentoId;
-            document.getElementById('valorPrevisto').value = 'R$ ' + valorPrevisto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-           document.getElementById('dataVencimento').value = dataVencimento;
-               document.getElementById('valorPago').value = valorPrevisto.toFixed(2);
-           });
+              document.getElementById('pagamentoId').value = pagamentoId;
+          document.getElementById('valorPrevisto').value = 'R$ ' + parseFloat(valorPrevisto).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              document.getElementById('dataVencimento').value = dataVencimento;
+                   // Formatar o valor com vírgula para o padrão brasileiro
+            document.getElementById('valorPago').value = parseFloat(valorPrevisto).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+               });
+
+               // Máscara para o campo de valor
+               document.getElementById('valorPago').addEventListener('input', function(e) {
+            var valor = e.target.value;
+
+                   // Remove tudo exceto números e vírgula
+            valor = valor.replace(/[^\d,]/g, '');
+
+                   // Garante apenas uma vírgula
+          var partes = valor.split(',');
+                   if (partes.length > 2) {
+                 valor = partes[0] + ',' + partes.slice(1).join('');
+              }
+
+                   // Limita a 2 casas decimais após a vírgula
+        if (partes.length === 2 && partes[1].length > 2) {
+                       valor = partes[0] + ',' + partes[1].substring(0, 2);
+         }
+
+           e.target.value = valor;
+          });
+
+               // Validar e formatar o valor ao submeter o formulário
+             document.querySelector('#modalMarcarPago form').addEventListener('submit', function(e) {
+             e.preventDefault(); // Prevenir envio padrão
+
+           var valorInput = document.getElementById('valorPago');
+                   var valorTexto = valorInput.value.trim();
+
+                // Remover pontos de milhar e substituir vírgula por ponto
+                   var valorNumerico = valorTexto.replace(/\./g, '').replace(',', '.');
+
+        // Validar se é um número válido
+          if (!valorNumerico || isNaN(parseFloat(valorNumerico)) || parseFloat(valorNumerico) <= 0) {
+              alert('Por favor, informe um valor válido maior que zero.');
+            valorInput.focus();
+          return false;
+           }
+
+                   console.log('Valor original:', valorTexto);
+           console.log('Valor convertido:', valorNumerico);
+
+             // Remover campo hidden anterior se existir
+                   var hiddenExistente = this.querySelector('input[name="valorPago"][type="hidden"]');
+                   if (hiddenExistente) {
+          hiddenExistente.remove();
+           }
+
+                   // Criar campo hidden com valor no formato correto (sempre com ponto decimal)
+                   var hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+            hiddenInput.name = 'valorPago';
+                   hiddenInput.value = valorNumerico;
+
+                console.log('Valor que será enviado:', hiddenInput.value);
+
+              // Remover o atributo name do campo visível para não enviar duplicado
+            valorInput.removeAttribute('name');
+
+              // Adicionar o campo hidden ao formulário
+                   this.appendChild(hiddenInput);
+
+                   // Enviar o formulário
+            this.submit();
+               });
     </script>
 }

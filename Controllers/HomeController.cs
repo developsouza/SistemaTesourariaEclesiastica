@@ -409,7 +409,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                      Data = e.Data,
                      Valor = e.Valor
                  })
-                   .ToListAsync();
+                   .ToListAsync<object>();
 
                     // ✅ CORRIGIDO: Últimas saídas incluídas em fechamentos aprovados/processados
                     var queryUltimasSaidas = _context.Saidas
@@ -427,17 +427,17 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     }
 
                     var ultimasSaidas = await queryUltimasSaidas
-                     .OrderByDescending(s => s.Data)
-                .Take(5)
-                   .Select(s => new
-                   {
-                       Tipo = "Saída",
-                       Descricao = s.Descricao,
-                       CentroCusto = s.CentroCusto.Nome,
-                       Data = s.Data,
-                       Valor = s.Valor
-                   })
-                  .ToListAsync();
+                    .OrderByDescending(s => s.Data)
+                    .Take(5)
+                    .Select(s => new
+                    {
+                        Tipo = "Saída",
+                        Descricao = s.Descricao,
+                        CentroCusto = s.CentroCusto.Nome,
+                        Data = s.Data,
+                        Valor = s.Valor
+                    })
+                    .ToListAsync<object>();
 
                     // Combinar e ordenar por data
                     ultimasTransacoes = ultimasEntradas
