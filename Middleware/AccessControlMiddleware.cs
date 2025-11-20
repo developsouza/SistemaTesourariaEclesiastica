@@ -17,108 +17,150 @@ namespace SistemaTesourariaEclesiastica.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
+            // ✅ CORREÇÃO CRÍTICA: Aplicar headers de segurança PRIMEIRO
+            // ANTES de qualquer operação que possa iniciar a resposta HTTP
+            try
+            {
+                // Só aplica headers se a resposta ainda não foi iniciada
+                if (!context.Response.HasStarted)
+                {
+                    ApplySecurityHeaders(context);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Erro ao aplicar headers de segurança (não crítico)");
+            }
+
             // Adicionar claims personalizados se o usuário estiver autenticado
-            if (context.User.Identity.IsAuthenticated)
+            if (context.User?.Identity?.IsAuthenticated == true)
             {
-                using var scope = context.RequestServices.CreateScope();
-                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-                var signInManager = scope.ServiceProvider.GetRequiredService<SignInManager<ApplicationUser>>();
-
-                var user = await userManager.GetUserAsync(context.User);
-
-                // ✅ CORREÇÃO: Se usuário não existe ou está inativo, fazer logout forçado
-                if (user == null || !user.Ativo)
+                try
                 {
-                    _logger.LogWarning($"Usuário inativo ou inexistente tentou acessar o sistema: {context.User.Identity.Name}");
+                    using var scope = context.RequestServices.CreateScope();
+                    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                    
+                    var user = await userManager.GetUserAsync(context.User);
 
-                    // Fazer logout forçado
-                    await signInManager.SignOutAsync();
+                    // Se usuário não existe ou está inativo, fazer logout forçado
+                    if (user == null || !user.Ativo)
+                    {
+                        _logger.LogWarning($"Usuário inativo ou inexistente tentou acessar o sistema: {context.User.Identity.Name}");
 
-                    // Redirecionar para login com mensagem
-                    context.Response.Redirect("/Account/Login?message=inactive");
-                    return; // ✅ IMPORTANTE: Retornar aqui sem chamar ApplySecurityHeaders
+                        // ✅ CORREÇÃO: Verificar se a resposta já foi iniciada antes de redirecionar
+                        if (!context.Response.HasStarted)
+                        {
+                            var signInManager = scope.ServiceProvider.GetRequiredService<SignInManager<ApplicationUser>>();
+                            
+                            // Fazer logout forçado
+                            await signInManager.SignOutAsync();
+
+                            // Redirecionar para login com mensagem
+                            context.Response.Redirect("/Account/Login?message=inactive");
+                        }
+                        
+                        return;
+                    }
+
+                    // Adicionar claims adicionais se não existirem
+                    var identity = context.User.Identity as ClaimsIdentity;
+                    
+                    if (identity != null)
+                    {
+                        // ✅ CORREÇÃO: Verificar se o claim já existe antes de adicionar
+                        var centroCustoValue = user.CentroCustoId?.ToString() ?? "";
+                        if (!context.User.HasClaim(c => c.Type == "CentroCustoId" && c.Value == centroCustoValue))
+                        {
+                            identity.AddClaim(new Claim("CentroCustoId", centroCustoValue));
+                        }
+
+                        var nomeCompletoValue = user.NomeCompleto ?? "";
+                        if (!context.User.HasClaim(c => c.Type == "NomeCompleto" && c.Value == nomeCompletoValue))
+                        {
+                            identity.AddClaim(new Claim("NomeCompleto", nomeCompletoValue));
+                        }
+                    }
                 }
-
-                // Adicionar claims adicionais se não existirem
-                var identity = (ClaimsIdentity)context.User.Identity;
-
-                if (!context.User.HasClaim("CentroCustoId", user.CentroCustoId?.ToString() ?? ""))
+                catch (ObjectDisposedException)
                 {
-                    identity.AddClaim(new Claim("CentroCustoId", user.CentroCustoId?.ToString() ?? ""));
+                    // ✅ Tratar caso o HttpContext já tenha sido descartado
+                    _logger.LogDebug("HttpContext já foi descartado durante verificação de usuário");
+                    return;
                 }
-
-                if (!context.User.HasClaim("NomeCompleto", user.NomeCompleto ?? ""))
+                catch (Exception ex)
                 {
-                    identity.AddClaim(new Claim("NomeCompleto", user.NomeCompleto ?? ""));
+                    _logger.LogError(ex, "Erro ao processar controle de acesso do usuário");
+                    // ✅ Continuar o pipeline mesmo com erro no middleware
                 }
             }
 
-            // ✅ CORREÇÃO: Aplicar headers de segurança APENAS antes de chamar _next
-            // e SOMENTE se a resposta ainda não foi iniciada
-            if (!context.Response.HasStarted)
-            {
-                ApplySecurityHeaders(context);
-            }
-
+            // Continuar o pipeline
             await _next(context);
-        }
-
-        private static bool ShouldAuditPath(string path)
-        {
-            if (string.IsNullOrEmpty(path)) return false;
-
-            var auditPaths = new[]
-            {
-                "/entradas",
-                "/saidas",
-                "/fechamentos",
-                "/usuarios",
-                "/auditoria",
-                "/relatorios"
-            };
-
-            return auditPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
         }
 
         private void ApplySecurityHeaders(HttpContext context)
         {
-            var headers = context.Response.Headers;
-            var isDevelopment = context.RequestServices
-                .GetRequiredService<IWebHostEnvironment>()
-                .IsDevelopment();
-
-            headers["X-Content-Type-Options"] = "nosniff";
-            headers["X-XSS-Protection"] = "1; mode=block";
-            headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-
-            // CSP com configuração diferente por ambiente
-            if (isDevelopment)
+            try
             {
-                // CSP mais permissivo para desenvolvimento
-                headers["Content-Security-Policy"] =
-                    "default-src 'self'; " +
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; " +
-                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://fonts.googleapis.com; " +
-                    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
-                    "img-src 'self' data: https: blob:; " +
-                    "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net ws://localhost:* http://localhost:*; " +
-                    "frame-ancestors 'none'; " +
-                    "base-uri 'self'; " +
-                    "form-action 'self';";
+                // ✅ CORREÇÃO: Verificar se a resposta já foi iniciada
+                if (context.Response.HasStarted)
+                {
+                    _logger.LogDebug("Resposta já iniciada, não é possível adicionar headers");
+                    return;
+                }
+
+                var headers = context.Response.Headers;
+                var isDevelopment = context.RequestServices
+                    .GetRequiredService<IWebHostEnvironment>()
+                    .IsDevelopment();
+
+                // ✅ CORREÇÃO: Adicionar headers de forma segura, verificando se já existem
+                if (!headers.ContainsKey("X-Content-Type-Options"))
+                    headers["X-Content-Type-Options"] = "nosniff";
+                
+                if (!headers.ContainsKey("X-XSS-Protection"))
+                    headers["X-XSS-Protection"] = "1; mode=block";
+                
+                if (!headers.ContainsKey("Referrer-Policy"))
+                    headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+
+                // CSP com configuração diferente por ambiente
+                if (!headers.ContainsKey("Content-Security-Policy"))
+                {
+                    if (isDevelopment)
+                    {
+                        // CSP mais permissivo para desenvolvimento
+                        headers["Content-Security-Policy"] =
+                            "default-src 'self'; " +
+                            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; " +
+                            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://fonts.googleapis.com; " +
+                            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
+                            "img-src 'self' data: https: blob:; " +
+                            "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net ws://localhost:* http://localhost:*; " +
+                            "frame-ancestors 'none'; " +
+                            "base-uri 'self'; " +
+                            "form-action 'self';";
+                    }
+                    else
+                    {
+                        // CSP mais restritivo para produção
+                        headers["Content-Security-Policy"] =
+                            "default-src 'self'; " +
+                            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; " +
+                            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://fonts.googleapis.com; " +
+                            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
+                            "img-src 'self' data: https:; " +
+                            "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; " +
+                            "frame-ancestors 'none'; " +
+                            "base-uri 'self'; " +
+                            "form-action 'self';";
+                    }
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // CSP mais restritivo para produção
-                headers["Content-Security-Policy"] =
-                    "default-src 'self'; " +
-                    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; " +
-                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://fonts.googleapis.com; " +
-                    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
-                    "img-src 'self' data: https:; " +
-                    "connect-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; " +
-                    "frame-ancestors 'none'; " +
-                    "base-uri 'self'; " +
-                    "form-action 'self';";
+                // ✅ CORREÇÃO: Log e continuar sem quebrar a aplicação
+                _logger.LogWarning(ex, "Erro ao aplicar headers de segurança (operação não crítica)");
             }
         }
     }

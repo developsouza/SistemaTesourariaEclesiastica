@@ -18,21 +18,28 @@ namespace SistemaTesourariaEclesiastica.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<AuditMiddleware> _logger;
-        private readonly AuditQueueService _auditQueue;
 
         public AuditMiddleware(
             RequestDelegate next, 
-            ILogger<AuditMiddleware> logger,
-            AuditQueueService auditQueue)
+            ILogger<AuditMiddleware> logger)
         {
             _next = next;
             _logger = logger;
-            _auditQueue = auditQueue;
         }
 
         public async Task InvokeAsync(HttpContext context)
         {
-            var shouldAudit = context.User.Identity?.IsAuthenticated == true && ShouldAudit(context);
+            // ✅ CORREÇÃO: Obter AuditQueueService do ServiceProvider de forma segura
+            var auditQueue = context.RequestServices.GetService<AuditQueueService>();
+            
+            if (auditQueue == null)
+            {
+                _logger.LogWarning("AuditQueueService não disponível, pulando auditoria");
+                await _next(context);
+                return;
+            }
+
+            var shouldAudit = context.User?.Identity?.IsAuthenticated == true && ShouldAudit(context);
             
             if (!shouldAudit)
             {
@@ -49,39 +56,58 @@ namespace SistemaTesourariaEclesiastica.Middleware
             var method = context.Request.Method;
             var path = context.Request.Path.Value ?? "";
             var queryParams = CaptureQueryParameters(context);
+            int statusCode = 0;
 
             try
             {
                 // Executar a requisição
                 await _next(context);
 
-                // ✅ SOLUÇÃO: Adicionar à fila SEM acessar HttpContext
+                // ✅ CORREÇÃO: Capturar status code de forma segura
+                try
+                {
+                    statusCode = context.Response.StatusCode;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Não foi possível obter status code da resposta");
+                    statusCode = 0; // Valor padrão se não conseguir obter
+                }
+
+                // ✅ SOLUÇÃO: Adicionar à fila SEM acessar HttpContext de forma insegura
                 if (!string.IsNullOrEmpty(userId))
                 {
-                    var details = JsonSerializer.Serialize(new
+                    try
                     {
-                        Method = method,
-                        Path = path,
-                        QueryParameters = queryParams,
-                        Timestamp = timestamp,
-                        StatusCode = context.Response.StatusCode
-                    }, new JsonSerializerOptions
-                    {
-                        WriteIndented = false,
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    });
+                        var details = JsonSerializer.Serialize(new
+                        {
+                            Method = method,
+                            Path = path,
+                            QueryParameters = queryParams,
+                            Timestamp = timestamp,
+                            StatusCode = statusCode
+                        }, new JsonSerializerOptions
+                        {
+                            WriteIndented = false,
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                        });
 
-                    _auditQueue.EnqueueAudit(new AuditQueueItem
+                        auditQueue.EnqueueAudit(new AuditQueueItem
+                        {
+                            UserId = userId,
+                            Action = $"{method} {actionInfo.Action}",
+                            EntityName = actionInfo.Controller,
+                            EntityId = actionInfo.EntityId ?? "0",
+                            Details = details,
+                            Timestamp = timestamp,
+                            IPAddress = ipAddress,
+                            UserAgent = userAgent
+                        });
+                    }
+                    catch (Exception ex)
                     {
-                        UserId = userId,
-                        Action = $"{method} {actionInfo.Action}",
-                        EntityName = actionInfo.Controller,
-                        EntityId = actionInfo.EntityId ?? "0",
-                        Details = details,
-                        Timestamp = timestamp,
-                        IPAddress = ipAddress,
-                        UserAgent = userAgent
-                    });
+                        _logger.LogWarning(ex, "Erro ao adicionar auditoria na fila (não crítico)");
+                    }
                 }
             }
             catch (Exception ex)
@@ -90,75 +116,90 @@ namespace SistemaTesourariaEclesiastica.Middleware
                     "Erro durante execução da requisição {Method} {Path}. User: {User}", 
                     method, path, context.User?.Identity?.Name ?? "Anonymous");
 
-                // Registrar erro na fila
+                // ✅ CORREÇÃO: Registrar erro na fila de forma segura
                 if (!string.IsNullOrEmpty(userId))
                 {
-                    var errorDetails = JsonSerializer.Serialize(new
+                    try
                     {
-                        Error = ex.Message,
-                        StackTrace = ex.StackTrace?.Substring(0, Math.Min(ex.StackTrace?.Length ?? 0, 500)),
-                        Method = method,
-                        Path = path
-                    });
+                        var errorDetails = JsonSerializer.Serialize(new
+                        {
+                            Error = ex.Message,
+                            StackTrace = ex.StackTrace?.Substring(0, Math.Min(ex.StackTrace?.Length ?? 0, 500)),
+                            Method = method,
+                            Path = path
+                        });
 
-                    _auditQueue.EnqueueAudit(new AuditQueueItem
+                        auditQueue.EnqueueAudit(new AuditQueueItem
+                        {
+                            UserId = userId,
+                            Action = "ERROR",
+                            EntityName = "System",
+                            EntityId = "0",
+                            Details = errorDetails,
+                            Timestamp = timestamp,
+                            IPAddress = ipAddress,
+                            UserAgent = userAgent
+                        });
+                    }
+                    catch (Exception auditEx)
                     {
-                        UserId = userId,
-                        Action = "ERROR",
-                        EntityName = "System",
-                        EntityId = "0",
-                        Details = errorDetails,
-                        Timestamp = timestamp,
-                        IPAddress = ipAddress,
-                        UserAgent = userAgent
-                    });
+                        _logger.LogWarning(auditEx, "Erro ao registrar exceção na auditoria (não crítico)");
+                    }
                 }
 
-                throw;
+                throw; // Re-lançar a exceção original
             }
         }
 
         private static bool ShouldAudit(HttpContext context)
         {
-            var path = context.Request.Path.Value?.ToLower();
-            var method = context.Request.Method.ToUpper();
-
-            if (string.IsNullOrEmpty(path)) return false;
-
-            // Não auditar requests de assets estáticos
-            var staticExtensions = new[] { ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".woff", ".woff2", ".ttf" };
-            if (staticExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+            try
             {
+                var path = context.Request.Path.Value?.ToLower();
+                var method = context.Request.Method.ToUpper();
+
+                if (string.IsNullOrEmpty(path)) return false;
+
+                // Não auditar requests de assets estáticos
+                var staticExtensions = new[] { ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".woff", ".woff2", ".ttf" };
+                if (staticExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return false;
+                }
+
+                // Não auditar requests de health check
+                if (path.Contains("/health", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                // Auditar apenas operações importantes
+                var auditPaths = new[]
+                {
+                    "/entradas",
+                    "/saidas",
+                    "/despesasrecorrentes",
+                    "/fechamentos",
+                    "/fechamentoperiodo",
+                    "/usuarios",
+                    "/planos",
+                    "/membros",
+                    "/fornecedores",
+                    "/transferencias"
+                };
+
+                var shouldAuditPath = auditPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
+                // Auditar todas as operações de escrita (POST, PUT, DELETE) e algumas de leitura importantes
+                var shouldAuditMethod = method is "POST" or "PUT" or "DELETE" or "PATCH";
+
+                return shouldAuditPath && (shouldAuditMethod || path.Contains("/details", StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception)
+            {
+                // Em caso de erro, não auditar (seguro)
                 return false;
             }
-
-            // Não auditar requests de health check
-            if (path.Contains("/health", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            // Auditar apenas operações importantes
-            var auditPaths = new[]
-            {
-                "/entradas",
-                "/saidas",
-                "/despesasrecorrentes",
-                "/fechamentos",
-                "/fechamentoperiodo",
-                "/usuarios",
-                "/planos",
-                "/membros",
-                "/fornecedores",
-                "/transferencias"
-            };
-
-            var shouldAuditPath = auditPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
-
-            // Auditar todas as operações de escrita (POST, PUT, DELETE) e algumas de leitura importantes
-            var shouldAuditMethod = method is "POST" or "PUT" or "DELETE" or "PATCH";
-
-            return shouldAuditPath && (shouldAuditMethod || path.Contains("/details", StringComparison.OrdinalIgnoreCase));
         }
 
         private static Dictionary<string, string> CaptureQueryParameters(HttpContext context)
@@ -188,12 +229,19 @@ namespace SistemaTesourariaEclesiastica.Middleware
 
         private static (string Controller, string Action, string? EntityId) ExtractActionInfo(HttpContext context)
         {
-            var routeValues = context.Request.RouteValues;
-            var controller = routeValues.GetValueOrDefault("controller")?.ToString() ?? "Unknown";
-            var action = routeValues.GetValueOrDefault("action")?.ToString() ?? "Unknown";
-            var entityId = routeValues.GetValueOrDefault("id")?.ToString();
+            try
+            {
+                var routeValues = context.Request.RouteValues;
+                var controller = routeValues?.GetValueOrDefault("controller")?.ToString() ?? "Unknown";
+                var action = routeValues?.GetValueOrDefault("action")?.ToString() ?? "Unknown";
+                var entityId = routeValues?.GetValueOrDefault("id")?.ToString();
 
-            return (controller, action, entityId);
+                return (controller, action, entityId);
+            }
+            catch (Exception)
+            {
+                return ("Unknown", "Unknown", null);
+            }
         }
 
         private static bool IsSensitiveParameter(string parameterName)

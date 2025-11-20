@@ -12,37 +12,40 @@ using System.IO.Compression;
 var builder = WebApplication.CreateBuilder(args);
 
 // ✅ OTIMIZAÇÃO: Response Compression
-builder.Services.AddResponseCompression(options =>
-{
-    options.EnableForHttps = true;
-    options.Providers.Add<GzipCompressionProvider>();
-    options.Providers.Add<BrotliCompressionProvider>();
-    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
-    {
-        "application/json",
-        "application/javascript",
-        "text/css",
-        "text/html",
-        "text/plain"
-    });
-});
+// ⚠️ DESABILITADO TEMPORARIAMENTE: Bug no .NET 9 causando IndexOutOfRangeException ao deletar cookies
+// https://github.com/dotnet/aspnetcore/issues/XXXXX
+// builder.Services.AddResponseCompression(options =>
+// {
+//     options.EnableForHttps = true;
+//     options.Providers.Add<GzipCompressionProvider>();
+//     options.Providers.Add<BrotliCompressionProvider>();
+//     options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
+//     {
+//         "application/json",
+//         "application/javascript",
+//         "text/css",
+//         "text/html",
+//         "text/plain"
+//     });
+// });
 
-builder.Services.Configure<GzipCompressionProviderOptions>(options =>
-{
-    options.Level = CompressionLevel.Fastest;
-});
+// builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+// {
+//     options.Level = CompressionLevel.Fastest;
+// });
 
-builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
-{
-    options.Level = CompressionLevel.Fastest;
-});
+// builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+// {
+//     options.Level = CompressionLevel.Fastest;
+// });
 
 // ✅ OTIMIZAÇÃO: Output Caching (novo no .NET 9)
-builder.Services.AddOutputCache(options =>
-{
-    options.AddBasePolicy(policy => policy.Expire(TimeSpan.FromMinutes(5)));
-    options.AddPolicy("StaticContent", policy => policy.Expire(TimeSpan.FromHours(1)));
-});
+// ⚠️ DESABILITADO: Causava conflito com TempData (cookies não podiam ser salvos após cache iniciar resposta)
+// builder.Services.AddOutputCache(options =>
+// {
+//     options.AddBasePolicy(policy => policy.Expire(TimeSpan.FromMinutes(5)));
+//     options.AddPolicy("StaticContent", policy => policy.Expire(TimeSpan.FromHours(1)));
+// });
 
 // ✅ OTIMIZAÇÃO: Memory Cache
 builder.Services.AddMemoryCache();
@@ -178,6 +181,9 @@ builder.Services.AddControllersWithViews(options =>
         .Build();
     options.Filters.Add(new AuthorizeFilter(policy));
 
+    // ✅ ADICIONAR: Filtro de auditoria global (substitui o middleware problemático)
+    options.Filters.Add<SistemaTesourariaEclesiastica.Filters.AuditActionFilter>();
+
     // Configuração de model binding
     options.ModelBindingMessageProvider.SetValueIsInvalidAccessor(x => $"O valor '{x}' é inválido.");
     options.ModelBindingMessageProvider.SetValueMustBeANumberAccessor(x => $"O campo '{x}' deve ser um número.");
@@ -202,11 +208,9 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
 
 var app = builder.Build();
 
-// ✅ OTIMIZAÇÃO: Usar Response Compression no início do pipeline
-app.UseResponseCompression();
-
 // ✅ OTIMIZAÇÃO: Adicionar Output Cache
-app.UseOutputCache();
+// ⚠️ DESABILITADO: Causava conflito com TempData/Cookies
+// app.UseOutputCache();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -236,12 +240,16 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseRouting();
 
+// ✅ CORREÇÃO CRÍTICA: Response Compression DEVE vir ANTES dos middlewares customizados
+// ⚠️ DESABILITADO TEMPORARIAMENTE: Bug no .NET 9 causando IndexOutOfRangeException
+// app.UseResponseCompression();
+
+app.UseAccessControl();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseAccessControl();
-
-// Middleware personalizado de auditoria
-app.UseAuditMiddleware();
+// ⚠️ REMOVIDO: AuditMiddleware causava conflitos com cookies/headers
+// Substituído por AuditActionFilter que funciona corretamente
+// app.UseAuditMiddleware();
 
 app.MapControllerRoute(
     name: "default",
