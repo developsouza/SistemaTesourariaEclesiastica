@@ -27,6 +27,18 @@
         </a>
     </div>
 
+    <!-- Validation Summary -->
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <!-- Alert Informativo -->
     @if (Model.EhSede)
     {
@@ -67,6 +79,8 @@
         <input type="hidden" asp-for="CentroCustoId" />
         <input type="hidden" asp-for="NomeCentroCusto" />
         <input type="hidden" asp-for="EhSede" />
+        <input type="hidden" asp-for="DataInicio" id="DataInicio" />
+        <input type="hidden" asp-for="DataFim" id="DataFim" />
 
         <div class="row g-4">
             <!-- Coluna Esquerda - Dados do Fechamento -->
@@ -424,50 +438,109 @@
 
     <script>
         $(document).ready(function() {
-        // Popular anos
-        var anoAtual = new Date().getFullYear();
-        for (var i = anoAtual + 1; i >= anoAtual - 5; i--) {
-        $('#selectAno').append($('<option>', {
-        value: i,
-        text: i,
-        selected: i === anoAtual
-        }));
-        }
+            // Popular anos
+            var anoAtual = new Date().getFullYear();
+            for (var i = anoAtual + 1; i >= anoAtual - 5; i--) {
+                $('#selectAno').append($('<option>', {
+                    value: i,
+                    text: i,
+                    selected: i === anoAtual
+                }));
+            }
 
-        // Definir mês atual
-        var mesAtual = new Date().getMonth() + 1;
-        $('#selectMes').val(mesAtual);
+            // Definir mês atual
+            var mesAtual = new Date().getMonth() + 1;
+            $('#selectMes').val(mesAtual);
 
-        // Definir data atual
-        var hoje = new Date().toISOString().split('T')[0];
-        $('#dataFechamentoDiario').val(hoje);
+            // Definir data atual
+            var hoje = new Date().toISOString().split('T')[0];
+            $('#dataFechamentoDiario').val(hoje);
 
-        // Alternar entre Diário, Semanal e Mensal
-        $('#tipoFechamento').change(function() {
-        var tipo = $(this).val();
+            // Função para atualizar DataInicio e DataFim baseado em Ano e Mês
+            function atualizarDatasMensal() {
+                var ano = parseInt($('#selectAno').val());
+                var mes = parseInt($('#selectMes').val());
 
-        $('#camposDiario, #camposSemanal, #camposMensal').hide();
+                if (ano && mes) {
+                    // Primeiro dia do mês
+                    var dataInicio = new Date(ano, mes - 1, 1);
+                    // Último dia do mês
+                    var dataFim = new Date(ano, mes, 0);
 
-        if (tipo == '1') { // Diário
-        $('#camposDiario').show();
-        } else if (tipo == '2') { // Semanal
-        $('#camposSemanal').show();
-        } else { // Mensal
-        $('#camposMensal').show();
-        }
-        });
+                    // Formatar para YYYY-MM-DD
+                    var dataInicioFormatada = dataInicio.toISOString().split('T')[0];
+                    var dataFimFormatada = dataFim.toISOString().split('T')[0];
 
-        // Select All para congregações
-        $('#selectAll').change(function() {
-        $('.fechamento-checkbox').prop('checked', $(this).prop('checked'));
-        });
+                    // Atualizar campos hidden ou criar se não existirem
+                    $('#DataInicio').val(dataInicioFormatada);
+                    $('#DataFim').val(dataFimFormatada);
 
-        // Desmarcar "Select All" se algum item for desmarcado
-        $('.fechamento-checkbox').change(function() {
-        if (!$(this).prop('checked')) {
-        $('#selectAll').prop('checked', false);
-        }
-        });
+                    console.log('Fechamento Mensal - DataInicio:', dataInicioFormatada, 'DataFim:', dataFimFormatada);
+                }
+            }
+
+            // Atualizar datas quando ano ou mês mudarem
+            $('#selectAno, #selectMes').change(function() {
+                atualizarDatasMensal();
+            });
+
+            // Inicializar datas para o mês atual
+            atualizarDatasMensal();
+
+            // Alternar entre Diário, Semanal e Mensal
+            $('#tipoFechamento').change(function() {
+                var tipo = $(this).val();
+
+                $('#camposDiario, #camposSemanal, #camposMensal').hide();
+
+                if (tipo == '1') { // Diário
+                    $('#camposDiario').show();
+                    // Copiar data do diário para DataInicio e DataFim
+                    var dataDiario = $('#dataFechamentoDiario').val();
+                    $('#DataInicio').val(dataDiario);
+                    $('#DataFim').val(dataDiario);
+                } else if (tipo == '2') { // Semanal
+                    $('#camposSemanal').show();
+                    // Para semanal, os próprios campos já são DataInicio e DataFim
+                } else { // Mensal
+                    $('#camposMensal').show();
+                    atualizarDatasMensal();
+                }
+            });
+
+            // Quando data diária mudar
+            $('#dataFechamentoDiario').change(function() {
+                var dataDiario = $(this).val();
+                $('#DataInicio').val(dataDiario);
+                $('#DataFim').val(dataDiario);
+            });
+
+            // Select All para congregações
+            $('#selectAll').change(function() {
+                $('.fechamento-checkbox').prop('checked', $(this).prop('checked'));
+            });
+
+            // Desmarcar "Select All" se algum item for desmarcado
+            $('.fechamento-checkbox').change(function() {
+                if (!$(this).prop('checked')) {
+                    $('#selectAll').prop('checked', false);
+                }
+            });
+
+            // Validação antes do submit
+            $('form').submit(function(e) {
+                var tipoFechamento = $('#tipoFechamento').val();
+                var dataInicio = $('#DataInicio').val();
+                var dataFim = $('#DataFim').val();
+
+                console.log('Submit - Tipo:', tipoFechamento, 'DataInicio:', dataInicio, 'DataFim:', dataFim);
+
+                if (!dataInicio || !dataFim) {
+                    e.preventDefault();
+                    alert('Erro: As datas de início e fim não foram preenchidas corretamente. Por favor, tente novamente.');
+                    return false;
+                }
+            });
         });
     </script>
 }
