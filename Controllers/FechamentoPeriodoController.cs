@@ -305,217 +305,231 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
     _logger.LogInformation($"Iniciando criação de fechamento {viewModel.TipoFechamento} para {viewModel.NomeCentroCusto} - Período: {viewModel.DataInicio:dd/MM/yyyy} a {viewModel.DataFim:dd/MM/yyyy}");
 
-    using var transaction = await _context.Database.BeginTransactionAsync();
- try
+    // ✅ VALIDAÇÕES ANTES DA TRANSAÇÃO
+    var fechamentoExistente = await FechamentoQueryHelper.BuscarFechamentoAprovadoNoPeriodo(
+        _context, viewModel.CentroCustoId, viewModel.DataInicio, viewModel.DataFim);
+
+    if (fechamentoExistente != null)
     {
-        // ✅ VERIFICAR SE JÁ EXISTE FECHAMENTO APROVADO NO PERÍODO
-        var fechamentoExistente = await FechamentoQueryHelper.BuscarFechamentoAprovadoNoPeriodo(
-            _context, viewModel.CentroCustoId, viewModel.DataInicio, viewModel.DataFim);
-
-   if (fechamentoExistente != null)
- {
-    // Para fechamentos NÃO DIÁRIOS, bloquear totalmente
-            if (viewModel.TipoFechamento != TipoFechamento.Diario)
-            {
+        // Para fechamentos NÃO DIÁRIOS, bloquear totalmente
+        if (viewModel.TipoFechamento != TipoFechamento.Diario)
+        {
             _logger.LogWarning($"Tentativa de criar fechamento duplicado: já existe fechamento aprovado ID {fechamentoExistente.Id} para o período {viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}");
- TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}). Não é possível criar outro fechamento no mesmo período.";
-
-    if (viewModel.EhSede)
-        {
-       viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-     }
-          return View(viewModel);
-            }
-
-        // Para fechamentos DIÁRIOS, verificar se há lançamentos novos
-            var temLancamentosNovosAntesDeCalcular = await FechamentoQueryHelper.TemLancamentosNovos(
-          _context, viewModel.CentroCustoId, viewModel.DataInicio, viewModel.DataFim);
-
-   if (!temLancamentosNovosAntesDeCalcular)
-   {
-  _logger.LogWarning($"Fechamento diário sem lançamentos novos - Período: {viewModel.DataInicio:dd/MM/yyyy}");
-      TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para o dia {viewModel.DataInicio:dd/MM/yyyy} e não há novos lançamentos desde então.";
-
-     if (viewModel.EhSede)
-              {
-         viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-           }
-  return View(viewModel);
-     }
-        }
-
-        // Buscar fechamentos das congregações selecionados (apenas se for SEDE)
-   List<FechamentoPeriodo> fechamentosCongregacoes = new List<FechamentoPeriodo>();
-
-    if (viewModel.EhSede && viewModel.FechamentosIncluidos != null && viewModel.FechamentosIncluidos.Any())
-   {
-    fechamentosCongregacoes = await _context.FechamentosPeriodo
-           .Include(f => f.CentroCusto)
- .Where(f => viewModel.FechamentosIncluidos.Contains(f.Id) &&
-          f.Status == StatusFechamentoPeriodo.Aprovado &&
-  f.FoiProcessadoPelaSede == false)
-    .ToListAsync();
-
-   _logger.LogInformation($"Selecionados {fechamentosCongregacoes.Count} fechamentos de congregações para consolidação");
-        }
-
-     // ✅ CALCULAR TOTAIS USANDO HELPER (APENAS LANÇAMENTOS NÃO INCLUÍDOS)
-        _logger.LogInformation($"Calculando totais para o período {viewModel.DataInicio:dd/MM/yyyy} a {viewModel.DataFim:dd/MM/yyyy}");
-      var totais = await FechamentoQueryHelper.CalcularTotais(
-            _context, viewModel.CentroCustoId, viewModel.DataInicio, viewModel.DataFim);
-
-        _logger.LogInformation($"Totais calculados - Entradas: {totais.TotalEntradas:C}, Saídas: {totais.TotalSaidas:C}, Balanço: {totais.BalancoFisico + totais.BalancoDigital:C}");
-
-        // ✅ VERIFICAR SE HÁ LANÇAMENTOS NOVOS
-        var temLancamentosNovos = totais.TotalEntradas > 0 || totais.TotalSaidas > 0;
-
-        if (!temLancamentosNovos && (!viewModel.EhSede || !fechamentosCongregacoes.Any()))
-        {
-            _logger.LogWarning("Nenhum lançamento novo encontrado para incluir no fechamento");
-    TempData["ErrorMessage"] = "Não há lançamentos novos para incluir neste fechamento. Todos os lançamentos do período já foram incluídos em fechamentos aprovados anteriormente.";
+            TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}). Não é possível criar outro fechamento no mesmo período.";
 
             if (viewModel.EhSede)
             {
-       viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
             }
-     return View(viewModel);
- }
-
-  // Somar valores das congregações (se houver)
-        decimal totalEntradasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradas);
-        decimal totalSaidasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidas);
-        decimal totalEntradasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasFisicas);
-        decimal totalSaidasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasFisicas);
-        decimal totalEntradasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasDigitais);
-        decimal totalSaidasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasDigitais);
-
-        if (fechamentosCongregacoes.Any())
-        {
-    _logger.LogInformation($"Totais das congregações - Entradas: {totalEntradasCongregacoes:C}, Saídas: {totalSaidasCongregacoes:C}");
+            return View(viewModel);
         }
 
-        // Preparar observação
-        var observacaoFinal = viewModel.Observacoes ?? "";
+        // Para fechamentos DIÁRIOS, verificar se há lançamentos novos
+        var temLancamentosNovosAntesDeCalcular = await FechamentoQueryHelper.TemLancamentosNovos(
+            _context, viewModel.CentroCustoId, viewModel.DataInicio, viewModel.DataFim);
 
-        if (viewModel.EhSede && fechamentosCongregacoes.Any())
+        if (!temLancamentosNovosAntesDeCalcular)
         {
-    observacaoFinal += $"\n\n✓ Fechamento consolidado: incluídos {fechamentosCongregacoes.Count} fechamento(s) de congregações aprovados.";
-   }
+            _logger.LogWarning($"Fechamento diário sem lançamentos novos - Período: {viewModel.DataInicio:dd/MM/yyyy}");
+            TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para o dia {viewModel.DataInicio:dd/MM/yyyy} e não há novos lançamentos desde então.";
 
- if (temLancamentosNovos)
- {
-       observacaoFinal += $"\n\n✓ Lançamentos novos incluídos: {totais.TotalEntradas:C} em entradas e {totais.TotalSaidas:C} em saídas.";
+            if (viewModel.EhSede)
+            {
+                viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+            }
+            return View(viewModel);
         }
+    }
 
-        // Criar fechamento
-        var fechamento = new FechamentoPeriodo
+    // ✅ CORREÇÃO: Usar ExecutionStrategy para suportar SqlServerRetryingExecutionStrategy
+    try
+    {
+        var strategy = _context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-  CentroCustoId = viewModel.CentroCustoId,
-            Ano = viewModel.Ano,
-       Mes = viewModel.Mes,
-            DataInicio = viewModel.DataInicio,
- DataFim = viewModel.DataFim,
-            TipoFechamento = viewModel.TipoFechamento,
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
 
-   // TOTAIS CONSOLIDADOS
-         TotalEntradas = totais.TotalEntradas + totalEntradasCongregacoes,
-            TotalSaidas = totais.TotalSaidas + totalSaidasCongregacoes,
+                // Buscar fechamentos das congregações selecionados (apenas se for SEDE)
+                List<FechamentoPeriodo> fechamentosCongregacoes = new List<FechamentoPeriodo>();
 
- TotalEntradasFisicas = totais.EntradasFisicas + totalEntradasFisicasCongregacoes,
-        TotalSaidasFisicas = totais.SaidasFisicas + totalSaidasFisicasCongregacoes,
+                if (viewModel.EhSede && viewModel.FechamentosIncluidos != null && viewModel.FechamentosIncluidos.Any())
+                {
+                    fechamentosCongregacoes = await _context.FechamentosPeriodo
+                        .Include(f => f.CentroCusto)
+                        .Where(f => viewModel.FechamentosIncluidos.Contains(f.Id) &&
+                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            f.FoiProcessadoPelaSede == false)
+                        .ToListAsync();
 
-     TotalEntradasDigitais = totais.EntradasDigitais + totalEntradasDigitaisCongregacoes,
-  TotalSaidasDigitais = totais.SaidasDigitais + totalSaidasDigitaisCongregacoes,
+                    _logger.LogInformation($"Selecionados {fechamentosCongregacoes.Count} fechamentos de congregações para consolidação");
+                }
 
-   BalancoFisico = (totais.EntradasFisicas + totalEntradasFisicasCongregacoes) -
-         (totais.SaidasFisicas + totalSaidasFisicasCongregacoes),
+                // ✅ CALCULAR TOTAIS USANDO HELPER (APENAS LANÇAMENTOS NÃO INCLUÍDOS)
+                _logger.LogInformation($"Calculando totais para o período {viewModel.DataInicio:dd/MM/yyyy} a {viewModel.DataFim:dd/MM/yyyy}");
+                var totais = await FechamentoQueryHelper.CalcularTotais(
+                    _context, viewModel.CentroCustoId, viewModel.DataInicio, viewModel.DataFim);
 
-          BalancoDigital = (totais.EntradasDigitais + totalEntradasDigitaisCongregacoes) -
-       (totais.SaidasDigitais + totalSaidasDigitaisCongregacoes),
+                _logger.LogInformation($"Totais calculados - Entradas: {totais.TotalEntradas:C}, Saídas: {totais.TotalSaidas:C}, Balanço: {totais.BalancoFisico + totais.BalancoDigital:C}");
 
-         Observacoes = observacaoFinal,
+                // ✅ VERIFICAR SE HÁ LANÇAMENTOS NOVOS
+                var temLancamentosNovos = totais.TotalEntradas > 0 || totais.TotalSaidas > 0;
 
-            // Marcar como fechamento da SEDE se aplicável
-            EhFechamentoSede = viewModel.EhSede,
-            QuantidadeCongregacoesIncluidas = fechamentosCongregacoes.Count,
+                if (!temLancamentosNovos && (!viewModel.EhSede || !fechamentosCongregacoes.Any()))
+                {
+                    _logger.LogWarning("Nenhum lançamento novo encontrado para incluir no fechamento");
+                    TempData["ErrorMessage"] = "Não há lançamentos novos para incluir neste fechamento. Todos os lançamentos do período já foram incluídos em fechamentos aprovados anteriormente.";
 
-      Status = StatusFechamentoPeriodo.Pendente,
-     UsuarioSubmissaoId = user.Id,
-         DataSubmissao = DateTime.Now
-      };
+                    if (viewModel.EhSede)
+                    {
+                        viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                    }
+                    throw new InvalidOperationException("Sem lançamentos para processar");
+                }
 
-        _logger.LogInformation($"Fechamento criado - Total Entradas: {fechamento.TotalEntradas:C}, Total Saídas: {fechamento.TotalSaidas:C}");
+                // Somar valores das congregações (se houver)
+                decimal totalEntradasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradas);
+                decimal totalSaidasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidas);
+                decimal totalEntradasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasFisicas);
+                decimal totalSaidasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasFisicas);
+                decimal totalEntradasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasDigitais);
+                decimal totalSaidasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasDigitais);
 
-        // Aplicar rateios (apenas para SEDE)
-        if (viewModel.EhSede)
-      {
-            _logger.LogInformation("Aplicando rateios ao fechamento da SEDE");
-            await AplicarRateiosComLog(fechamento);
-   }
-        else
-        {
-   fechamento.TotalRateios = 0;
-   fechamento.SaldoFinal = fechamento.BalancoFisico + fechamento.BalancoDigital;
-        }
+                if (fechamentosCongregacoes.Any())
+                {
+                    _logger.LogInformation($"Totais das congregações - Entradas: {totalEntradasCongregacoes:C}, Saídas: {totalSaidasCongregacoes:C}");
+                }
 
-        // Gerar detalhes do fechamento (APENAS COM LANÇAMENTOS NÃO INCLUÍDOS)
-        _logger.LogInformation("Gerando detalhes do fechamento (entradas e saídas)");
-    await GerarDetalhesFechamento(fechamento);
+                // Preparar observação
+                var observacaoFinal = viewModel.Observacoes ?? "";
 
-        // Salvar fechamento
-        _context.Add(fechamento);
- await _context.SaveChangesAsync();
+                if (viewModel.EhSede && fechamentosCongregacoes.Any())
+                {
+                    observacaoFinal += $"\n\n✓ Fechamento consolidado: incluídos {fechamentosCongregacoes.Count} fechamento(s) de congregações aprovados.";
+                }
 
-        _logger.LogInformation($"Fechamento ID {fechamento.Id} salvo com sucesso - Total de {fechamento.DetalhesFechamento.Count} detalhes incluídos");
+                if (temLancamentosNovos)
+                {
+                    observacaoFinal += $"\n\n✓ Lançamentos novos incluídos: {totais.TotalEntradas:C} em entradas e {totais.TotalSaidas:C} em saídas.";
+                }
 
-   // ✅ MARCAR LANÇAMENTOS COMO INCLUÍDOS EM FECHAMENTO (APENAS OS NOVOS)
-    _logger.LogInformation("Marcando lançamentos como incluídos no fechamento");
-        await MarcarLancamentosComoIncluidos(fechamento);
+                // Criar fechamento
+                var fechamento = new FechamentoPeriodo
+                {
+                    CentroCustoId = viewModel.CentroCustoId,
+                    Ano = viewModel.Ano,
+                    Mes = viewModel.Mes,
+                    DataInicio = viewModel.DataInicio,
+                    DataFim = viewModel.DataFim,
+                    TipoFechamento = viewModel.TipoFechamento,
 
-        // Marcar fechamentos das congregações como PROCESSADOS (se houver)
-     if (fechamentosCongregacoes.Any())
-        {
-        _logger.LogInformation($"Marcando {fechamentosCongregacoes.Count} fechamentos de congregações como PROCESSADOS");
-    foreach (var fechamentoCongregacao in fechamentosCongregacoes)
-        {
-         fechamentoCongregacao.FoiProcessadoPelaSede = true;
-    fechamentoCongregacao.FechamentoSedeProcessadorId = fechamento.Id;
-    fechamentoCongregacao.DataProcessamentoPelaSede = DateTime.Now;
-            fechamentoCongregacao.Status = StatusFechamentoPeriodo.Processado;
-      _context.Update(fechamentoCongregacao);
- }
-     }
+                    // TOTAIS CONSOLIDADOS
+                    TotalEntradas = totais.TotalEntradas + totalEntradasCongregacoes,
+                    TotalSaidas = totais.TotalSaidas + totalSaidasCongregacoes,
 
-  await _context.SaveChangesAsync();
-    await transaction.CommitAsync();
+                    TotalEntradasFisicas = totais.EntradasFisicas + totalEntradasFisicasCongregacoes,
+                    TotalSaidasFisicas = totais.SaidasFisicas + totalSaidasFisicasCongregacoes,
 
-var mensagemSucesso = viewModel.EhSede && fechamentosCongregacoes.Any()
-            ? $"Fechamento da SEDE criado com sucesso! {fechamentosCongregacoes.Count} prestação(ões) de congregação(ões) incluída(s)."
-            : "Fechamento criado com sucesso!";
+                    TotalEntradasDigitais = totais.EntradasDigitais + totalEntradasDigitaisCongregacoes,
+                    TotalSaidasDigitais = totais.SaidasDigitais + totalSaidasDigitaisCongregacoes,
 
-        if (temLancamentosNovos)
-     {
-            mensagemSucesso += $" Total de {totais.TotalEntradas:C} em entradas e {totais.TotalSaidas:C} em saídas foram incluídos.";
-        }
+                    BalancoFisico = (totais.EntradasFisicas + totalEntradasFisicasCongregacoes) -
+                        (totais.SaidasFisicas + totalSaidasFisicasCongregacoes),
 
-        await _auditService.LogAsync("Criação", "FechamentoPeriodo", mensagemSucesso);
+                    BalancoDigital = (totais.EntradasDigitais + totalEntradasDigitaisCongregacoes) -
+                        (totais.SaidasDigitais + totalSaidasDigitaisCongregacoes),
 
- _logger.LogInformation($"Fechamento ID {fechamento.Id} criado com sucesso - {mensagemSucesso}");
+                    Observacoes = observacaoFinal,
 
-      TempData["SuccessMessage"] = mensagemSucesso;
+                    // Marcar como fechamento da SEDE se aplicável
+                    EhFechamentoSede = viewModel.EhSede,
+                    QuantidadeCongregacoesIncluidas = fechamentosCongregacoes.Count,
 
-        return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+                    Status = StatusFechamentoPeriodo.Pendente,
+                    UsuarioSubmissaoId = user.Id,
+                    DataSubmissao = DateTime.Now
+                };
+
+                _logger.LogInformation($"Fechamento criado - Total Entradas: {fechamento.TotalEntradas:C}, Total Saídas: {fechamento.TotalSaidas:C}");
+
+                // Aplicar rateios (apenas para SEDE)
+                if (viewModel.EhSede)
+                {
+                    _logger.LogInformation("Aplicando rateios ao fechamento da SEDE");
+                    await AplicarRateiosComLog(fechamento);
+                }
+                else
+                {
+                    fechamento.TotalRateios = 0;
+                    fechamento.SaldoFinal = fechamento.BalancoFisico + fechamento.BalancoDigital;
+                }
+
+                // Gerar detalhes do fechamento (APENAS COM LANÇAMENTOS NÃO INCLUÍDOS)
+                _logger.LogInformation("Gerando detalhes do fechamento (entradas e saídas)");
+                await GerarDetalhesFechamento(fechamento);
+
+                // Salvar fechamento
+                _context.Add(fechamento);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Fechamento ID {fechamento.Id} salvo com sucesso - Total de {fechamento.DetalhesFechamento.Count} detalhes incluídos");
+
+                // ✅ MARCAR LANÇAMENTOS COMO INCLUÍDOS EM FECHAMENTO (APENAS OS NOVOS)
+                _logger.LogInformation("Marcando lançamentos como incluídos no fechamento");
+                await MarcarLancamentosComoIncluidos(fechamento);
+
+                // Marcar fechamentos das congregações como PROCESSADOS (se houver)
+                if (fechamentosCongregacoes.Any())
+                {
+                    _logger.LogInformation($"Marcando {fechamentosCongregacoes.Count} fechamentos de congregações como PROCESSADOS");
+                    foreach (var fechamentoCongregacao in fechamentosCongregacoes)
+                    {
+                        fechamentoCongregacao.FoiProcessadoPelaSede = true;
+                        fechamentoCongregacao.FechamentoSedeProcessadorId = fechamento.Id;
+                        fechamentoCongregacao.DataProcessamentoPelaSede = DateTime.Now;
+                        fechamentoCongregacao.Status = StatusFechamentoPeriodo.Processado;
+                        _context.Update(fechamentoCongregacao);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                var mensagemSucesso = viewModel.EhSede && fechamentosCongregacoes.Any()
+                    ? $"Fechamento da SEDE criado com sucesso! {fechamentosCongregacoes.Count} prestação(ões) de congregação(ões) incluída(s)."
+                    : "Fechamento criado com sucesso!";
+
+                if (temLancamentosNovos)
+                {
+                    mensagemSucesso += $" Total de {totais.TotalEntradas:C} em entradas e {totais.TotalSaidas:C} em saídas foram incluídos.";
+                }
+
+                await _auditService.LogAsync("Criação", "FechamentoPeriodo", mensagemSucesso);
+
+                _logger.LogInformation($"Fechamento ID {fechamento.Id} criado com sucesso - {mensagemSucesso}");
+
+                TempData["SuccessMessage"] = mensagemSucesso;
+
+                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Erro ao criar fechamento interno");
+                throw; // Re-lançar para que o ExecuteAsync possa tratar
+            }
+        });
     }
     catch (Exception ex)
     {
-        await transaction.RollbackAsync();
         _logger.LogError(ex, "Erro ao criar fechamento");
-      TempData["ErrorMessage"] = $"Erro ao criar fechamento: {ex.Message}";
+        TempData["ErrorMessage"] = $"Erro ao criar fechamento: {ex.Message}";
 
         // Recarregar dados se for SEDE
         if (viewModel.EhSede)
         {
-   viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+            viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
         }
         return View(viewModel);
     }
@@ -1142,171 +1156,189 @@ var mensagemSucesso = viewModel.EhSede && fechamentosCongregacoes.Any()
                 return RedirectToAction(nameof(Index));
             }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            // ✅ VALIDAÇÕES ANTES DA TRANSAÇÃO
+            var fechamentoExistente = await FechamentoQueryHelper.BuscarFechamentoAprovadoNoPeriodo(
+                _context, sede.Id, viewModel.DataInicio, viewModel.DataFim);
+
+            if (fechamentoExistente != null)
             {
-                // ✅ VERIFICAR SE JÁ EXISTE FECHAMENTO APROVADO NO PERÍODO
-                var fechamentoExistente = await FechamentoQueryHelper.BuscarFechamentoAprovadoNoPeriodo(
-                    _context, sede.Id, viewModel.DataInicio, viewModel.DataFim);
-
-                if (fechamentoExistente != null)
+                // Para fechamentos NÃO DIÁRIOS, bloquear totalmente
+                if (viewModel.TipoFechamento != TipoFechamento.Diario)
                 {
-                    // Para fechamentos NÃO DIÁRIOS, bloquear totalmente
-                    if (viewModel.TipoFechamento != TipoFechamento.Diario)
-                    {
-                        TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO da SEDE para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}).";
-                        viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-                        return View(viewModel);
-                    }
-
-                    // Para fechamentos DIÁRIOS, verificar se há lançamentos novos
-                    var temLancamentosNovosAntesDeCalcular = await FechamentoQueryHelper.TemLancamentosNovos(
-                        _context, sede.Id, viewModel.DataInicio, viewModel.DataFim);
-
-                    if (!temLancamentosNovosAntesDeCalcular)
-                    {
-                        TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para o dia {viewModel.DataInicio:dd/MM/yyyy} e não há novos lançamentos desde então.";
-                        viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-                        return View(viewModel);
-                    }
-                }
-
-                // 1. Buscar fechamentos das congregações selecionados (SE HOUVER)
-                List<FechamentoPeriodo> fechamentosCongregacoes = new List<FechamentoPeriodo>();
-
-    if (viewModel.FechamentosIncluidos != null && viewModel.FechamentosIncluidos.Any())
-   {
-    fechamentosCongregacoes = await _context.FechamentosPeriodo
-           .Include(f => f.CentroCusto)
- .Where(f => viewModel.FechamentosIncluidos.Contains(f.Id) &&
-          f.Status == StatusFechamentoPeriodo.Aprovado &&
-  f.FoiProcessadoPelaSede == false)
-    .ToListAsync();
-
-   _logger.LogInformation($"Selecionados {fechamentosCongregacoes.Count} fechamentos de congregações para consolidação");
-        }
-
-     // 2. Calcular totais da SEDE no período usando HELPER
-                var totais = await FechamentoQueryHelper.CalcularTotais(
-                    _context, sede.Id, viewModel.DataInicio, viewModel.DataFim);
-
-                // ✅ VERIFICAR SE HÁ LANÇAMENTOS NOVOS
-                var temLancamentosNovos = totais.TotalEntradas > 0 || totais.TotalSaidas > 0;
-
-                if (!temLancamentosNovos && !fechamentosCongregacoes.Any())
-                {
-                    TempData["ErrorMessage"] = "Não há lançamentos novos da SEDE nem prestações de congregações para incluir neste fechamento.";
+                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO da SEDE para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}).";
                     viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
                     return View(viewModel);
                 }
 
-                // 3. Somar valores das congregações APROVADAS (SE HOUVER)
-                decimal totalEntradasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradas);
-                decimal totalSaidasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidas);
-                decimal totalEntradasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasFisicas);
-                decimal totalSaidasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasFisicas);
-                decimal totalEntradasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasDigitais);
-                decimal totalSaidasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasDigitais);
+                // Para fechamentos DIÁRIOS, verificar se há lançamentos novos
+                var temLancamentosNovosAntesDeCalcular = await FechamentoQueryHelper.TemLancamentosNovos(
+                    _context, sede.Id, viewModel.DataInicio, viewModel.DataFim);
 
-                // 4. Criar fechamento consolidado da SEDE
-                var observacaoFinal = viewModel.Observacoes ?? "";
-
-                if (fechamentosCongregacoes.Any())
+                if (!temLancamentosNovosAntesDeCalcular)
                 {
-    observacaoFinal += $"\n\n✓ Fechamento consolidado: incluídos {fechamentosCongregacoes.Count} fechamento(s) de congregações aprovados.";
-   }
-
- if (temLancamentosNovos)
- {
-       observacaoFinal += $"\n\n✓ Lançamentos novos da SEDE incluídos: {totais.TotalEntradas:C} em entradas e {totais.TotalSaidas:C} em saídas.";
+                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para o dia {viewModel.DataInicio:dd/MM/yyyy} e não há novos lançamentos desde então.";
+                    viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                    return View(viewModel);
                 }
+            }
 
-                var fechamentoSede = new FechamentoPeriodo
+            // ✅ CORREÇÃO: Usar ExecutionStrategy para suportar SqlServerRetryingExecutionStrategy
+            try
+            {
+                var strategy = _context.Database.CreateExecutionStrategy();
+                return await strategy.ExecuteAsync(async () =>
                 {
-                    CentroCustoId = sede.Id,
-                    Ano = viewModel.Ano,
-                    Mes = viewModel.Mes,
-                    DataInicio = viewModel.DataInicio,
-                    DataFim = viewModel.DataFim,
-                    TipoFechamento = viewModel.TipoFechamento,
-
-                    // TOTAIS CONSOLIDADOS (SEDE + CONGREGAÇÕES, se houver)
-                    TotalEntradas = totais.TotalEntradas + totalEntradasCongregacoes,
-                    TotalSaidas = totais.TotalSaidas + totalSaidasCongregacoes,
-
-                    TotalEntradasFisicas = totais.EntradasFisicas + totalEntradasFisicasCongregacoes,
-                    TotalSaidasFisicas = totais.SaidasFisicas + totalSaidasFisicasCongregacoes,
-
-                    TotalEntradasDigitais = totais.EntradasDigitais + totalEntradasDigitaisCongregacoes,
-                    TotalSaidasDigitais = totais.SaidasDigitais + totalSaidasDigitaisCongregacoes,
-
-                    BalancoFisico = (totais.EntradasFisicas + totalEntradasFisicasCongregacoes) -
-                                   (totais.SaidasFisicas + totalSaidasFisicasCongregacoes),
-
-                    BalancoDigital = (totais.EntradasDigitais + totalEntradasDigitaisCongregacoes) -
-                                    (totais.SaidasDigitais + totalSaidasDigitaisCongregacoes),
-
-                    Observacoes = observacaoFinal,
-
-                    // NOVAS PROPRIEDADES
-                    EhFechamentoSede = true,
-                    QuantidadeCongregacoesIncluidas = fechamentosCongregacoes.Count,
-
-                    Status = StatusFechamentoPeriodo.Pendente,
-                    UsuarioSubmissaoId = user.Id,
-                    DataSubmissao = DateTime.Now
-                };
-
-                // 5. Aplicar RATEIOS sobre o TOTAL CONSOLIDADO
-                await AplicarRateiosComLog(fechamentoSede);
-
-                // 6. Gerar detalhes do fechamento (APENAS COM LANÇAMENTOS NOVOS)
-                await GerarDetalhesFechamento(fechamentoSede);
-
-                // 7. Salvar fechamento da SEDE
-                _context.Add(fechamentoSede);
-                await _context.SaveChangesAsync();
-
-                // ✅ 8. MARCAR LANÇAMENTOS DA SEDE COMO INCLUÍDOS
-                if (temLancamentosNovos)
-                {
-                    await MarcarLancamentosComoIncluidos(fechamentoSede);
-                }
-
-                // 9. Marcar fechamentos das congregações como PROCESSADOS (SE HOUVER)
-                if (fechamentosCongregacoes.Any())
-                {
-                    foreach (var fechamentoCongregacao in fechamentosCongregacoes)
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
                     {
-                        fechamentoCongregacao.FoiProcessadoPelaSede = true;
-                        fechamentoCongregacao.FechamentoSedeProcessadorId = fechamentoSede.Id;
-                        fechamentoCongregacao.DataProcessamentoPelaSede = DateTime.Now;
-                        fechamentoCongregacao.Status = StatusFechamentoPeriodo.Processado;
-                        _context.Update(fechamentoCongregacao);
+
+                        // 1. Buscar fechamentos das congregações selecionados (SE HOUVER)
+                        List<FechamentoPeriodo> fechamentosCongregacoes = new List<FechamentoPeriodo>();
+
+                        if (viewModel.FechamentosIncluidos != null && viewModel.FechamentosIncluidos.Any())
+                        {
+                            fechamentosCongregacoes = await _context.FechamentosPeriodo
+                                .Include(f => f.CentroCusto)
+                                .Where(f => viewModel.FechamentosIncluidos.Contains(f.Id) &&
+                                    f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                    f.FoiProcessadoPelaSede == false)
+                                .ToListAsync();
+
+                            _logger.LogInformation($"Selecionados {fechamentosCongregacoes.Count} fechamentos de congregações para consolidação");
+                        }
+
+                        // 2. Calcular totais da SEDE no período usando HELPER
+                        var totais = await FechamentoQueryHelper.CalcularTotais(
+                            _context, sede.Id, viewModel.DataInicio, viewModel.DataFim);
+
+                        // ✅ VERIFICAR SE HÁ LANÇAMENTOS NOVOS
+                        var temLancamentosNovos = totais.TotalEntradas > 0 || totais.TotalSaidas > 0;
+
+                        if (!temLancamentosNovos && !fechamentosCongregacoes.Any())
+                        {
+                            TempData["ErrorMessage"] = "Não há lançamentos novos da SEDE nem prestações de congregações para incluir neste fechamento.";
+
+                            if (viewModel.EhSede)
+                            {
+                                viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                            }
+                            throw new InvalidOperationException("Sem lançamentos para processar");
+                        }
+
+                        // 3. Somar valores das congregações APROVADAS (SE HOUVER)
+                        decimal totalEntradasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradas);
+                        decimal totalSaidasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidas);
+                        decimal totalEntradasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasFisicas);
+                        decimal totalSaidasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasFisicas);
+                        decimal totalEntradasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasDigitais);
+                        decimal totalSaidasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasDigitais);
+
+                        // 4. Criar fechamento consolidado da SEDE
+                        var observacaoFinal = viewModel.Observacoes ?? "";
+
+                        if (fechamentosCongregacoes.Any())
+                        {
+                            observacaoFinal += $"\n\n✓ Fechamento consolidado: incluídos {fechamentosCongregacoes.Count} fechamento(s) de congregações aprovados.";
+                        }
+
+                        if (temLancamentosNovos)
+                        {
+                            observacaoFinal += $"\n\n✓ Lançamentos novos da SEDE incluídos: {totais.TotalEntradas:C} em entradas e {totais.TotalSaidas:C} em saídas.";
+                        }
+
+                        var fechamentoSede = new FechamentoPeriodo
+                        {
+                            CentroCustoId = sede.Id,
+                            Ano = viewModel.Ano,
+                            Mes = viewModel.Mes,
+                            DataInicio = viewModel.DataInicio,
+                            DataFim = viewModel.DataFim,
+                            TipoFechamento = viewModel.TipoFechamento,
+
+                            // TOTAIS CONSOLIDADOS (SEDE + CONGREGAÇÕES, se houver)
+                            TotalEntradas = totais.TotalEntradas + totalEntradasCongregacoes,
+                            TotalSaidas = totais.TotalSaidas + totalSaidasCongregacoes,
+
+                            TotalEntradasFisicas = totais.EntradasFisicas + totalEntradasFisicasCongregacoes,
+                            TotalSaidasFisicas = totais.SaidasFisicas + totalSaidasFisicasCongregacoes,
+
+                            TotalEntradasDigitais = totais.EntradasDigitais + totalEntradasDigitaisCongregacoes,
+                            TotalSaidasDigitais = totais.SaidasDigitais + totalSaidasDigitaisCongregacoes,
+
+                            BalancoFisico = (totais.EntradasFisicas + totalEntradasFisicasCongregacoes) -
+                                (totais.SaidasFisicas + totalSaidasFisicasCongregacoes),
+
+                            BalancoDigital = (totais.EntradasDigitais + totalEntradasDigitaisCongregacoes) -
+                                (totais.SaidasDigitais + totalSaidasDigitaisCongregacoes),
+
+                            Observacoes = observacaoFinal,
+
+                            // NOVAS PROPRIEDADES
+                            EhFechamentoSede = true,
+                            QuantidadeCongregacoesIncluidas = fechamentosCongregacoes.Count,
+
+                            Status = StatusFechamentoPeriodo.Pendente,
+                            UsuarioSubmissaoId = user.Id,
+                            DataSubmissao = DateTime.Now
+                        };
+
+                        // 5. Aplicar RATEIOS sobre o TOTAL CONSOLIDADO
+                        await AplicarRateiosComLog(fechamentoSede);
+
+                        // 6. Gerar detalhes do fechamento (APENAS COM LANÇAMENTOS NOVOS)
+                        await GerarDetalhesFechamento(fechamentoSede);
+
+                        // 7. Salvar fechamento da SEDE
+                        _context.Add(fechamentoSede);
+                        await _context.SaveChangesAsync();
+
+                        // ✅ 8. MARCAR LANÇAMENTOS DA SEDE COMO INCLUÍDOS
+                        if (temLancamentosNovos)
+                        {
+                            await MarcarLancamentosComoIncluidos(fechamentoSede);
+                        }
+
+                        // 9. Marcar fechamentos das congregações como PROCESSADOS (SE HOUVER)
+                        if (fechamentosCongregacoes.Any())
+                        {
+                            foreach (var fechamentoCongregacao in fechamentosCongregacoes)
+                            {
+                                fechamentoCongregacao.FoiProcessadoPelaSede = true;
+                                fechamentoCongregacao.FechamentoSedeProcessadorId = fechamentoSede.Id;
+                                fechamentoCongregacao.DataProcessamentoPelaSede = DateTime.Now;
+                                fechamentoCongregacao.Status = StatusFechamentoPeriodo.Processado;
+                                _context.Update(fechamentoCongregacao);
+                            }
+                        }
+
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        var mensagemSucesso = fechamentosCongregacoes.Any()
+                            ? $"Fechamento da SEDE criado com sucesso! {fechamentosCongregacoes.Count} prestação(ões) de congregação(ões) incluída(s)."
+                            : "Fechamento da SEDE criado com sucesso! (Sem congregações incluídas)";
+
+                        if (temLancamentosNovos)
+                        {
+                            mensagemSucesso += $" Total de {totais.TotalEntradas:C} em entradas e {totais.TotalSaidas:C} em saídas da SEDE foram incluídos.";
+                        }
+
+                        await _auditService.LogAsync("Criação", "FechamentoPeriodo", mensagemSucesso);
+
+                        TempData["SuccessMessage"] = mensagemSucesso;
+
+                        return RedirectToAction(nameof(Details), new { id = fechamentoSede.Id });
                     }
-                }
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                var mensagemSucesso = fechamentosCongregacoes.Any()
-                    ? $"Fechamento da SEDE criado com sucesso! {fechamentosCongregacoes.Count} prestação(ões) de congregação(ões) incluída(s)."
-                    : "Fechamento da SEDE criado com sucesso! (Sem congregações incluídas)";
-
-                if (temLancamentosNovos)
-                {
-                    mensagemSucesso += $" Total de {totais.TotalEntradas:C} em entradas e {totais.TotalSaidas:C} em saídas da SEDE foram incluídos.";
-                }
-
-                await _auditService.LogAsync("Criação", "FechamentoPeriodo", mensagemSucesso);
-
-                TempData["SuccessMessage"] = mensagemSucesso;
-
-                return RedirectToAction(nameof(Details), new { id = fechamentoSede.Id });
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+                        _logger.LogError(ex, "Erro ao criar fechamento da SEDE interno");
+                        throw; // Re-lançar para que o ExecuteAsync possa tratar
+                    }
+                });
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
                 _logger.LogError(ex, "Erro ao criar fechamento da SEDE");
                 TempData["ErrorMessage"] = $"Erro ao criar fechamento: {ex.Message}";
 
