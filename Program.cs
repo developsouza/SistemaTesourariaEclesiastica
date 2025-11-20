@@ -20,9 +20,9 @@ builder.Services.AddResponseCompression(options =>
     options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
     {
         "application/json",
-   "application/javascript",
+        "application/javascript",
         "text/css",
- "text/html",
+        "text/html",
         "text/plain"
     });
 });
@@ -54,16 +54,16 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // ✅ OTIMIZAÇÃO: Configuração do Entity Framework com pooling e timeout otimizado
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-  options.UseSqlServer(connectionString, sqlOptions =>
- {
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
         sqlOptions.CommandTimeout(30);
         sqlOptions.EnableRetryOnFailure(
-     maxRetryCount: 3,
- maxRetryDelay: TimeSpan.FromSeconds(5),
-    errorNumbersToAdd: null);
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null);
     });
- 
- // ✅ Melhor performance em produção
+
+    // ✅ Melhor performance em produção
     if (!builder.Environment.IsDevelopment())
     {
         options.EnableSensitiveDataLogging(false);
@@ -164,9 +164,10 @@ builder.Services.AddScoped<BusinessRulesService>();
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<BalanceteService>();
 
-// ✅ OTIMIZAÇÃO: Remover LancamentoAprovadoService (substituído pelo FechamentoQueryHelper que é mais eficiente)
-// builder.Services.AddScoped<LancamentoAprovadoService>();
-
+// ✅ SERVIÇO DE AUDITORIA EM BACKGROUND
+// Registrado como Singleton para que seja compartilhado e como HostedService para rodar em background
+builder.Services.AddSingleton<AuditQueueService>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<AuditQueueService>());
 
 // Configuração do MVC com filtro global de autorização
 builder.Services.AddControllersWithViews(options =>

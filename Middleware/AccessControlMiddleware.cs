@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Models;
 using System.Security.Claims;
 
@@ -18,9 +17,6 @@ namespace SistemaTesourariaEclesiastica.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            // Aplicar headers de segurança
-            ApplySecurityHeaders(context);
-
             // Adicionar claims personalizados se o usuário estiver autenticado
             if (context.User.Identity.IsAuthenticated)
             {
@@ -40,7 +36,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
 
                     // Redirecionar para login com mensagem
                     context.Response.Redirect("/Account/Login?message=inactive");
-                    return;
+                    return; // ✅ IMPORTANTE: Retornar aqui sem chamar ApplySecurityHeaders
                 }
 
                 // Adicionar claims adicionais se não existirem
@@ -55,6 +51,13 @@ namespace SistemaTesourariaEclesiastica.Middleware
                 {
                     identity.AddClaim(new Claim("NomeCompleto", user.NomeCompleto ?? ""));
                 }
+            }
+
+            // ✅ CORREÇÃO: Aplicar headers de segurança APENAS antes de chamar _next
+            // e SOMENTE se a resposta ainda não foi iniciada
+            if (!context.Response.HasStarted)
+            {
+                ApplySecurityHeaders(context);
             }
 
             await _next(context);
@@ -125,117 +128,6 @@ namespace SistemaTesourariaEclesiastica.Middleware
         public static IApplicationBuilder UseAccessControl(this IApplicationBuilder builder)
         {
             return builder.UseMiddleware<AccessControlMiddleware>();
-        }
-    }
-
-    /// <summary>
-    /// Middleware para controle de centro de custo
-    /// Garante que usuários locais só acessem dados do seu centro de custo
-    /// </summary>
-    public class CentroCustoAccessMiddleware
-    {
-        private readonly RequestDelegate _next;
-        private readonly ILogger<CentroCustoAccessMiddleware> _logger;
-
-        public CentroCustoAccessMiddleware(RequestDelegate next, ILogger<CentroCustoAccessMiddleware> logger)
-        {
-            _next = next;
-            _logger = logger;
-        }
-
-        public async Task InvokeAsync(HttpContext context)
-        {
-            if (context.User.Identity.IsAuthenticated)
-            {
-                var path = context.Request.Path.Value?.ToLower();
-                var method = context.Request.Method;
-
-                // Verificar se é uma operação que requer verificação de centro de custo
-                if (RequiresCentroCustoCheck(path, method))
-                {
-                    var isAuthorized = await CheckCentroCustoAccess(context);
-                    if (!isAuthorized)
-                    {
-                        _logger.LogWarning($"Acesso negado por centro de custo para usuário {context.User.Identity.Name} em {path}");
-                        context.Response.StatusCode = 403;
-                        await context.Response.WriteAsync("Acesso negado: você só pode acessar dados do seu centro de custo.");
-                        return;
-                    }
-                }
-            }
-
-            await _next(context);
-        }
-
-        private static bool RequiresCentroCustoCheck(string path, string method)
-        {
-            if (string.IsNullOrEmpty(path)) return false;
-
-            var restrictedPaths = new[]
-            {
-                "/entradas/edit/",
-                "/entradas/delete/",
-                "/saidas/edit/",
-                "/saidas/delete/",
-                "/fechamentos/"
-            };
-
-            return method != "GET" && restrictedPaths.Any(p => path.StartsWith(p));
-        }
-
-        private static async Task<bool> CheckCentroCustoAccess(HttpContext context)
-        {
-            // Administradores e Tesoureiros Gerais têm acesso total
-            if (context.User.IsInRole(Roles.Administrador) || context.User.IsInRole(Roles.TesoureiroGeral))
-            {
-                return true;
-            }
-
-            // Para outros usuários, verificar se estão acessando dados do seu centro de custo
-            var userCentroCustoId = context.User.FindFirst("CentroCustoId")?.Value;
-            if (string.IsNullOrEmpty(userCentroCustoId))
-            {
-                return false;
-            }
-
-            // Extrair centro de custo da requisição
-            var requestCentroCustoId = ExtractCentroCustoFromRequest(context);
-
-            return string.IsNullOrEmpty(requestCentroCustoId) || userCentroCustoId == requestCentroCustoId;
-        }
-
-        private static string ExtractCentroCustoFromRequest(HttpContext context)
-        {
-            // Tentar extrair de route params
-            if (context.Request.RouteValues.TryGetValue("centroCustoId", out var routeValue))
-            {
-                return routeValue?.ToString();
-            }
-
-            // Tentar extrair de query string
-            if (context.Request.Query.TryGetValue("centroCustoId", out var queryValue))
-            {
-                return queryValue.FirstOrDefault();
-            }
-
-            // Para POST/PUT, tentar extrair do form data
-            if (context.Request.HasFormContentType)
-            {
-                if (context.Request.Form.TryGetValue("CentroCustoId", out var formValue))
-                {
-                    return formValue.FirstOrDefault();
-                }
-            }
-
-            return null;
-        }
-    }
-
-    public static class CentroCustoAccessMiddlewareExtensions
-    {
-        public static IApplicationBuilder UseCentroCustoAccess(this IApplicationBuilder builder)
-        {
-            return builder.UseMiddleware<CentroCustoAccessMiddleware>();
         }
     }
 }

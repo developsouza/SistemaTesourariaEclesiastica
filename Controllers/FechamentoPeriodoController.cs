@@ -1217,11 +1217,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         if (!temLancamentosNovos && !fechamentosCongregacoes.Any())
                         {
                             TempData["ErrorMessage"] = "Não há lançamentos novos da SEDE nem prestações de congregações para incluir neste fechamento.";
-
-                            if (viewModel.EhSede)
-                            {
-                                viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-                            }
+                            viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
                             throw new InvalidOperationException("Sem lançamentos para processar");
                         }
 
@@ -1613,7 +1609,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 {
                     FechamentoPeriodoId = fechamento.Id,
                     TipoMovimento = "Entrada",
-                    Descricao = e.Descricao,
+                    Descricao = e.Descricao ?? "Sem descrição",
                     Valor = e.Valor,
                     Data = e.Data,
                     PlanoContas = e.PlanoDeContas != null ? e.PlanoDeContas.Nome : null,
@@ -1638,7 +1634,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 {
                     FechamentoPeriodoId = fechamento.Id,
                     TipoMovimento = "Saida",
-                    Descricao = s.Descricao,
+                    Descricao = s.Descricao ?? "Sem descrição",
                     Valor = s.Valor,
                     Data = s.Data,
                     PlanoContas = s.PlanoDeContas != null ? s.PlanoDeContas.Nome : null,
