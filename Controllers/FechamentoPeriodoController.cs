@@ -116,7 +116,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
 
         // GET: FechamentoPeriodo/Create
-        // GET: FechamentoPeriodo/Create
         [HttpGet]
         public async Task<IActionResult> Create()
         {
@@ -1537,68 +1536,69 @@ var mensagemSucesso = viewModel.EhSede && fechamentosCongregacoes.Any()
 
             // ✅ EXECUTAR SEQUENCIALMENTE - DbContext não suporta operações paralelas
             var detalheEntradas = await _context.Entradas
-   .AsNoTracking()
-        .Include(e => e.PlanoDeContas)
-        .Include(e => e.MeioDePagamento)
-        .Include(e => e.Membro)
-     .Where(FechamentoQueryHelper.EntradasNaoIncluidasEmFechamentosAprovados(
-          fechamento.CentroCustoId,
-            fechamento.DataInicio,
-          fechamento.DataFim))
-        .Select(e => new DetalheFechamento
-        {
-    FechamentoPeriodoId = fechamento.Id,
-    TipoMovimento = "Entrada",
-    Descricao = e.Descricao,
-            Valor = e.Valor,
-      Data = e.Data,
-         PlanoContas = e.PlanoDeContas != null ? e.PlanoDeContas.Nome : null,
-   MeioPagamento = e.MeioDePagamento != null ? e.MeioDePagamento.Nome : null,
-     Membro = e.Membro != null ? e.Membro.NomeCompleto : null,
-    Observacoes = e.Observacoes
-        })
-    .ToListAsync();
+                .AsNoTracking()
+                .Include(e => e.PlanoDeContas)
+                .Include(e => e.MeioDePagamento)
+                .Include(e => e.Membro)
+                .Where(FechamentoQueryHelper.EntradasNaoIncluidasEmFechamentosAprovados(
+                    fechamento.CentroCustoId,
+                    fechamento.DataInicio,
+                    fechamento.DataFim))
+                .Select(e => new DetalheFechamento
+                {
+                    FechamentoPeriodoId = fechamento.Id,
+                    TipoMovimento = "Entrada",
+                    Descricao = e.Descricao,
+                    Valor = e.Valor,
+                    Data = e.Data,
+                    PlanoContas = e.PlanoDeContas != null ? e.PlanoDeContas.Nome : null,
+                    MeioPagamento = e.MeioDePagamento != null ? e.MeioDePagamento.Nome : null,
+                    Membro = e.Membro != null ? e.Membro.NomeCompleto : null,
+                    Observacoes = e.Observacoes
+                })
+                .ToListAsync();
 
-  _logger.LogInformation($"Encontradas {detalheEntradas.Count} entradas para incluir no fechamento");
+            _logger.LogInformation($"Encontradas {detalheEntradas.Count} entradas para incluir no fechamento");
 
-    var detalheSaidas = await _context.Saidas
-   .AsNoTracking()
-        .Include(s => s.PlanoDeContas)
-        .Include(s => s.MeioDePagamento)
-        .Include(s => s.Fornecedor)
-        .Where(FechamentoQueryHelper.SaidasNaoIncluidasEmFechamentosAprovados(
-            fechamento.CentroCustoId,
- fechamento.DataInicio,
-         fechamento.DataFim))
-        .Select(s => new DetalheFechamento
-        {
-            FechamentoPeriodoId = fechamento.Id,
-     TipoMovimento = "Saida",
-         Descricao = s.Descricao,
-     Valor = s.Valor,
-     Data = s.Data,
-            PlanoContas = s.PlanoDeContas != null ? s.PlanoDeContas.Nome : null,
-            MeioPagamento = s.MeioDePagamento != null ? s.MeioDePagamento.Nome : null,
-      Fornecedor = s.Fornecedor != null ? s.Fornecedor.Nome : null,
-    Observacoes = s.Observacoes
-        })
-  .ToListAsync();
+            var detalheSaidas = await _context.Saidas
+                .AsNoTracking()
+                .Include(s => s.PlanoDeContas)
+                .Include(s => s.MeioDePagamento)
+                .Include(s => s.Fornecedor)
+                .Where(FechamentoQueryHelper.SaidasNaoIncluidasEmFechamentosAprovados(
+                    fechamento.CentroCustoId,
+                    fechamento.DataInicio,
+                    fechamento.DataFim))
+                .Select(s => new DetalheFechamento
+                {
+                    FechamentoPeriodoId = fechamento.Id,
+                    TipoMovimento = "Saida",
+                    Descricao = s.Descricao,
+                    Valor = s.Valor,
+                    Data = s.Data,
+                    PlanoContas = s.PlanoDeContas != null ? s.PlanoDeContas.Nome : null,
+                    MeioPagamento = s.MeioDePagamento != null ? s.MeioDePagamento.Nome : null,
+                    Fornecedor = s.Fornecedor != null ? s.Fornecedor.Nome : null,
+                    Observacoes = s.Observacoes
+                })
+                .ToListAsync();
 
-    _logger.LogInformation($"Encontradas {detalheSaidas.Count} saídas para incluir no fechamento");
+            _logger.LogInformation($"Encontradas {detalheSaidas.Count} saídas para incluir no fechamento");
 
-  // Adicionar todos os detalhes de uma vez (mais eficiente que loop)
-    if (detalheEntradas.Count > 0)
-    {
-        ((List<DetalheFechamento>)fechamento.DetalhesFechamento).AddRange(detalheEntradas);
-    }
+            // ✅ CORREÇÃO CRÍTICA: Adicionar detalhes sem cast inválido
+            // O EF Core rastreia automaticamente os objetos adicionados à coleção
+            foreach (var detalhe in detalheEntradas)
+            {
+                fechamento.DetalhesFechamento.Add(detalhe);
+            }
 
-    if (detalheSaidas.Count > 0)
-    {
-     ((List<DetalheFechamento>)fechamento.DetalhesFechamento).AddRange(detalheSaidas);
-    }
+            foreach (var detalhe in detalheSaidas)
+            {
+                fechamento.DetalhesFechamento.Add(detalhe);
+            }
 
-    _logger.LogInformation($"Total de {detalheEntradas.Count + detalheSaidas.Count} detalhes adicionados ao fechamento {fechamento.Id}");
-}
+            _logger.LogInformation($"Total de {detalheEntradas.Count + detalheSaidas.Count} detalhes adicionados ao fechamento {fechamento.Id}");
+        }
 
         // ✅ NOVO MÉTODO: Marcar Lançamentos como Incluídos em Fechamento
         private async Task MarcarLancamentosComoIncluidos(FechamentoPeriodo fechamento)

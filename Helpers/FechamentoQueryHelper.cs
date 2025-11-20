@@ -60,8 +60,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
 
         /// <summary>
         /// Calcula totais de entradas e saídas (APENAS lançamentos não incluídos em fechamentos aprovados).
-        /// ✅ CORRIGIDO: Executa queries SEQUENCIALMENTE para evitar erro de concorrência no DbContext.
-        /// O EF Core não permite múltiplas operações simultâneas no mesmo contexto.
+        /// ✅ CORRIGIDO: Inclui MeioDePagamento nas queries para acessar TipoCaixa.
         /// </summary>
         public static async Task<TotaisFechamento> CalcularTotais(
             ApplicationDbContext context,
@@ -70,9 +69,10 @@ namespace SistemaTesourariaEclesiastica.Helpers
             DateTime dataFim,
             int? fechamentoAtualId = null)
         {
-            // ✅ EXECUTAR SEQUENCIALMENTE - DbContext não suporta operações paralelas
+            // ✅ INCLUIR MeioDePagamento antes de agrupar por TipoCaixa
             var totaisEntradas = await context.Entradas
                 .AsNoTracking()
+                .Include(e => e.MeioDePagamento)
                 .Where(EntradasNaoIncluidasEmFechamentosAprovados(centroCustoId, dataInicio, dataFim, fechamentoAtualId))
                 .GroupBy(e => e.MeioDePagamento.TipoCaixa)
                 .Select(g => new { TipoCaixa = g.Key, Total = g.Sum(e => e.Valor) })
@@ -80,6 +80,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
 
             var totaisSaidas = await context.Saidas
                 .AsNoTracking()
+                .Include(s => s.MeioDePagamento)
                 .Where(SaidasNaoIncluidasEmFechamentosAprovados(centroCustoId, dataInicio, dataFim, fechamentoAtualId))
                 .GroupBy(s => s.MeioDePagamento.TipoCaixa)
                 .Select(g => new { TipoCaixa = g.Key, Total = g.Sum(s => s.Valor) })

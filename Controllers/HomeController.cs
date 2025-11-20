@@ -18,21 +18,18 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly AuditService _auditService;
-        private readonly LancamentoAprovadoService _lancamentoAprovadoService;
 
 
         public HomeController(
             ILogger<HomeController> logger,
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            AuditService auditService,
-            LancamentoAprovadoService lancamentoAprovadoService)
+            AuditService auditService)
         {
             _logger = logger;
             _context = context;
             _userManager = userManager;
             _auditService = auditService;
-            _lancamentoAprovadoService = lancamentoAprovadoService;
         }
 
         public async Task<IActionResult> Index()

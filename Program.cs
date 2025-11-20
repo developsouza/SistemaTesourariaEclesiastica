@@ -6,16 +6,70 @@ using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Middleware;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
+using Microsoft.AspNetCore.ResponseCompression;
+using System.IO.Compression;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ✅ OTIMIZAÇÃO: Response Compression
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<GzipCompressionProvider>();
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
+    {
+        "application/json",
+   "application/javascript",
+        "text/css",
+ "text/html",
+        "text/plain"
+    });
+});
+
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+// ✅ OTIMIZAÇÃO: Output Caching (novo no .NET 9)
+builder.Services.AddOutputCache(options =>
+{
+    options.AddBasePolicy(policy => policy.Expire(TimeSpan.FromMinutes(5)));
+    options.AddPolicy("StaticContent", policy => policy.Expire(TimeSpan.FromHours(1)));
+});
+
+// ✅ OTIMIZAÇÃO: Memory Cache
+builder.Services.AddMemoryCache();
+
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
-    throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+  throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-// Configuração do Entity Framework para SQL Server
+// ✅ OTIMIZAÇÃO: Configuração do Entity Framework com pooling e timeout otimizado
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+{
+  options.UseSqlServer(connectionString, sqlOptions =>
+ {
+        sqlOptions.CommandTimeout(30);
+        sqlOptions.EnableRetryOnFailure(
+     maxRetryCount: 3,
+ maxRetryDelay: TimeSpan.FromSeconds(5),
+    errorNumbersToAdd: null);
+    });
+ 
+ // ✅ Melhor performance em produção
+    if (!builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging(false);
+        options.EnableDetailedErrors(false);
+    }
+});
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -109,7 +163,9 @@ builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<BusinessRulesService>();
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<BalanceteService>();
-builder.Services.AddScoped<LancamentoAprovadoService>();
+
+// ✅ OTIMIZAÇÃO: Remover LancamentoAprovadoService (substituído pelo FechamentoQueryHelper que é mais eficiente)
+// builder.Services.AddScoped<LancamentoAprovadoService>();
 
 
 // Configuração do MVC com filtro global de autorização
@@ -145,6 +201,12 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
 
 var app = builder.Build();
 
+// ✅ OTIMIZAÇÃO: Usar Response Compression no início do pipeline
+app.UseResponseCompression();
+
+// ✅ OTIMIZAÇÃO: Adicionar Output Cache
+app.UseOutputCache();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -160,7 +222,16 @@ else
 app.UseRequestLocalization();
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+
+// ✅ OTIMIZAÇÃO: Cache estático para arquivos wwwroot
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        const int durationInSeconds = 60 * 60 * 24 * 30; // 30 dias
+        ctx.Context.Response.Headers["Cache-Control"] = $"public,max-age={durationInSeconds}";
+    }
+});
 
 app.UseRouting();
 

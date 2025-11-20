@@ -399,149 +399,125 @@ namespace SistemaTesourariaEclesiastica.Data
             // ÍNDICES ÚNICOS
             // ========================================
             builder.Entity<Membro>()
-                .HasIndex(m => m.CPF)
-                .IsUnique();
+        .HasIndex(m => m.CPF)
+              .IsUnique();
 
-            builder.Entity<CentroCusto>()
-                .HasIndex(c => c.Nome)
-                .IsUnique();
+      builder.Entity<CentroCusto>()
+      .HasIndex(c => c.Nome)
+            .IsUnique();
 
-            builder.Entity<PlanoDeContas>()
-                .HasIndex(pc => pc.Descricao)
-                .IsUnique();
+      builder.Entity<PlanoDeContas>()
+          .HasIndex(pc => pc.Descricao)
+           .IsUnique();
 
-            builder.Entity<MeioDePagamento>()
-                .HasIndex(mp => mp.Nome)
-                .IsUnique();
+        builder.Entity<MeioDePagamento>()
+        .HasIndex(mp => mp.Nome)
+   .IsUnique();
 
             builder.Entity<ModeloRateioEntrada>()
-                .HasIndex(mre => mre.Nome)
-                .IsUnique();
+         .HasIndex(mre => mre.Nome)
+    .IsUnique();
 
             builder.Entity<Fornecedor>()
-                .HasIndex(f => f.Nome)
-                .IsUnique();
+.HasIndex(f => f.Nome)
+       .IsUnique();
 
-            // Índices para Empréstimos
-            builder.Entity<DevolucaoEmprestimo>()
-                .HasIndex(d => d.EmprestimoId)
-                .HasDatabaseName("IX_DevolucaoEmprestimos_EmprestimoId");
+  // ========================================
+      // ✅ ÍNDICES COMPOSTOS PARA MELHOR PERFORMANCE
+          // ========================================
+ 
+   // Entradas - Otimizar queries por centro de custo, data e status de fechamento
+    builder.Entity<Entrada>()
+       .HasIndex(e => new { e.CentroCustoId, e.Data, e.IncluidaEmFechamento })
+        .HasDatabaseName("IX_Entradas_CentroCusto_Data_Fechamento");
+
+    builder.Entity<Entrada>()
+       .HasIndex(e => new { e.Data, e.CentroCustoId })
+             .IsDescending(true, false)
+       .HasDatabaseName("IX_Entradas_Data_CentroCusto_Desc");
+
+   builder.Entity<Entrada>()
+    .HasIndex(e => new { e.PlanoDeContasId, e.Data })
+            .HasDatabaseName("IX_Entradas_PlanoContas_Data");
+
+   builder.Entity<Entrada>()
+ .HasIndex(e => new { e.MembroId, e.Data })
+     .HasDatabaseName("IX_Entradas_Membro_Data");
+
+    // Saídas - Otimizar queries por centro de custo, data e status de fechamento
+         builder.Entity<Saida>()
+.HasIndex(s => new { s.CentroCustoId, s.Data, s.IncluidaEmFechamento })
+  .HasDatabaseName("IX_Saidas_CentroCusto_Data_Fechamento");
+
+            builder.Entity<Saida>()
+          .HasIndex(s => new { s.Data, s.CentroCustoId })
+   .IsDescending(true, false)
+       .HasDatabaseName("IX_Saidas_Data_CentroCusto_Desc");
+
+       builder.Entity<Saida>()
+         .HasIndex(s => new { s.PlanoDeContasId, s.Data })
+      .HasDatabaseName("IX_Saidas_PlanoContas_Data");
+
+    builder.Entity<Saida>()
+                .HasIndex(s => new { s.FornecedorId, s.Data })
+  .HasDatabaseName("IX_Saidas_Fornecedor_Data");
+
+            // FechamentoPeriodo - Otimizar queries por status, centro de custo e período
+            builder.Entity<FechamentoPeriodo>()
+         .HasIndex(f => new { f.Status, f.CentroCustoId, f.DataInicio, f.DataFim })
+     .HasDatabaseName("IX_Fechamentos_Status_CentroCusto_Periodo");
+
+            builder.Entity<FechamentoPeriodo>()
+     .HasIndex(f => new { f.CentroCustoId, f.DataInicio, f.DataFim, f.Status })
+         .HasDatabaseName("IX_Fechamentos_CentroCusto_Periodo_Status");
+
+          builder.Entity<FechamentoPeriodo>()
+         .HasIndex(f => new { f.EhFechamentoSede, f.Status, f.DataAprovacao })
+            .IsDescending(false, false, true)
+           .HasDatabaseName("IX_Fechamentos_Sede_Status_DataAprovacao");
+
+        builder.Entity<FechamentoPeriodo>()
+    .HasIndex(f => new { f.FoiProcessadoPelaSede, f.Status })
+   .HasDatabaseName("IX_Fechamentos_ProcessadoSede_Status");
+
+     // LogAuditoria - Otimizar queries por data e usuário
+        builder.Entity<LogAuditoria>()
+                .HasIndex(l => new { l.DataHora, l.UsuarioId })
+     .IsDescending(true, false)
+   .HasDatabaseName("IX_LogAuditoria_DataHora_Usuario_Desc");
+
+       builder.Entity<LogAuditoria>()
+       .HasIndex(l => new { l.Acao, l.DataHora })
+        .IsDescending(false, true)
+     .HasDatabaseName("IX_LogAuditoria_Acao_DataHora");
+
+   // ItemRateioFechamento - Otimizar queries por fechamento
+   builder.Entity<ItemRateioFechamento>()
+       .HasIndex(i => new { i.FechamentoPeriodoId, i.RegraRateioId })
+             .HasDatabaseName("IX_ItemRateio_Fechamento_Regra");
+
+      // DetalheFechamento - Otimizar queries por fechamento e tipo
+            builder.Entity<DetalheFechamento>()
+   .HasIndex(d => new { d.FechamentoPeriodoId, d.TipoMovimento, d.Data })
+    .HasDatabaseName("IX_DetalheFechamento_Fechamento_Tipo_Data");
+
+       // Índices para Empréstimos
+     builder.Entity<DevolucaoEmprestimo>()
+              .HasIndex(d => d.EmprestimoId)
+             .HasDatabaseName("IX_DevolucaoEmprestimos_EmprestimoId");
+
+          builder.Entity<Emprestimo>()
+         .HasIndex(e => e.Status)
+  .HasDatabaseName("IX_Emprestimos_Status");
 
             builder.Entity<Emprestimo>()
-                .HasIndex(e => e.Status)
-                .HasDatabaseName("IX_Emprestimos_Status");
+    .HasIndex(e => e.DataEmprestimo)
+   .IsDescending()
+         .HasDatabaseName("IX_Emprestimos_DataEmprestimo");
 
-            builder.Entity<Emprestimo>()
-                .HasIndex(e => e.DataEmprestimo)
-                .IsDescending()
-                .HasDatabaseName("IX_Emprestimos_DataEmprestimo");
-
-            builder.Entity<Emprestimo>()
-                .HasIndex(e => new { e.Status, e.DataEmprestimo })
-                .HasDatabaseName("IX_Emprestimos_Status_DataEmprestimo");
-
-            // ========================================
-            // 📅 CONFIGURAÇÕES - DESPESAS RECORRENTES
-            // ========================================
-            builder.Entity<DespesaRecorrente>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-
-                entity.Property(e => e.Nome)
-                    .IsRequired()
-                    .HasMaxLength(150);
-
-                entity.Property(e => e.Descricao)
-                    .HasMaxLength(500);
-
-                entity.Property(e => e.ValorPadrao)
-                    .HasColumnType("decimal(18,2)")
-                    .IsRequired();
-
-                entity.Property(e => e.Periodicidade)
-                    .HasConversion<int>()
-                    .IsRequired();
-
-                entity.Property(e => e.Ativa)
-                    .IsRequired()
-                    .HasDefaultValue(true);
-
-                entity.Property(e => e.DataCadastro)
-                    .HasDefaultValueSql("GETDATE()");
-
-                entity.HasOne(e => e.CentroCusto)
-                    .WithMany()
-                    .HasForeignKey(e => e.CentroCustoId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(e => e.PlanoDeContas)
-                    .WithMany()
-                    .HasForeignKey(e => e.PlanoDeContasId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(e => e.Fornecedor)
-                    .WithMany()
-                    .HasForeignKey(e => e.FornecedorId)
-                    .OnDelete(DeleteBehavior.SetNull);
-
-                entity.HasOne(e => e.MeioDePagamento)
-                    .WithMany()
-                    .HasForeignKey(e => e.MeioDePagamentoId)
-                    .OnDelete(DeleteBehavior.SetNull);
-            });
-
-            builder.Entity<PagamentoDespesaRecorrente>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-
-                entity.Property(e => e.DataVencimento)
-                    .IsRequired();
-
-                entity.Property(e => e.ValorPrevisto)
-                    .HasColumnType("decimal(18,2)")
-                    .IsRequired();
-
-                entity.Property(e => e.ValorPago)
-                    .HasColumnType("decimal(18,2)");
-
-                entity.Property(e => e.Pago)
-                    .IsRequired()
-                    .HasDefaultValue(false);
-
-                entity.Property(e => e.SaidaGerada)
-                    .IsRequired()
-                    .HasDefaultValue(false);
-
-                entity.Property(e => e.DataRegistro)
-                    .HasDefaultValueSql("GETDATE()");
-
-                entity.HasOne(e => e.DespesaRecorrente)
-                    .WithMany(d => d.Pagamentos)
-                    .HasForeignKey(e => e.DespesaRecorrenteId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(e => e.Saida)
-                    .WithMany()
-                    .HasForeignKey(e => e.SaidaId)
-                    .OnDelete(DeleteBehavior.SetNull);
-            });
-
-            // Índices para Despesas Recorrentes
-            builder.Entity<DespesaRecorrente>()
-                .HasIndex(d => d.Ativa)
-                .HasDatabaseName("IX_DespesasRecorrentes_Ativa");
-
-            builder.Entity<DespesaRecorrente>()
-                .HasIndex(d => new { d.CentroCustoId, d.Ativa })
-                .HasDatabaseName("IX_DespesasRecorrentes_CentroCusto_Ativa");
-
-            builder.Entity<PagamentoDespesaRecorrente>()
-                .HasIndex(p => p.Pago)
-                .HasDatabaseName("IX_PagamentosDespesas_Pago");
-
-            builder.Entity<PagamentoDespesaRecorrente>()
-                .HasIndex(p => new { p.DespesaRecorrenteId, p.DataVencimento })
-                .HasDatabaseName("IX_PagamentosDespesas_Despesa_Vencimento");
+      builder.Entity<Emprestimo>()
+         .HasIndex(e => new { e.Status, e.DataEmprestimo })
+         .HasDatabaseName("IX_Emprestimos_Status_DataEmprestimo");
         }
     }
 }

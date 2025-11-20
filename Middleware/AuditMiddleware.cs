@@ -18,18 +18,20 @@ namespace SistemaTesourariaEclesiastica.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            // Capturar informações da requisição
-            var originalBodyStream = context.Response.Body;
-
+            // ✅ CORREÇÃO: Capturar informações ANTES da execução da requisição
+            var startTime = DateTime.UtcNow;
+            var shouldAudit = context.User.Identity?.IsAuthenticated == true && ShouldAudit(context);
+            var actionInfo = ExtractActionInfo(context);
+            
             try
             {
                 // Executar a próxima requisição
                 await _next(context);
 
-                // Log de auditoria após a execução
-                if (context.User.Identity?.IsAuthenticated == true && ShouldAudit(context))
+                // ✅ CORREÇÃO: Apenas fazer log se a resposta NÃO tiver começado
+                if (shouldAudit && !context.Response.HasStarted)
                 {
-                    await LogRequestAsync(context);
+                    await LogRequestAsync(context, actionInfo, startTime);
                 }
             }
             catch (Exception ex)
@@ -37,17 +39,13 @@ namespace SistemaTesourariaEclesiastica.Middleware
                 // Log de erro
                 _logger.LogError(ex, $"Erro durante execução da requisição {context.Request.Method} {context.Request.Path}");
 
-                // Log de auditoria para erros
-                if (context.User.Identity?.IsAuthenticated == true)
+                // Log de auditoria para erros (apenas se resposta não começou)
+                if (context.User.Identity?.IsAuthenticated == true && !context.Response.HasStarted)
                 {
                     await LogErrorAsync(context, ex);
                 }
 
                 throw;
-            }
-            finally
-            {
-                context.Response.Body = originalBodyStream;
             }
         }
 
@@ -78,6 +76,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
                 "/saidas",
                 "/despesasrecorrentes",
                 "/fechamentos",
+                "/fechamentoperiodo",
                 "/usuarios",
                 "/planos",
                 "/membros",
@@ -93,10 +92,17 @@ namespace SistemaTesourariaEclesiastica.Middleware
             return shouldAuditPath && (shouldAuditMethod || path.Contains("/details", StringComparison.OrdinalIgnoreCase));
         }
 
-        private async Task LogRequestAsync(HttpContext context)
+        private async Task LogRequestAsync(HttpContext context, (string Controller, string Action, string? EntityId) actionInfo, DateTime startTime)
         {
             try
             {
+                // ✅ VERIFICAÇÃO ADICIONAL: Não tentar fazer log se resposta já começou
+                if (context.Response.HasStarted)
+                {
+                    _logger.LogWarning("Tentativa de log de auditoria após resposta iniciada. Path: {Path}", context.Request.Path);
+                    return;
+                }
+
                 using var scope = context.RequestServices.CreateScope();
                 var auditService = scope.ServiceProvider.GetService<AuditService>();
                 var userManager = scope.ServiceProvider.GetService<UserManager<ApplicationUser>>();
@@ -106,8 +112,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
                 var user = await userManager.GetUserAsync(context.User);
                 if (user == null) return;
 
-                var actionInfo = ExtractActionInfo(context);
-                var details = await ExtractRequestDetailsAsync(context);
+                var details = await ExtractRequestDetailsAsync(context, startTime);
 
                 await auditService.LogAuditAsync(
                     user.Id,
@@ -127,6 +132,13 @@ namespace SistemaTesourariaEclesiastica.Middleware
         {
             try
             {
+                // ✅ VERIFICAÇÃO ADICIONAL: Não tentar fazer log se resposta já começou
+                if (context.Response.HasStarted)
+                {
+                    _logger.LogWarning("Tentativa de log de erro após resposta iniciada. Path: {Path}", context.Request.Path);
+                    return;
+                }
+
                 using var scope = context.RequestServices.CreateScope();
                 var auditService = scope.ServiceProvider.GetService<AuditService>();
                 var userManager = scope.ServiceProvider.GetService<UserManager<ApplicationUser>>();
@@ -169,7 +181,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
             return (controller, action, entityId);
         }
 
-        private async Task<string?> ExtractRequestDetailsAsync(HttpContext context)
+        private async Task<string?> ExtractRequestDetailsAsync(HttpContext context, DateTime startTime)
         {
             try
             {
@@ -178,7 +190,9 @@ namespace SistemaTesourariaEclesiastica.Middleware
                 // Adicionar informações da requisição
                 details["UserAgent"] = context.Request.Headers["User-Agent"].ToString();
                 details["IPAddress"] = context.Connection.RemoteIpAddress?.ToString();
-                details["RequestTime"] = DateTime.UtcNow;
+                details["RequestTime"] = startTime;
+                details["ResponseTime"] = DateTime.UtcNow;
+                details["Duration"] = (DateTime.UtcNow - startTime).TotalMilliseconds;
                 details["StatusCode"] = context.Response.StatusCode;
 
                 // Adicionar parâmetros da query string (exceto dados sensíveis)
@@ -198,22 +212,31 @@ namespace SistemaTesourariaEclesiastica.Middleware
                     }
                 }
 
-                // Adicionar dados do formulário para POST/PUT (exceto dados sensíveis)
+                // ✅ CORREÇÃO: Não tentar ler Form se resposta já começou ou se não há FormContentType
                 if (context.Request.Method is "POST" or "PUT" or "PATCH" &&
                     context.Request.HasFormContentType &&
+                    !context.Response.HasStarted &&
                     context.Request.ContentLength < 10000) // Limitar tamanho
                 {
-                    var formData = new Dictionary<string, string>();
-                    foreach (var field in context.Request.Form)
+                    try
                     {
-                        if (!IsSensitiveParameter(field.Key))
+                        var formData = new Dictionary<string, string>();
+                        foreach (var field in context.Request.Form)
                         {
-                            formData[field.Key] = field.Value.ToString();
+                            if (!IsSensitiveParameter(field.Key))
+                            {
+                                formData[field.Key] = field.Value.ToString();
+                            }
+                        }
+                        if (formData.Any())
+                        {
+                            details["FormData"] = formData;
                         }
                     }
-                    if (formData.Any())
+                    catch (InvalidOperationException)
                     {
-                        details["FormData"] = formData;
+                        // Form já foi lido - ignorar
+                        _logger.LogDebug("Form já foi lido anteriormente");
                     }
                 }
 
