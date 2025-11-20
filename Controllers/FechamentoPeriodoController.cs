@@ -257,15 +257,48 @@ namespace SistemaTesourariaEclesiastica.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(FechamentoUnificadoViewModel viewModel)
         {
+            _logger.LogInformation($"=== INICIANDO CREATE FECHAMENTO ===");
+            _logger.LogInformation($"CentroCustoId: {viewModel.CentroCustoId}");
+            _logger.LogInformation($"TipoFechamento: {viewModel.TipoFechamento}");
+            _logger.LogInformation($"DataInicio: {viewModel.DataInicio:dd/MM/yyyy}");
+            _logger.LogInformation($"DataFim: {viewModel.DataFim:dd/MM/yyyy}");
+            _logger.LogInformation($"Ano: {viewModel.Ano}, Mes: {viewModel.Mes}");
+            _logger.LogInformation($"EhSede: {viewModel.EhSede}");
+
             if (!ModelState.IsValid)
             {
+                _logger.LogWarning("ModelState inválido. Erros de validação:");
+                foreach (var modelState in ModelState.Values)
+                {
+                    foreach (var error in modelState.Errors)
+                    {
+                        _logger.LogWarning($"  - {error.ErrorMessage}");
+                    }
+                }
+
+                // Criar mensagem de erro detalhada
+                var erros = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .Where(m => !string.IsNullOrEmpty(m))
+                    .ToList();
+
+                if (erros.Any())
+                {
+                    TempData["ErrorMessage"] = "Erro de validação: " + string.Join("; ", erros);
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Erro de validação. Verifique os campos preenchidos e tente novamente.";
+                }
+
                 // Recarregar dados se for SEDE
                 if (viewModel.EhSede)
-  {
-            viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-        }
-      return View(viewModel);
-    }
+                {
+                    viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                }
+                return View(viewModel);
+            }
 
     var user = await _userManager.GetUserAsync(User);
     if (user == null) return Unauthorized();
