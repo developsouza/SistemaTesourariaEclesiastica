@@ -73,6 +73,18 @@ namespace SistemaTesourariaEclesiastica.Services
             // Aqui vamos usar sempre o primeiro responsável, mas pode ser melhorado
             var responsavelSelecionado = responsaveis.First();
 
+            // ? Variável para rastrear o último porteiro escalado e a data
+            int? ultimoPorteiroId = null;
+            DateTime? ultimaDataEscalada = null;
+
+            // ? Se houver escalas anteriores, pegar o último porteiro escalado
+            if (ultimasEscalas.Any())
+            {
+                var ultimaEscala = ultimasEscalas.First();
+                ultimoPorteiroId = ultimaEscala.PorteiroId;
+                ultimaDataEscalada = ultimaEscala.DataCulto;
+            }
+
             foreach (var dia in diasOrdenados)
             {
                 // Verificar se já existe escala para este dia
@@ -85,14 +97,44 @@ namespace SistemaTesourariaEclesiastica.Services
                     continue;
                 }
 
-                // Selecionar porteiro com menor número de escalas (distribuição justa)
-                var porteiroSelecionadoId = distribuicaoPorteiros
-                    .OrderBy(d => d.Value)
+                // ? NOVA LÓGICA: Filtrar porteiros elegíveis
+                // Um porteiro é elegível se:
+                // 1. Não foi o último escalado OU
+                // 2. A última data escalada foi há mais de 1 dia
+                var porteirosElegiveis = porteiros
+                    .Where(p =>
+                    {
+                        // Se não há histórico, todos são elegíveis
+                        if (ultimoPorteiroId == null || ultimaDataEscalada == null)
+                            return true;
+
+                        // Se o porteiro é diferente do último, é elegível
+                        if (p.Id != ultimoPorteiroId.Value)
+                            return true;
+
+                        // Se o porteiro é o mesmo, verificar se a data não é consecutiva
+                        var diasDiferenca = (dia.Data.Date - ultimaDataEscalada.Value.Date).Days;
+                        return diasDiferenca > 1;
+                    })
+                    .ToList();
+
+                // ? Se não houver porteiros elegíveis (improvável), permitir qualquer um
+                if (!porteirosElegiveis.Any())
+                {
+                    _logger.LogWarning($"Nenhum porteiro elegível encontrado para {dia.Data:dd/MM/yyyy}. Permitindo qualquer porteiro.");
+                    porteirosElegiveis = porteiros.ToList();
+                }
+
+                // ? Selecionar porteiro com menor número de escalas entre os elegíveis
+                var porteiroSelecionadoId = porteirosElegiveis
+                    .OrderBy(p => distribuicaoPorteiros[p.Id])
                     .ThenBy(_ => random.Next()) // Adiciona aleatoriedade em caso de empate
                     .First()
-                    .Key;
+                    .Id;
 
                 var porteiro = porteiros.First(p => p.Id == porteiroSelecionadoId);
+
+                _logger.LogInformation($"Porteiro selecionado para {dia.Data:dd/MM/yyyy}: {porteiro.Nome} (ID: {porteiro.Id})");
 
                 // Criar a escala
                 var escala = new EscalaPorteiro
@@ -108,8 +150,12 @@ namespace SistemaTesourariaEclesiastica.Services
 
                 escalasGeradas.Add(escala);
 
-                // Atualizar distribuição
+                // ? Atualizar distribuição
                 distribuicaoPorteiros[porteiroSelecionadoId]++;
+
+                // ? Atualizar rastreamento do último porteiro
+                ultimoPorteiroId = porteiroSelecionadoId;
+                ultimaDataEscalada = dia.Data;
             }
 
             return escalasGeradas;
