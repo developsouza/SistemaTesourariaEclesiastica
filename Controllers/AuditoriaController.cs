@@ -234,11 +234,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 .ToListAsync();
 
             // Atividade por dia da semana
-            var atividadePorDiaSemana = await query
+            var logsParaDiaSemana = await query.ToListAsync();
+            var atividadePorDiaSemana = logsParaDiaSemana
                 .GroupBy(l => l.DataHora.DayOfWeek)
                 .Select(g => new { DiaSemana = g.Key, Quantidade = g.Count() })
                 .OrderBy(x => x.DiaSemana)
-                .ToListAsync();
+                .ToList();
 
             ViewBag.TotalLogs = totalLogs;
             ViewBag.TotalUsuarios = totalUsuarios;
