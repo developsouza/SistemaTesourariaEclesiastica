@@ -1,0 +1,94 @@
+@model SistemaTesourariaEclesiastica.Models.ConfiguracaoCulto
+@using SistemaTesourariaEclesiastica.Extensions
+
+@{
+    ViewData["Title"] = "Excluir Configuração";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Excluir Configuração de Culto
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger" role="alert">
+                    <h5 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmação de Exclusão
+                    </h5>
+                    <hr>
+                    <p class="mb-0">Tem certeza que deseja excluir esta configuração? Esta ação não pode ser desfeita.</p>
+                </div>
+
+                <dl class="row">
+                    <dt class="col-sm-4">Tipo de Configuração:</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.DataEspecifica.HasValue)
+                        {
+                            <span class="badge bg-success">
+                                <i class="bi bi-calendar-event me-1"></i>Data Específica
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-primary">
+                                <i class="bi bi-calendar-week me-1"></i>Semanal
+                            </span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Dia / Data:</dt>
+                    <dd class="col-sm-8">
+                        <strong>@Model.DescricaoConfiguracao</strong>
+                    </dd>
+
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.TipoCulto)</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-info">@Model.TipoCulto.GetDisplayName()</span>
+                    </dd>
+
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Observacao)</dt>
+                    <dd class="col-sm-8">
+                        @if (!string.IsNullOrEmpty(Model.Observacao))
+                        {
+                            @Model.Observacao
+                        }
+                        else
+                        {
+                            <em class="text-muted">Nenhuma observação</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Ativo)</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Ativo)
+                        {
+                            <span class="badge bg-success">Ativo</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inativo</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.DataCadastro)</dt>
+                    <dd class="col-sm-8">@Model.DataCadastro.ToString("dd/MM/yyyy HH:mm")</dd>
+                </dl>
+
+                <form asp-action="Delete" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <div class="d-flex justify-content-between gap-2 mt-4">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i>Confirmar Exclusão
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

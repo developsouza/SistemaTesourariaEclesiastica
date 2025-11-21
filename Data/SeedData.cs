@@ -369,7 +369,7 @@ namespace SistemaTesourariaEclesiastica.Data
             int sedeId,
                   int fundoId,
              ILogger logger)
-            {
+        {
             logger.LogInformation("6. Criando Regras de Rateio (Dízimo dos Dízimos)...");
 
             // Verificar se já existe regra de rateio SEDE → FUNDO

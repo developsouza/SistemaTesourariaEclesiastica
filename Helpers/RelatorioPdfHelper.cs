@@ -1,6 +1,4 @@
 using iText.Html2pdf;
-using iText.Kernel.Pdf;
-using iText.Layout;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.ViewModels;
 using System.Text;

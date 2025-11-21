@@ -1,7 +1,6 @@
-using System.Collections.Concurrent;
-using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
 using SistemaTesourariaEclesiastica.Models;
+using System.Collections.Concurrent;
 
 namespace SistemaTesourariaEclesiastica.Services
 {
@@ -53,8 +52,8 @@ namespace SistemaTesourariaEclesiastica.Services
             {
                 _auditQueue.Enqueue(item);
                 _signal.Release();
-                
-                _logger.LogTrace("Item de auditoria adicionado à fila: {Action} - {Entity}", 
+
+                _logger.LogTrace("Item de auditoria adicionado à fila: {Action} - {Entity}",
                     item.Action, item.EntityName);
             }
             catch (Exception ex)
@@ -91,7 +90,7 @@ namespace SistemaTesourariaEclesiastica.Services
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Erro no serviço de auditoria em background");
-                        
+
                         // ? CORREÇÃO: Aguardar antes de tentar novamente para evitar loop infinito
                         try
                         {
@@ -134,11 +133,11 @@ namespace SistemaTesourariaEclesiastica.Services
                 // ? VALIDAÇÃO: Verificar se o usuário ainda existe
                 var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
                 var userExists = await userManager.FindByIdAsync(item.UserId);
-                
+
                 if (userExists == null)
                 {
                     _logger.LogWarning(
-                        "Usuário {UserId} não encontrado ao processar auditoria. Ação: {Action}", 
+                        "Usuário {UserId} não encontrado ao processar auditoria. Ação: {Action}",
                         item.UserId, item.Action);
                     // Continuar mesmo assim para não perder o log
                 }
@@ -156,38 +155,38 @@ namespace SistemaTesourariaEclesiastica.Services
                 };
 
                 context.LogsAuditoria.Add(log);
-                
+
                 // ? CORREÇÃO: Usar SaveChangesAsync com timeout
                 using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-                
+
                 await context.SaveChangesAsync(linkedCts.Token);
 
                 _itemsProcessed++;
-                
+
                 _logger.LogDebug(
-                    "? Log de auditoria processado: {Action} - {Entity} #{Id} (User: {UserId})", 
+                    "? Log de auditoria processado: {Action} - {Entity} #{Id} (User: {UserId})",
                     item.Action, item.EntityName, item.EntityId, item.UserId);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 _itemsFailed++;
                 _logger.LogWarning(
-                    "?? Timeout ao processar auditoria: {Action} - {Entity}. Item será descartado.", 
+                    "?? Timeout ao processar auditoria: {Action} - {Entity}. Item será descartado.",
                     item.Action, item.EntityName);
             }
             catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
             {
                 _itemsFailed++;
-                _logger.LogError(dbEx, 
-                    "? Erro de banco de dados ao processar auditoria: {Action} - {Entity}", 
+                _logger.LogError(dbEx,
+                    "? Erro de banco de dados ao processar auditoria: {Action} - {Entity}",
                     item.Action, item.EntityName);
             }
             catch (Exception ex)
             {
                 _itemsFailed++;
-                _logger.LogError(ex, 
-                    "? Erro ao processar item de auditoria: {Action} - {Entity}", 
+                _logger.LogError(ex,
+                    "? Erro ao processar item de auditoria: {Action} - {Entity}",
                     item.Action, item.EntityName);
             }
         }
@@ -196,7 +195,7 @@ namespace SistemaTesourariaEclesiastica.Services
         {
             _logger.LogInformation(
                 "?? Finalizando serviço de auditoria... " +
-                "Processando {Count} itens restantes na fila", 
+                "Processando {Count} itens restantes na fila",
                 _auditQueue.Count);
 
             // ? CORREÇÃO: Processar itens restantes com timeout global
@@ -213,7 +212,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 if (_auditQueue.Count > 0)
                 {
                     _logger.LogWarning(
-                        "?? {Count} itens de auditoria não foram processados devido ao shutdown", 
+                        "?? {Count} itens de auditoria não foram processados devido ao shutdown",
                         _auditQueue.Count);
                 }
             }

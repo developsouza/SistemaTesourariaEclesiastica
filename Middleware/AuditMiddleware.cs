@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
-using SistemaTesourariaEclesiastica.Models;
-using SistemaTesourariaEclesiastica.Services;
+﻿using SistemaTesourariaEclesiastica.Services;
 using System.Text.Json;
 
 namespace SistemaTesourariaEclesiastica.Middleware
@@ -20,7 +18,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
         private readonly ILogger<AuditMiddleware> _logger;
 
         public AuditMiddleware(
-            RequestDelegate next, 
+            RequestDelegate next,
             ILogger<AuditMiddleware> logger)
         {
             _next = next;
@@ -31,7 +29,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
         {
             // ✅ CORREÇÃO: Obter AuditQueueService do ServiceProvider de forma segura
             var auditQueue = context.RequestServices.GetService<AuditQueueService>();
-            
+
             if (auditQueue == null)
             {
                 _logger.LogWarning("AuditQueueService não disponível, pulando auditoria");
@@ -40,7 +38,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
             }
 
             var shouldAudit = context.User?.Identity?.IsAuthenticated == true && ShouldAudit(context);
-            
+
             if (!shouldAudit)
             {
                 await _next(context);
@@ -112,8 +110,8 @@ namespace SistemaTesourariaEclesiastica.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, 
-                    "Erro durante execução da requisição {Method} {Path}. User: {User}", 
+                _logger.LogError(ex,
+                    "Erro durante execução da requisição {Method} {Path}. User: {User}",
                     method, path, context.User?.Identity?.Name ?? "Anonymous");
 
                 // ✅ CORREÇÃO: Registrar erro na fila de forma segura

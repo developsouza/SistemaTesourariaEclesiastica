@@ -427,27 +427,27 @@ namespace SistemaTesourariaEclesiastica.Controllers
  c.Nome.ToUpper().Contains("DÍZIMO") ||
 c.Nome.ToUpper().Contains("DIZIMO")));
 
- // ✅ CORREÇÃO: Filtrar APENAS rateios para o FUNDO de empréstimos
-       var historico = new List<ItemRateioFechamento>();
+            // ✅ CORREÇÃO: Filtrar APENAS rateios para o FUNDO de empréstimos
+            var historico = new List<ItemRateioFechamento>();
 
-    if (centroCustoFundo != null)
-     {
-       historico = await _context.ItensRateioFechamento
-   .Include(i => i.FechamentoPeriodo)
-   .ThenInclude(f => f.CentroCusto)
-          .Include(i => i.RegraRateio)
-      .ThenInclude(r => r.CentroCustoDestino)
-             .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
-     i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id) // ✅ FILTRO ESSENCIAL
-      .OrderByDescending(i => i.FechamentoPeriodo.DataAprovacao)
-        .Take(20)
-          .ToListAsync();
-    }
+            if (centroCustoFundo != null)
+            {
+                historico = await _context.ItensRateioFechamento
+            .Include(i => i.FechamentoPeriodo)
+            .ThenInclude(f => f.CentroCusto)
+                   .Include(i => i.RegraRateio)
+               .ThenInclude(r => r.CentroCustoDestino)
+                      .Where(i => i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado &&
+              i.RegraRateio.CentroCustoDestinoId == centroCustoFundo.Id) // ✅ FILTRO ESSENCIAL
+               .OrderByDescending(i => i.FechamentoPeriodo.DataAprovacao)
+                 .Take(20)
+                   .ToListAsync();
+            }
 
-       ViewBag.Detalhamento = detalhamento;
-        ViewBag.Historico = historico;
+            ViewBag.Detalhamento = detalhamento;
+            ViewBag.Historico = historico;
 
-       return View();
+            return View();
         }
 
         // ✅ NOVO: Diagnóstico Completo do Sistema de Rateios e Fundo

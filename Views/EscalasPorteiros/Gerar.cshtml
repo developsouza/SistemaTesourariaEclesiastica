@@ -1,0 +1,46 @@
+@model SistemaTesourariaEclesiastica.ViewModels.GerarEscalaViewModel
+@using SistemaTesourariaEclesiastica.Extensions
+@{
+    ViewData["Title"] = "Gerar Escala de Porteiros";
+}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-calendar-plus me-2"></i>Gerar Escala de Porteiros</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info" role="alert"><i class="bi bi-info-circle me-2"></i><strong>Como funciona:</strong> Selecione o período e os dias dos cultos. O sistema distribuirá automaticamente os porteiros de forma justa.</div>
+                @if (!Model.PorteirosDisponiveis.Any())
+                {
+                    <div class="alert alert-danger" role="alert"><i class="bi bi-exclamation-triangle me-2"></i><strong>Atenção!</strong> Não há porteiros cadastrados. <a asp-controller="Porteiros" asp-action="Create" class="alert-link">Cadastre porteiros aqui</a>.</div>
+                }
+                @if (!Model.ResponsaveisDisponiveis.Any())
+                {
+                    <div class="alert alert-danger" role="alert"><i class="bi bi-exclamation-triangle me-2"></i><strong>Atenção!</strong> Não há responsáveis cadastrados. <a asp-controller="ResponsaveisPorteiros" asp-action="Create" class="alert-link">Cadastre responsáveis aqui</a>.</div>
+                }
+                @if (Model.PorteirosDisponiveis.Any() && Model.ResponsaveisDisponiveis.Any())
+                {
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3"><label for="dataInicio" class="form-label fw-semibold">Data de Início</label><input type="date" class="form-control" id="dataInicio" value="@Model.DataInicio.ToString("yyyy-MM-dd")" /></div>
+                        <div class="col-md-6 mb-3"><label for="dataFim" class="form-label fw-semibold">Data de Fim</label><input type="date" class="form-control" id="dataFim" value="@Model.DataFim.ToString("yyyy-MM-dd")" /></div>
+                    </div>
+                    <div class="d-flex gap-2 mb-4">
+                        <button type="button" class="btn btn-outline-primary" id="btnSugerirDias"><i class="bi bi-lightbulb me-1"></i>Sugerir Dias Automaticamente</button>
+                        <button type="button" class="btn btn-outline-secondary" id="btnLimparDias"><i class="bi bi-x-circle me-1"></i>Limpar Seleção</button>
+                    </div>
+                    <div class="card mb-4"><div class="card-header"><h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Selecione os Dias dos Cultos</h5></div><div class="card-body"><div id="calendario" class="mb-3"></div><div class="alert alert-secondary" role="alert" id="diasSelecionadosInfo"><i class="bi bi-calendar-check me-2"></i><strong>Dias selecionados:</strong> <span id="totalDiasSelecionados">0</span></div><div id="listaDiasSelecionados" class="mb-3"></div></div></div>
+                    <div class="d-flex justify-content-between gap-2"><a asp-action="Index" class="btn btn-secondary"><i class="bi bi-arrow-left me-1"></i>Cancelar</a><button type="button" class="btn btn-success" id="btnGerarEscala"><i class="bi bi-check-circle me-1"></i>Gerar Escala</button></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    @Html.AntiForgeryToken()
+    @if (Model.DiasSelecionados != null && Model.DiasSelecionados.Any())
+    {
+        <script id="diasIniciaisJson" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DiasSelecionados.Select(d => new { Data = d.Data.ToString("yyyy-MM-dd"), TipoCulto = (int)d.TipoCulto, Observacao = d.Observacao })))</script>
+    }
+    <script src="~/js/escala-porteiros-gerar.js" asp-append-version="true"></script>
+}

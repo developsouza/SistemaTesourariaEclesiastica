@@ -635,56 +635,56 @@ UserManager<ApplicationUser> userManager,
         .Include(p => p.Saida)
       .FirstOrDefaultAsync(p => p.Id == pagamentoId);
 
-   if (pagamento == null)
+            if (pagamento == null)
             {
-         return NotFound();
-   }
-
-          if (!await CanAccessDespesa(pagamento.DespesaRecorrente))
-      {
-    return Forbid();
+                return NotFound();
             }
 
-        if (!pagamento.Pago)
+            if (!await CanAccessDespesa(pagamento.DespesaRecorrente))
             {
-      TempData["InfoMessage"] = "Este pagamento já está desmarcado.";
-         return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });
+                return Forbid();
+            }
+
+            if (!pagamento.Pago)
+            {
+                TempData["InfoMessage"] = "Este pagamento já está desmarcado.";
+                return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });
             }
 
             // Se há saída gerada, excluí-la automaticamente
             if (pagamento.SaidaGerada && pagamento.SaidaId.HasValue)
             {
-      var saida = await _context.Saidas.FindAsync(pagamento.SaidaId.Value);
-if (saida != null)
-              {
-        // Excluir a saída
-       _context.Saidas.Remove(saida);
+                var saida = await _context.Saidas.FindAsync(pagamento.SaidaId.Value);
+                if (saida != null)
+                {
+                    // Excluir a saída
+                    _context.Saidas.Remove(saida);
 
-   // Registrar auditoria da exclusão da saída
-      var user = await _userManager.GetUserAsync(User);
-   if (user != null)
-     {
-      await _auditService.LogAuditAsync(user.Id, "Excluir Saída (Desmarcar Pago)", "Saida",
-           saida.Id.ToString(), $"Saída de {saida.Valor:C2} excluída automaticamente ao desmarcar pagamento #{pagamentoId}.");
-}
-      }
+                    // Registrar auditoria da exclusão da saída
+                    var user = await _userManager.GetUserAsync(User);
+                    if (user != null)
+                    {
+                        await _auditService.LogAuditAsync(user.Id, "Excluir Saída (Desmarcar Pago)", "Saida",
+                             saida.Id.ToString(), $"Saída de {saida.Valor:C2} excluída automaticamente ao desmarcar pagamento #{pagamentoId}.");
+                    }
+                }
             }
 
-       // Desmarcar o pagamento
-     pagamento.Pago = false;
- pagamento.DataPagamento = null;
-     pagamento.ValorPago = null;
+            // Desmarcar o pagamento
+            pagamento.Pago = false;
+            pagamento.DataPagamento = null;
+            pagamento.ValorPago = null;
             pagamento.SaidaGerada = false;
             pagamento.SaidaId = null;
 
-   await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
-var userAudit = await _userManager.GetUserAsync(User);
-    if (userAudit != null)
-          {
-  await _auditService.LogAuditAsync(userAudit.Id, "Desmarcar Pago", "PagamentoDespesaRecorrente",
-          pagamento.Id.ToString(), "Pagamento desmarcado como não pago e saída automaticamente excluída.");
-         }
+            var userAudit = await _userManager.GetUserAsync(User);
+            if (userAudit != null)
+            {
+                await _auditService.LogAuditAsync(userAudit.Id, "Desmarcar Pago", "PagamentoDespesaRecorrente",
+                        pagamento.Id.ToString(), "Pagamento desmarcado como não pago e saída automaticamente excluída.");
+            }
 
             TempData["SuccessMessage"] = "Pagamento desmarcado com sucesso! A saída vinculada foi excluída automaticamente.";
             return RedirectToAction(nameof(Pagamentos), new { id = pagamento.DespesaRecorrenteId });

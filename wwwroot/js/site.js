@@ -700,7 +700,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Se a request não tem token no data, pegar do meta tag
-                if (settings.data && !settings.data.includes('__RequestVerificationToken')) {
+                // Verificar se data é string antes de usar includes
+                const hasTokenInData = settings.data && 
+                    typeof settings.data === 'string' && 
+                    settings.data.includes('__RequestVerificationToken');
+                
+                if (!hasTokenInData) {
                     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
                     if (token) {
                         xhr.setRequestHeader("X-CSRF-Token", token);
@@ -730,4 +735,6 @@ window.addEventListener('error', (e) => {
 });
 
 // Log de sucesso
-console.log('✨ Sistema de Tesouraria carregado com sucesso!');
+console.log('[OK] Sistema de Tesouraria carregado com sucesso!');
+
+// Versão: 1.0.2 - Encoding fix

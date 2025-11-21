@@ -31,6 +31,10 @@ namespace SistemaTesourariaEclesiastica.Data
         public DbSet<DevolucaoEmprestimo> DevolucaoEmprestimos { get; set; }
         public DbSet<DespesaRecorrente> DespesasRecorrentes { get; set; }
         public DbSet<PagamentoDespesaRecorrente> PagamentosDespesasRecorrentes { get; set; }
+        public DbSet<Porteiro> Porteiros { get; set; }
+        public DbSet<ResponsavelPorteiro> ResponsaveisPorteiros { get; set; }
+        public DbSet<EscalaPorteiro> EscalasPorteiros { get; set; }
+        public DbSet<ConfiguracaoCulto> ConfiguracoesCultos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -402,17 +406,17 @@ namespace SistemaTesourariaEclesiastica.Data
         .HasIndex(m => m.CPF)
               .IsUnique();
 
-      builder.Entity<CentroCusto>()
-      .HasIndex(c => c.Nome)
-            .IsUnique();
+            builder.Entity<CentroCusto>()
+            .HasIndex(c => c.Nome)
+                  .IsUnique();
 
-      builder.Entity<PlanoDeContas>()
-          .HasIndex(pc => pc.Descricao)
-           .IsUnique();
+            builder.Entity<PlanoDeContas>()
+                .HasIndex(pc => pc.Descricao)
+                 .IsUnique();
 
-        builder.Entity<MeioDePagamento>()
-        .HasIndex(mp => mp.Nome)
-   .IsUnique();
+            builder.Entity<MeioDePagamento>()
+            .HasIndex(mp => mp.Nome)
+       .IsUnique();
 
             builder.Entity<ModeloRateioEntrada>()
          .HasIndex(mre => mre.Nome)
@@ -422,45 +426,45 @@ namespace SistemaTesourariaEclesiastica.Data
 .HasIndex(f => f.Nome)
        .IsUnique();
 
-  // ========================================
-      // ✅ ÍNDICES COMPOSTOS PARA MELHOR PERFORMANCE
-          // ========================================
- 
-   // Entradas - Otimizar queries por centro de custo, data e status de fechamento
-    builder.Entity<Entrada>()
-       .HasIndex(e => new { e.CentroCustoId, e.Data, e.IncluidaEmFechamento })
-        .HasDatabaseName("IX_Entradas_CentroCusto_Data_Fechamento");
+            // ========================================
+            // ✅ ÍNDICES COMPOSTOS PARA MELHOR PERFORMANCE
+            // ========================================
 
-    builder.Entity<Entrada>()
-       .HasIndex(e => new { e.Data, e.CentroCustoId })
-             .IsDescending(true, false)
-       .HasDatabaseName("IX_Entradas_Data_CentroCusto_Desc");
+            // Entradas - Otimizar queries por centro de custo, data e status de fechamento
+            builder.Entity<Entrada>()
+               .HasIndex(e => new { e.CentroCustoId, e.Data, e.IncluidaEmFechamento })
+                .HasDatabaseName("IX_Entradas_CentroCusto_Data_Fechamento");
 
-   builder.Entity<Entrada>()
-    .HasIndex(e => new { e.PlanoDeContasId, e.Data })
-            .HasDatabaseName("IX_Entradas_PlanoContas_Data");
+            builder.Entity<Entrada>()
+               .HasIndex(e => new { e.Data, e.CentroCustoId })
+                     .IsDescending(true, false)
+               .HasDatabaseName("IX_Entradas_Data_CentroCusto_Desc");
 
-   builder.Entity<Entrada>()
- .HasIndex(e => new { e.MembroId, e.Data })
-     .HasDatabaseName("IX_Entradas_Membro_Data");
+            builder.Entity<Entrada>()
+             .HasIndex(e => new { e.PlanoDeContasId, e.Data })
+                     .HasDatabaseName("IX_Entradas_PlanoContas_Data");
 
-    // Saídas - Otimizar queries por centro de custo, data e status de fechamento
-         builder.Entity<Saida>()
-.HasIndex(s => new { s.CentroCustoId, s.Data, s.IncluidaEmFechamento })
-  .HasDatabaseName("IX_Saidas_CentroCusto_Data_Fechamento");
+            builder.Entity<Entrada>()
+          .HasIndex(e => new { e.MembroId, e.Data })
+              .HasDatabaseName("IX_Entradas_Membro_Data");
+
+            // Saídas - Otimizar queries por centro de custo, data e status de fechamento
+            builder.Entity<Saida>()
+   .HasIndex(s => new { s.CentroCustoId, s.Data, s.IncluidaEmFechamento })
+     .HasDatabaseName("IX_Saidas_CentroCusto_Data_Fechamento");
 
             builder.Entity<Saida>()
           .HasIndex(s => new { s.Data, s.CentroCustoId })
    .IsDescending(true, false)
        .HasDatabaseName("IX_Saidas_Data_CentroCusto_Desc");
 
-       builder.Entity<Saida>()
-         .HasIndex(s => new { s.PlanoDeContasId, s.Data })
-      .HasDatabaseName("IX_Saidas_PlanoContas_Data");
+            builder.Entity<Saida>()
+              .HasIndex(s => new { s.PlanoDeContasId, s.Data })
+           .HasDatabaseName("IX_Saidas_PlanoContas_Data");
 
-    builder.Entity<Saida>()
-                .HasIndex(s => new { s.FornecedorId, s.Data })
-  .HasDatabaseName("IX_Saidas_Fornecedor_Data");
+            builder.Entity<Saida>()
+                        .HasIndex(s => new { s.FornecedorId, s.Data })
+          .HasDatabaseName("IX_Saidas_Fornecedor_Data");
 
             // FechamentoPeriodo - Otimizar queries por status, centro de custo e período
             builder.Entity<FechamentoPeriodo>()
@@ -471,53 +475,172 @@ namespace SistemaTesourariaEclesiastica.Data
      .HasIndex(f => new { f.CentroCustoId, f.DataInicio, f.DataFim, f.Status })
          .HasDatabaseName("IX_Fechamentos_CentroCusto_Periodo_Status");
 
-          builder.Entity<FechamentoPeriodo>()
-         .HasIndex(f => new { f.EhFechamentoSede, f.Status, f.DataAprovacao })
-            .IsDescending(false, false, true)
-           .HasDatabaseName("IX_Fechamentos_Sede_Status_DataAprovacao");
+            builder.Entity<FechamentoPeriodo>()
+           .HasIndex(f => new { f.EhFechamentoSede, f.Status, f.DataAprovacao })
+              .IsDescending(false, false, true)
+             .HasDatabaseName("IX_Fechamentos_Sede_Status_DataAprovacao");
 
-        builder.Entity<FechamentoPeriodo>()
-    .HasIndex(f => new { f.FoiProcessadoPelaSede, f.Status })
-   .HasDatabaseName("IX_Fechamentos_ProcessadoSede_Status");
+            builder.Entity<FechamentoPeriodo>()
+        .HasIndex(f => new { f.FoiProcessadoPelaSede, f.Status })
+       .HasDatabaseName("IX_Fechamentos_ProcessadoSede_Status");
 
-     // LogAuditoria - Otimizar queries por data e usuário
-        builder.Entity<LogAuditoria>()
-                .HasIndex(l => new { l.DataHora, l.UsuarioId })
-     .IsDescending(true, false)
-   .HasDatabaseName("IX_LogAuditoria_DataHora_Usuario_Desc");
+            // LogAuditoria - Otimizar queries por data e usuário
+            builder.Entity<LogAuditoria>()
+                    .HasIndex(l => new { l.DataHora, l.UsuarioId })
+         .IsDescending(true, false)
+       .HasDatabaseName("IX_LogAuditoria_DataHora_Usuario_Desc");
 
-       builder.Entity<LogAuditoria>()
-       .HasIndex(l => new { l.Acao, l.DataHora })
-        .IsDescending(false, true)
-     .HasDatabaseName("IX_LogAuditoria_Acao_DataHora");
+            builder.Entity<LogAuditoria>()
+            .HasIndex(l => new { l.Acao, l.DataHora })
+             .IsDescending(false, true)
+          .HasDatabaseName("IX_LogAuditoria_Acao_DataHora");
 
-   // ItemRateioFechamento - Otimizar queries por fechamento
-   builder.Entity<ItemRateioFechamento>()
-       .HasIndex(i => new { i.FechamentoPeriodoId, i.RegraRateioId })
-             .HasDatabaseName("IX_ItemRateio_Fechamento_Regra");
+            // ItemRateioFechamento - Otimizar queries por fechamento
+            builder.Entity<ItemRateioFechamento>()
+                .HasIndex(i => new { i.FechamentoPeriodoId, i.RegraRateioId })
+                      .HasDatabaseName("IX_ItemRateio_Fechamento_Regra");
 
-      // DetalheFechamento - Otimizar queries por fechamento e tipo
+            // DetalheFechamento - Otimizar queries por fechamento e tipo
             builder.Entity<DetalheFechamento>()
    .HasIndex(d => new { d.FechamentoPeriodoId, d.TipoMovimento, d.Data })
     .HasDatabaseName("IX_DetalheFechamento_Fechamento_Tipo_Data");
 
-       // Índices para Empréstimos
-     builder.Entity<DevolucaoEmprestimo>()
-              .HasIndex(d => d.EmprestimoId)
-             .HasDatabaseName("IX_DevolucaoEmprestimos_EmprestimoId");
+            // Índices para Empréstimos
+            builder.Entity<DevolucaoEmprestimo>()
+                     .HasIndex(d => d.EmprestimoId)
+                    .HasDatabaseName("IX_DevolucaoEmprestimos_EmprestimoId");
 
-          builder.Entity<Emprestimo>()
-         .HasIndex(e => e.Status)
-  .HasDatabaseName("IX_Emprestimos_Status");
+            builder.Entity<Emprestimo>()
+           .HasIndex(e => e.Status)
+    .HasDatabaseName("IX_Emprestimos_Status");
 
             builder.Entity<Emprestimo>()
     .HasIndex(e => e.DataEmprestimo)
    .IsDescending()
          .HasDatabaseName("IX_Emprestimos_DataEmprestimo");
 
-      builder.Entity<Emprestimo>()
-         .HasIndex(e => new { e.Status, e.DataEmprestimo })
-         .HasDatabaseName("IX_Emprestimos_Status_DataEmprestimo");
+            builder.Entity<Emprestimo>()
+               .HasIndex(e => new { e.Status, e.DataEmprestimo })
+               .HasDatabaseName("IX_Emprestimos_Status_DataEmprestimo");
+
+            // ========================================
+            // 📋 CONFIGURAÇÕES - MÓDULO DE ESCALA DE PORTEIROS
+            // ========================================
+
+            // Porteiro
+            builder.Entity<Porteiro>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Nome)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Telefone)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.Ativo)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.DataCadastro)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETDATE()");
+            });
+
+            // ResponsavelPorteiro
+            builder.Entity<ResponsavelPorteiro>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Nome)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Telefone)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.Ativo)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.DataCadastro)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETDATE()");
+            });
+
+            // ConfiguracaoCulto
+            builder.Entity<ConfiguracaoCulto>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.DiaSemana)
+                    .HasConversion<int?>()
+                    .IsRequired(false); // ✅ Tornado opcional
+
+                entity.Property(e => e.DataEspecifica)
+                    .IsRequired(false); // ✅ Tornado opcional
+
+                entity.Property(e => e.TipoCulto)
+                    .HasConversion<int>()
+                    .IsRequired();
+
+                entity.Property(e => e.Ativo)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.DataCadastro)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.Property(e => e.Observacao)
+                    .HasMaxLength(200);
+            });
+
+            // EscalaPorteiro
+            builder.Entity<EscalaPorteiro>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.DataCulto)
+                    .IsRequired();
+
+                entity.Property(e => e.TipoCulto)
+                    .HasConversion<int>()
+                    .IsRequired();
+
+                entity.Property(e => e.DataGeracao)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.Property(e => e.Observacao)
+                    .HasMaxLength(200);
+
+                // Relacionamentos
+                entity.HasOne(e => e.Porteiro)
+                    .WithMany(p => p.Escalas)
+                    .HasForeignKey(e => e.PorteiroId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Responsavel)
+                    .WithMany(r => r.Escalas)
+                    .HasForeignKey(e => e.ResponsavelId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.UsuarioGeracao)
+                    .WithMany()
+                    .HasForeignKey(e => e.UsuarioGeracaoId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Índices
+                entity.HasIndex(e => new { e.DataCulto, e.PorteiroId })
+                    .HasDatabaseName("IX_EscalaPorteiro_Data_Porteiro");
+
+                entity.HasIndex(e => e.DataCulto)
+                    .HasDatabaseName("IX_EscalaPorteiro_DataCulto");
+            });
         }
     }
 }

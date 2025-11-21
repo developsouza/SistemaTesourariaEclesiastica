@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.Filters;
+using SistemaTesourariaEclesiastica.Services;
 using System.Security.Claims;
 using System.Text.Json;
-using SistemaTesourariaEclesiastica.Services;
 
 namespace SistemaTesourariaEclesiastica.Filters
 {
@@ -88,7 +88,7 @@ namespace SistemaTesourariaEclesiastica.Filters
                         UserAgent = userAgent
                     });
 
-                    _logger.LogDebug("Auditoria enfileirada: {User} -> {Method} {Controller}/{Action}", 
+                    _logger.LogDebug("Auditoria enfileirada: {User} -> {Method} {Controller}/{Action}",
                         userName, method, controller, action);
                 }
                 catch (Exception ex)

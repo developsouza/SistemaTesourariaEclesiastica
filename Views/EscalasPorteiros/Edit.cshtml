@@ -1,0 +1,82 @@
+@model SistemaTesourariaEclesiastica.Models.EscalaPorteiro
+
+@{
+    ViewData["Title"] = "Editar Escala";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning">
+                <h4 class="mb-0">
+                    <i class="bi bi-pencil-fill me-2"></i>Editar Escala
+                </h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="DataGeracao" />
+                    <input type="hidden" asp-for="UsuarioGeracaoId" />
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="DataCulto" class="form-label fw-semibold"></label>
+                            <input asp-for="DataCulto" class="form-control" type="date" />
+                            <span asp-validation-for="DataCulto" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="TipoCulto" class="form-label fw-semibold"></label>
+                            <select asp-for="TipoCulto" class="form-select" asp-items="Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.TipoCulto>()"></select>
+                            <span asp-validation-for="TipoCulto" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PorteiroId" class="form-label fw-semibold"></label>
+                            <select asp-for="PorteiroId" class="form-select">
+                                @foreach (var porteiro in ViewBag.Porteiros as List<SistemaTesourariaEclesiastica.Models.Porteiro>)
+                                {
+                                    <option value="@porteiro.Id">@porteiro.Nome</option>
+                                }
+                            </select>
+                            <span asp-validation-for="PorteiroId" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="ResponsavelId" class="form-label fw-semibold"></label>
+                            <select asp-for="ResponsavelId" class="form-select">
+                                @foreach (var responsavel in ViewBag.Responsaveis as List<SistemaTesourariaEclesiastica.Models.ResponsavelPorteiro>)
+                                {
+                                    <option value="@responsavel.Id">@responsavel.Nome</option>
+                                }
+                            </select>
+                            <span asp-validation-for="ResponsavelId" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Observacao" class="form-label fw-semibold"></label>
+                        <textarea asp-for="Observacao" class="form-control" rows="3" placeholder="Observações opcionais..."></textarea>
+                        <span asp-validation-for="Observacao" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between gap-2 mt-4">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i>Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

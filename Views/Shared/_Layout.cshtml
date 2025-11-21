@@ -145,6 +145,45 @@
                             </li>
                         }
 
+                        @* ==================== ESCALA DE PORTEIROS ==================== *@
+                        @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.TesoureiroLocal))
+                        {
+                            <li class="nav-item has-submenu">
+                                <a class="nav-link" href="#escalasSubmenu">
+                                    <i class="bi bi-calendar-check"></i>
+                                    <span class="nav-text">Escala de Porteiros</span>
+                                    <i class="bi bi-chevron-right submenu-arrow"></i>
+                                </a>
+                                <ul class="submenu" id="escalasSubmenu">
+                                    <li>
+                                        <a class="nav-link" asp-controller="EscalasPorteiros" asp-action="Index">
+                                            <span class="nav-text">Visualizar Escalas</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" asp-controller="EscalasPorteiros" asp-action="Gerar">
+                                            <span class="nav-text">Gerar Nova Escala</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" asp-controller="Porteiros" asp-action="Index">
+                                            <span class="nav-text">Gerenciar Porteiros</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" asp-controller="ResponsaveisPorteiros" asp-action="Index">
+                                            <span class="nav-text">Gerenciar Responsáveis</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="nav-link" asp-controller="ConfiguracoesCultos" asp-action="Index">
+                                            <span class="nav-text">Configurar Cultos</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+
                         @* ==================== MENU RELATÓRIOS ==================== *@
                         @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.Pastor))
                         {
@@ -499,6 +538,9 @@
 
     <!-- Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- Máscaras -->
+    <script src="~/js/mascaras.js" asp-append-version="true"></script>
 
     <script>
         $.extend(true, $.fn.dataTable.defaults, {

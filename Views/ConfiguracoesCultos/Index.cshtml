@@ -1,0 +1,192 @@
+@model IEnumerable<SistemaTesourariaEclesiastica.Models.ConfiguracaoCulto>
+@using SistemaTesourariaEclesiastica.Extensions
+@using SistemaTesourariaEclesiastica.Helpers
+
+@{
+    ViewData["Title"] = "Configurações de Cultos";
+}
+
+<!-- Cabeçalho -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+    <div>
+        <h1 class="h3 mb-1">
+            <i class="bi bi-calendar3 me-2"></i>Configurações de Cultos
+        </h1>
+        <p class="text-muted mb-0 small">
+            Definir dias da semana e datas específicas para cultos
+        </p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>Nova Configuração
+    </a>
+</div>
+
+<!-- Informações -->
+<div class="alert alert-info mb-4" role="alert">
+    <i class="bi bi-info-circle me-2"></i>
+    Configure cultos semanais (ex: todas as quartas) ou eventos especiais em datas específicas (ex: congresso em 15/06/2024).
+</div>
+
+<!-- Resumo -->
+@if (Model != null && Model.Any())
+{
+    var configsPorDiaSemana = Model.Where(c => c.DiaSemana.HasValue && c.Ativo).Count();
+    var configsPorDataEspecifica = Model.Where(c => c.DataEspecifica.HasValue && c.Ativo).Count();
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-calendar-week text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">Cultos Semanais</h6>
+                            <p class="mb-0 text-muted small">@configsPorDiaSemana configuração(ões) ativa(s)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-calendar-event text-success" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">Eventos Especiais</h6>
+                            <p class="mb-0 text-muted small">@configsPorDataEspecifica configuração(ões) ativa(s)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Resultados -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-list-ul me-2 text-primary"></i>
+            @(Model?.Count() ?? 0) configuração(ões) cadastrada(s)
+        </h5>
+    </div>
+
+    <div class="card-body p-0">
+        @if (Model != null && Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Tipo</th>
+                            <th>Dia / Data</th>
+                            <th>Tipo de Culto</th>
+                            <th class="d-none d-md-table-cell">Observação</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center" style="width: 140px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr class="@(!item.Ativo ? "table-secondary" : "")">
+                                <td class="ps-3">
+                                    @if (item.DataEspecifica.HasValue)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-calendar-event me-1"></i>Data Específica
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary">
+                                            <i class="bi bi-calendar-week me-1"></i>Semanal
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <strong>@item.DescricaoConfiguracao</strong>
+                                    @if (item.DataEspecifica.HasValue)
+                                    {
+                                        var diasRestantes = (item.DataEspecifica.Value.Date - DateTime.Now.Date).Days;
+                                        @if (diasRestantes > 0 && diasRestantes <= 30)
+                                        {
+                                            <br/><small class="text-warning"><i class="bi bi-clock me-1"></i>Em @diasRestantes dia(s)</small>
+                                        }
+                                        else if (diasRestantes == 0)
+                                        {
+                                            <br/><small class="text-success"><i class="bi bi-check-circle me-1"></i>Hoje</small>
+                                        }
+                                        else if (diasRestantes < 0)
+                                        {
+                                            <br/><small class="text-muted"><i class="bi bi-archive me-1"></i>Já passou</small>
+                                        }
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@item.TipoCulto.GetDisplayName()</span>
+                                </td>
+                                <td class="d-none d-md-table-cell">
+                                    @if (!string.IsNullOrEmpty(item.Observacao))
+                                    {
+                                        <small class="text-muted">@item.Observacao</small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted fst-italic">-</small>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (item.Ativo)
+                                    {
+                                        <span class="badge bg-success">Ativo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inativo</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-action="Edit" asp-route-id="@item.Id"
+                                           class="btn btn-outline-primary" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id"
+                                           class="btn btn-outline-danger" title="Excluir">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-calendar3 text-muted" style="font-size: 4rem;"></i>
+                <h5 class="mt-3 text-muted">Nenhuma configuração cadastrada</h5>
+                <p class="text-muted">
+                    Configure os dias e tipos de cultos da sua congregação.
+                </p>
+                <a asp-action="Create" class="btn btn-primary mt-2">
+                    <i class="bi bi-plus-circle me-2"></i>Cadastrar Primeira Configuração
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="mt-3">
+    <a asp-action="Index" asp-controller="EscalasPorteiros" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Voltar para Escalas
+    </a>
+</div>

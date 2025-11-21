@@ -39,7 +39,7 @@ namespace SistemaTesourariaEclesiastica.Middleware
                 {
                     using var scope = context.RequestServices.CreateScope();
                     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-                    
+
                     var user = await userManager.GetUserAsync(context.User);
 
                     // Se usuário não existe ou está inativo, fazer logout forçado
@@ -51,20 +51,20 @@ namespace SistemaTesourariaEclesiastica.Middleware
                         if (!context.Response.HasStarted)
                         {
                             var signInManager = scope.ServiceProvider.GetRequiredService<SignInManager<ApplicationUser>>();
-                            
+
                             // Fazer logout forçado
                             await signInManager.SignOutAsync();
 
                             // Redirecionar para login com mensagem
                             context.Response.Redirect("/Account/Login?message=inactive");
                         }
-                        
+
                         return;
                     }
 
                     // Adicionar claims adicionais se não existirem
                     var identity = context.User.Identity as ClaimsIdentity;
-                    
+
                     if (identity != null)
                     {
                         // ✅ CORREÇÃO: Verificar se o claim já existe antes de adicionar
@@ -117,10 +117,10 @@ namespace SistemaTesourariaEclesiastica.Middleware
                 // ✅ CORREÇÃO: Adicionar headers de forma segura, verificando se já existem
                 if (!headers.ContainsKey("X-Content-Type-Options"))
                     headers["X-Content-Type-Options"] = "nosniff";
-                
+
                 if (!headers.ContainsKey("X-XSS-Protection"))
                     headers["X-XSS-Protection"] = "1; mode=block";
-                
+
                 if (!headers.ContainsKey("Referrer-Policy"))
                     headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
 

@@ -6,8 +6,6 @@ using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Middleware;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
-using Microsoft.AspNetCore.ResponseCompression;
-using System.IO.Compression;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -166,6 +164,7 @@ builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<BusinessRulesService>();
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<BalanceteService>();
+builder.Services.AddScoped<EscalaPorteiroService>();
 
 // ✅ SERVIÇO DE AUDITORIA EM BACKGROUND
 // Registrado como Singleton para que seja compartilhado e como HostedService para rodar em background
