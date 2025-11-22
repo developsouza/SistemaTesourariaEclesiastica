@@ -148,13 +148,22 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             var escalas = await _context.EscalasPorteiros
                 .Include(e => e.Porteiro)
+                .Include(e => e.Porteiro2) // ? INCLUIR PORTEIRO2
                 .Include(e => e.Responsavel)
                 .Where(e => e.DataCulto >= dataInicio && e.DataCulto <= dataFim)
                 .OrderBy(e => e.DataCulto)
+                .ThenBy(e => e.Horario) // ? ORDENAR POR HORÁRIO TAMBÉM
                 .ToListAsync();
 
+            // ? CORRIGIR: Buscar TODOS os porteiros que aparecem nas escalas (incluindo Porteiro2)
+            var porteirosIds = escalas.Select(e => e.PorteiroId)
+                .Union(escalas.Where(e => e.Porteiro2Id.HasValue).Select(e => e.Porteiro2Id!.Value))
+                .Distinct()
+                .ToList();
+
             var todosPorteiros = await _context.Porteiros
-                .Where(p => escalas.Select(e => e.PorteiroId).Contains(p.Id))
+                .Where(p => porteirosIds.Contains(p.Id))
+                .OrderBy(p => p.Nome)
                 .ToListAsync();
 
             var responsavel = escalas.Select(e => e.Responsavel).FirstOrDefault();
@@ -299,9 +308,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 var escalas = await _context.EscalasPorteiros
                     .Include(e => e.Porteiro)
+                    .Include(e => e.Porteiro2) // ? INCLUIR PORTEIRO2
                     .Include(e => e.Responsavel)
                     .Where(e => e.DataCulto >= dataInicio && e.DataCulto <= dataFim)
                     .OrderBy(e => e.DataCulto)
+                    .ThenBy(e => e.Horario) // ? ORDENAR POR HORÁRIO TAMBÉM
                     .ToListAsync();
 
                 if (!escalas.Any())
@@ -310,8 +321,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
+                // ? CORRIGIR: Buscar TODOS os porteiros que aparecem nas escalas (incluindo Porteiro2)
+                var porteirosIds = escalas.Select(e => e.PorteiroId)
+                    .Union(escalas.Where(e => e.Porteiro2Id.HasValue).Select(e => e.Porteiro2Id!.Value))
+                    .Distinct()
+                    .ToList();
+
                 var todosPorteiros = await _context.Porteiros
-                    .Where(p => escalas.Select(e => e.PorteiroId).Contains(p.Id))
+                    .Where(p => porteirosIds.Contains(p.Id))
                     .OrderBy(p => p.Nome)
                     .ToListAsync();
 

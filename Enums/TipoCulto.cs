@@ -4,6 +4,9 @@ namespace SistemaTesourariaEclesiastica.Enums
 {
     public enum TipoCulto
     {
+        [Display(Name = "Escola Bíblica")]
+        EscolaBiblica = 0,
+
         [Display(Name = "Culto Evangelístico")]
         Evangelistico = 1,
 

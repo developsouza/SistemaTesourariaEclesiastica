@@ -15,6 +15,10 @@ namespace SistemaTesourariaEclesiastica.Models
         [DataType(DataType.Date)]
         public DateTime? DataEspecifica { get; set; }
 
+        [Display(Name = "Horário")]
+        [DataType(DataType.Time)]
+        public TimeSpan? Horario { get; set; }
+
         [Required(ErrorMessage = "O tipo de culto é obrigatório.")]
         [Display(Name = "Tipo de Culto")]
         public TipoCulto TipoCulto { get; set; }
@@ -39,15 +43,26 @@ namespace SistemaTesourariaEclesiastica.Models
         {
             get
             {
+                var descricao = "";
                 if (DataEspecifica.HasValue)
                 {
-                    return $"{DataEspecifica.Value:dd/MM/yyyy} ({DataEspecifica.Value:dddd})";
+                    descricao = $"{DataEspecifica.Value:dd/MM/yyyy} ({DataEspecifica.Value:dddd})";
                 }
                 else if (DiaSemana.HasValue)
                 {
-                    return Helpers.LocalizacaoHelper.ObterNomeDiaSemana(DiaSemana.Value);
+                    descricao = Helpers.LocalizacaoHelper.ObterNomeDiaSemana(DiaSemana.Value);
                 }
-                return "Não configurado";
+                else
+                {
+                    descricao = "Não configurado";
+                }
+
+                if (Horario.HasValue)
+                {
+                    descricao += $" às {Horario.Value:hh\\:mm}";
+                }
+
+                return descricao;
             }
         }
     }

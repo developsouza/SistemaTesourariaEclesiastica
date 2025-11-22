@@ -40,7 +40,12 @@
     @Html.AntiForgeryToken()
     @if (Model.DiasSelecionados != null && Model.DiasSelecionados.Any())
     {
-        <script id="diasIniciaisJson" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DiasSelecionados.Select(d => new { Data = d.Data.ToString("yyyy-MM-dd"), TipoCulto = (int)d.TipoCulto, Observacao = d.Observacao })))</script>
+        <script id="diasIniciaisJson" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DiasSelecionados.Select(d => new { 
+            Data = d.Data.ToString("yyyy-MM-dd"), 
+            TipoCulto = (int)d.TipoCulto, 
+            Horario = d.Horario?.ToString(@"hh\:mm"), 
+            Observacao = d.Observacao 
+        })))</script>
     }
     <script src="~/js/escala-porteiros-gerar.js" asp-append-version="true"></script>
 }

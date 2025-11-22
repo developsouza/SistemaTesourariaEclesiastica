@@ -40,6 +40,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
             if (ModelState.IsValid)
             {
                 porteiro.DataCadastro = DateTime.Now;
+                // Salvar disponibilidade dos checkboxes para a string
+                porteiro.SalvarDisponibilidade();
                 _context.Add(porteiro);
                 await _context.SaveChangesAsync();
                 TempData["SuccessMessage"] = "Porteiro cadastrado com sucesso!";
@@ -61,6 +63,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 return NotFound();
             }
+
+            // Carregar disponibilidade da string para os checkboxes
+            porteiro.CarregarDisponibilidade();
             return View(porteiro);
         }
 
@@ -78,6 +83,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 try
                 {
+                    // Salvar disponibilidade dos checkboxes para a string
+                    porteiro.SalvarDisponibilidade();
                     _context.Update(porteiro);
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Porteiro atualizado com sucesso!";
@@ -125,7 +132,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             if (porteiro != null)
             {
                 // Verificar se há escalas associadas
-                var temEscalas = await _context.EscalasPorteiros.AnyAsync(e => e.PorteiroId == id);
+                var temEscalas = await _context.EscalasPorteiros.AnyAsync(e => e.PorteiroId == id || e.Porteiro2Id == id);
                 if (temEscalas)
                 {
                     // Ao invés de deletar, desativar
@@ -146,6 +153,17 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private bool PorteiroExists(int id)
         {
             return _context.Porteiros.Any(e => e.Id == id);
+        }
+
+        // ?? DIAGNÓSTICO: Ver configuração de disponibilidade de todos os porteiros
+        [HttpGet]
+        public async Task<IActionResult> Diagnostico()
+        {
+            var service = new Services.EscalaPorteiroService(_context, null!);
+            var diagnostico = await service.DiagnosticarDisponibilidadePorteirosAsync();
+
+            ViewBag.Diagnostico = diagnostico;
+            return View();
         }
     }
 }

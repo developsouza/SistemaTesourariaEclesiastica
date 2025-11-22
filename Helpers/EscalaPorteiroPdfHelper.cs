@@ -380,26 +380,39 @@ namespace SistemaTesourariaEclesiastica.Helpers
                     <table>
                         <thead>
                             <tr>
-                                <th style='width: 15%'>Data</th>
-                                <th style='width: 20%'>Dia da Semana</th>
-                                <th style='width: 25%'>Tipo de Culto</th>
-                                <th style='width: 40%'>Porteiro</th>
+                                <th style='width: 12%'>Data</th>
+                                <th style='width: 15%'>Dia da Semana</th>
+                                <th style='width: 10%'>Horário</th>
+                                <th style='width: 20%'>Tipo de Culto</th>
+                                <th style='width: 43%'>Porteiro(s)</th>
                             </tr>
                         </thead>
                         <tbody>");
 
-                foreach (var escala in escalas.OrderBy(e => e.DataCulto))
+                foreach (var escala in escalas.OrderBy(e => e.DataCulto).ThenBy(e => e.Horario))
                 {
                     var diaSemana = LocalizacaoHelper.ObterNomeDiaSemana(escala.DataCulto.DayOfWeek);
                     var tipoCulto = escala.TipoCulto.GetDisplayName();
                     var dataFormatada = LocalizacaoHelper.FormatarData(escala.DataCulto);
 
+                    // ? CORREÇÃO: Formato 24h usando formatação manual
+                    var horarioFormatado = escala.Horario.HasValue
+                        ? $"{escala.Horario.Value.Hours:D2}:{escala.Horario.Value.Minutes:D2}"
+                        : "-";
+
+                    var porteiros = escala.Porteiro?.Nome ?? "";
+                    if (escala.Porteiro2 != null)
+                    {
+                        porteiros += " e " + escala.Porteiro2.Nome;
+                    }
+
                     sb.AppendLine($@"
                             <tr>
                                 <td class='date-cell'>{dataFormatada}</td>
                                 <td>{diaSemana}</td>
+                                <td style='text-align: center;'>{horarioFormatado}</td>
                                 <td><span class='badge'>{tipoCulto}</span></td>
-                                <td><strong>{escala.Porteiro?.Nome}</strong></td>
+                                <td><strong>{porteiros}</strong></td>
                             </tr>");
                 }
 

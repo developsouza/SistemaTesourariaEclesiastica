@@ -547,6 +547,14 @@ namespace SistemaTesourariaEclesiastica.Data
                 entity.Property(e => e.DataCadastro)
                     .IsRequired()
                     .HasDefaultValueSql("GETDATE()");
+
+                entity.Property(e => e.DiasDisponiveis)
+                    .HasMaxLength(100)
+                    .IsRequired(false);
+
+                entity.Property(e => e.HorariosDisponiveis)
+                    .HasMaxLength(200)
+                    .IsRequired(false);
             });
 
             // ResponsavelPorteiro
@@ -583,6 +591,9 @@ namespace SistemaTesourariaEclesiastica.Data
                 entity.Property(e => e.DataEspecifica)
                     .IsRequired(false); // ✅ Tornado opcional
 
+                entity.Property(e => e.Horario)
+                    .IsRequired(false);
+
                 entity.Property(e => e.TipoCulto)
                     .HasConversion<int>()
                     .IsRequired();
@@ -607,6 +618,9 @@ namespace SistemaTesourariaEclesiastica.Data
                 entity.Property(e => e.DataCulto)
                     .IsRequired();
 
+                entity.Property(e => e.Horario)
+                    .IsRequired(false);
+
                 entity.Property(e => e.TipoCulto)
                     .HasConversion<int>()
                     .IsRequired();
@@ -622,6 +636,11 @@ namespace SistemaTesourariaEclesiastica.Data
                 entity.HasOne(e => e.Porteiro)
                     .WithMany(p => p.Escalas)
                     .HasForeignKey(e => e.PorteiroId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Porteiro2)
+                    .WithMany()
+                    .HasForeignKey(e => e.Porteiro2Id)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(e => e.Responsavel)

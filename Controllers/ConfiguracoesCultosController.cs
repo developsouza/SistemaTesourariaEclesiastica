@@ -62,34 +62,38 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             if (ModelState.IsValid)
             {
-                // Verificar se já existe configuração para este dia/data
+                // Verificar se já existe configuração para este dia/data E horário
                 bool jaExiste;
 
                 if (configuracao.DataEspecifica.HasValue)
                 {
-                    // Verificar se já existe configuração para esta data específica
+                    // Verificar se já existe configuração para esta data específica E horário
                     jaExiste = await _context.ConfiguracoesCultos
                         .AnyAsync(c => c.DataEspecifica.HasValue &&
                                       c.DataEspecifica.Value.Date == configuracao.DataEspecifica.Value.Date &&
+                                      c.Horario == configuracao.Horario &&
                                       c.Ativo);
 
                     if (jaExiste)
                     {
-                        ModelState.AddModelError("DataEspecifica", "Já existe uma configuração ativa para esta data específica.");
+                        var horarioMsg = configuracao.Horario.HasValue ? $" às {configuracao.Horario.Value:hh\\:mm}" : "";
+                        ModelState.AddModelError("", $"Já existe uma configuração ativa para esta data{horarioMsg}.");
                         return View(configuracao);
                     }
                 }
                 else if (configuracao.DiaSemana.HasValue)
                 {
-                    // Verificar se já existe configuração para este dia da semana
+                    // Verificar se já existe configuração para este dia da semana E horário
                     jaExiste = await _context.ConfiguracoesCultos
                         .AnyAsync(c => c.DiaSemana.HasValue &&
                                       c.DiaSemana.Value == configuracao.DiaSemana.Value &&
+                                      c.Horario == configuracao.Horario &&
                                       c.Ativo);
 
                     if (jaExiste)
                     {
-                        ModelState.AddModelError("DiaSemana", "Já existe uma configuração ativa para este dia da semana.");
+                        var horarioMsg = configuracao.Horario.HasValue ? $" às {configuracao.Horario.Value:hh\\:mm}" : "";
+                        ModelState.AddModelError("", $"Já existe uma configuração ativa para este dia da semana{horarioMsg}.");
                         return View(configuracao);
                     }
                 }
@@ -102,7 +106,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     ? $"data {configuracao.DataEspecifica.Value:dd/MM/yyyy}"
                     : $"dia {configuracao.DiaSemana}";
 
-                TempData["SuccessMessage"] = $"Configuração cadastrada com sucesso para {tipoConfig}!";
+                var horarioConfig = configuracao.Horario.HasValue ? $" às {configuracao.Horario.Value:hh\\:mm}" : "";
+
+                TempData["SuccessMessage"] = $"Configuração cadastrada com sucesso para {tipoConfig}{horarioConfig}!";
                 return RedirectToAction(nameof(Index));
             }
             return View(configuracao);
@@ -152,7 +158,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 try
                 {
-                    // Verificar se já existe outra configuração para este dia/data
+                    // Verificar se já existe outra configuração para este dia/data E horário
                     bool jaExiste;
 
                     if (configuracao.DataEspecifica.HasValue)
@@ -161,11 +167,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
                             .AnyAsync(c => c.Id != id &&
                                           c.DataEspecifica.HasValue &&
                                           c.DataEspecifica.Value.Date == configuracao.DataEspecifica.Value.Date &&
+                                          c.Horario == configuracao.Horario &&
                                           c.Ativo);
 
                         if (jaExiste)
                         {
-                            ModelState.AddModelError("DataEspecifica", "Já existe outra configuração ativa para esta data específica.");
+                            var horarioMsg = configuracao.Horario.HasValue ? $" às {configuracao.Horario.Value:hh\\:mm}" : "";
+                            ModelState.AddModelError("", $"Já existe outra configuração ativa para esta data{horarioMsg}.");
                             return View(configuracao);
                         }
                     }
@@ -175,11 +183,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
                             .AnyAsync(c => c.Id != id &&
                                           c.DiaSemana.HasValue &&
                                           c.DiaSemana.Value == configuracao.DiaSemana.Value &&
+                                          c.Horario == configuracao.Horario &&
                                           c.Ativo);
 
                         if (jaExiste)
                         {
-                            ModelState.AddModelError("DiaSemana", "Já existe outra configuração ativa para este dia da semana.");
+                            var horarioMsg = configuracao.Horario.HasValue ? $" às {configuracao.Horario.Value:hh\\:mm}" : "";
+                            ModelState.AddModelError("", $"Já existe outra configuração ativa para este dia da semana{horarioMsg}.");
                             return View(configuracao);
                         }
                     }

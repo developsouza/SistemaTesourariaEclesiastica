@@ -13,6 +13,10 @@ namespace SistemaTesourariaEclesiastica.Models
         [Display(Name = "Data do Culto")]
         public DateTime DataCulto { get; set; }
 
+        [Display(Name = "Horário")]
+        [DataType(DataType.Time)]
+        public TimeSpan? Horario { get; set; }
+
         [Required(ErrorMessage = "O tipo de culto é obrigatório.")]
         [Display(Name = "Tipo de Culto")]
         public TipoCulto TipoCulto { get; set; }
@@ -20,6 +24,9 @@ namespace SistemaTesourariaEclesiastica.Models
         [Required(ErrorMessage = "O porteiro é obrigatório.")]
         [Display(Name = "Porteiro")]
         public int PorteiroId { get; set; }
+
+        [Display(Name = "Porteiro 2")]
+        public int? Porteiro2Id { get; set; }
 
         [Required(ErrorMessage = "O responsável é obrigatório.")]
         [Display(Name = "Responsável")]
@@ -38,6 +45,9 @@ namespace SistemaTesourariaEclesiastica.Models
         // Navigation properties
         [ValidateNever]
         public virtual Porteiro Porteiro { get; set; } = null!;
+
+        [ValidateNever]
+        public virtual Porteiro? Porteiro2 { get; set; }
 
         [ValidateNever]
         public virtual ResponsavelPorteiro Responsavel { get; set; } = null!;

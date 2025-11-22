@@ -58,7 +58,16 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="Horario" class="form-label fw-semibold">
+                                <i class="bi bi-clock me-1"></i>
+                                @Html.DisplayNameFor(m => m.Horario)
+                            </label>
+                            <input asp-for="Horario" type="time" class="form-control" />
+                            <span asp-validation-for="Horario" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-5 mb-3">
                             <label asp-for="TipoCulto" class="form-label fw-semibold">
                                 <i class="bi bi-bookmark me-1"></i>
                                 @Html.DisplayNameFor(m => m.TipoCulto)
@@ -67,7 +76,7 @@
                             <span asp-validation-for="TipoCulto" class="text-danger small"></span>
                         </div>
 
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label class="form-label fw-semibold">Status</label>
                             <div class="form-check form-switch">
                                 <input asp-for="Ativo" class="form-check-input" type="checkbox" />

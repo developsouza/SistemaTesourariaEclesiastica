@@ -1,0 +1,46 @@
+@{
+    ViewData["Title"] = "Diagnóstico de Disponibilidade";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-bug me-2"></i>Diagnóstico de Disponibilidade de Porteiros
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Informação:</strong> Este relatório mostra como cada porteiro está configurado no banco de dados e como o sistema interpreta essa configuração.
+                    </div>
+
+                    <div class="mb-3">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Voltar
+                        </a>
+                        <button onclick="window.print()" class="btn btn-primary ms-2">
+                            <i class="bi bi-printer me-1"></i>Imprimir
+                        </button>
+                    </div>
+
+                    <pre class="bg-dark text-light p-4 rounded" style="max-height: 80vh; overflow-y: auto; font-size: 0.9rem; line-height: 1.5;">@ViewBag.Diagnostico</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@media print {
+        .btn, .alert {
+            display: none !important;
+        }
+        pre {
+            max-height: none !important;
+            page-break-inside: avoid;
+        }
+    }
+</style>

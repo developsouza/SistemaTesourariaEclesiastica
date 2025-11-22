@@ -29,6 +29,9 @@ namespace SistemaTesourariaEclesiastica.ViewModels
         [DataType(DataType.Date)]
         public DateTime Data { get; set; }
 
+        [DataType(DataType.Time)]
+        public TimeSpan? Horario { get; set; }
+
         [Required]
         public TipoCulto TipoCulto { get; set; }
 
