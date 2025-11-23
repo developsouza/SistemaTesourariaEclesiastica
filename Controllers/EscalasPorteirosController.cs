@@ -89,12 +89,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return Json(new { success = false, message = "Selecione pelo menos um dia para gerar a escala." });
                 }
 
-                // Log dos dias selecionados para debug
-                foreach (var dia in model.DiasSelecionados)
-                {
-                    _logger.LogInformation("Dia selecionado: {Data}, TipoCulto: {TipoCulto}", dia.Data, dia.TipoCulto);
-                }
-
                 // Validar se há porteiros e responsáveis
                 var temPorteiros = await _context.Porteiros.AnyAsync(p => p.Ativo);
                 if (!temPorteiros)

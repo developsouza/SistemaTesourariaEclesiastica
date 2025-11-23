@@ -59,162 +59,128 @@ namespace SistemaTesourariaEclesiastica.Services
             // Ordenar dias por data e horário
             var diasOrdenados = diasSelecionados.OrderBy(d => d.Data).ThenBy(d => d.Horario).ToList();
 
-            // Buscar as últimas escalas para fazer distribuição justa
+            // Buscar as últimas 50 escalas para ter um histórico mais amplo
+            var dataMinima = diasOrdenados.First().Data.AddMonths(-3);
             var ultimasEscalas = await _context.EscalasPorteiros
-                .Where(e => e.DataCulto < diasOrdenados.First().Data)
+                .Where(e => e.DataCulto >= dataMinima && e.DataCulto < diasOrdenados.First().Data)
                 .OrderByDescending(e => e.DataCulto)
-                .Take(20)
+                .ThenByDescending(e => e.Horario)
+                .Take(50)
                 .Include(e => e.Porteiro)
-                .Include(e => e.Porteiro2) // ? INCLUIR PORTEIRO2
+                .Include(e => e.Porteiro2)
                 .ToListAsync();
 
-            // Criar lista para controlar distribuição
+            // Criar dicionário de distribuição baseado no histórico real
             var distribuicaoPorteiros = porteiros.ToDictionary(
                 p => p.Id,
                 p => ultimasEscalas.Count(e => e.PorteiroId == p.Id || e.Porteiro2Id == p.Id)
             );
 
-            var escalasGeradas = new List<EscalaPorteiro>();
-            var random = new Random();
+            // Identificar porteiros com disponibilidade limitada (apenas 1 dia ou 1 horário)
+            var porteirosLimitados = new HashSet<int>();
+            foreach (var porteiro in porteiros)
+            {
+                var diasDisponiveis = 0;
+                if (porteiro.DisponibilidadeDomingo) diasDisponiveis++;
+                if (porteiro.DisponibilidadeSegunda) diasDisponiveis++;
+                if (porteiro.DisponibilidadeTerca) diasDisponiveis++;
+                if (porteiro.DisponibilidadeQuarta) diasDisponiveis++;
+                if (porteiro.DisponibilidadeQuinta) diasDisponiveis++;
+                if (porteiro.DisponibilidadeSexta) diasDisponiveis++;
+                if (porteiro.DisponibilidadeSabado) diasDisponiveis++;
 
-            // Selecionar um responsável (pode ser rotativo ou fixo)
+                if (diasDisponiveis == 0)
+                    diasDisponiveis = 7;
+
+                var horariosDisponiveis = 1;
+                if (!string.IsNullOrWhiteSpace(porteiro.HorariosDisponiveis))
+                {
+                    horariosDisponiveis = porteiro.HorariosDisponiveis.Split(',', StringSplitOptions.RemoveEmptyEntries).Length;
+                }
+
+                if (diasDisponiveis == 1 || (horariosDisponiveis == 1 && !string.IsNullOrWhiteSpace(porteiro.HorariosDisponiveis)))
+                {
+                    porteirosLimitados.Add(porteiro.Id);
+                }
+            }
+
+            var escalasGeradas = new List<EscalaPorteiro>();
+            var random = new Random(DateTime.Now.Millisecond);
             var responsavelSelecionado = responsaveis.First();
 
-            // Variável para rastrear os últimos porteiros escalados
-            var ultimosPorteirosIds = new List<int>();
-            if (ultimasEscalas.Any())
+            // Rastrear os últimos 3 porteiros de cada escala
+            var historicoEscalas = new Queue<List<int>>();
+
+            foreach (var escala in ultimasEscalas.Take(3))
             {
-                ultimosPorteirosIds.Add(ultimasEscalas.First().PorteiroId);
-                if (ultimasEscalas.First().Porteiro2Id.HasValue)
-                    ultimosPorteirosIds.Add(ultimasEscalas.First().Porteiro2Id.Value);
+                var porteirosEscala = new List<int> { escala.PorteiroId };
+                if (escala.Porteiro2Id.HasValue)
+                    porteirosEscala.Add(escala.Porteiro2Id.Value);
+                historicoEscalas.Enqueue(porteirosEscala);
             }
 
             foreach (var dia in diasOrdenados)
             {
-                // ? CORREÇÃO: Verificar se já existe escala para este dia E HORÁRIO
                 var escalaExistente = await _context.EscalasPorteiros
-                    .AnyAsync(e => e.DataCulto.Date == dia.Data.Date &&
-                                   e.Horario == dia.Horario);
+                    .AnyAsync(e => e.DataCulto.Date == dia.Data.Date && e.Horario == dia.Horario);
 
                 if (escalaExistente)
                 {
-                    // ? CORREÇÃO: Formatação manual de TimeSpan
                     var horarioStr = dia.Horario.HasValue ? $" às {dia.Horario.Value.Hours:D2}:{dia.Horario.Value.Minutes:D2}" : "";
                     _logger.LogWarning($"Já existe escala para o dia {dia.Data:dd/MM/yyyy}{horarioStr}. Pulando...");
                     continue;
                 }
 
-                // Determinar quantidade de porteiros necessários
-                // Escola Bíblica (domingo manhã) = 1 porteiro
-                // Demais cultos = 2 porteiros
                 int quantidadePorteiros = (dia.TipoCulto == TipoCulto.EscolaBiblica) ? 1 : 2;
 
-                // ? LOG DETALHADO: Informações do dia/horário sendo processado
-                var horarioInfo = dia.Horario.HasValue ? $" às {dia.Horario.Value.Hours:D2}:{dia.Horario.Value.Minutes:D2}" : " (sem horário)";
-                _logger.LogInformation($"?? Processando escala para {dia.Data:dd/MM/yyyy} ({dia.Data.DayOfWeek}){horarioInfo} - Tipo: {dia.TipoCulto}");
-
-                // ? CORREÇÃO: Filtrar porteiros elegíveis para este dia E horário específico
+                // Filtrar porteiros elegíveis para este dia e horário
                 var porteirosElegiveis = porteiros
                     .Where(p =>
                     {
-                        // ? LOG: Verificando cada porteiro
-                        _logger.LogDebug($"   ?? Verificando porteiro: {p.Nome}");
-                        _logger.LogDebug($"      - DiasDisponiveis: '{p.DiasDisponiveis ?? "(vazio)"}'");
-                        _logger.LogDebug($"      - HorariosDisponiveis: '{p.HorariosDisponiveis ?? "(vazio)"}'");
-
-                        // 1. Verificar disponibilidade de dia da semana
-                        var disponivelNoDia = p.EstaDisponivelNodia(dia.Data.DayOfWeek);
-                        _logger.LogDebug($"      - Disponível no dia {dia.Data.DayOfWeek}? {(disponivelNoDia ? "? SIM" : "? NÃO")}");
-
-                        if (!disponivelNoDia)
-                        {
+                        if (!p.EstaDisponivelNodia(dia.Data.DayOfWeek))
                             return false;
-                        }
 
-                        // 2. ? CORREÇÃO CRÍTICA: Verificar disponibilidade de horário (se o culto tiver horário)
-                        if (dia.Horario.HasValue)
+                        if (dia.Horario.HasValue && !string.IsNullOrWhiteSpace(p.HorariosDisponiveis))
                         {
-                            var horarioFormatado = $"{dia.Horario.Value.Hours:D2}:{dia.Horario.Value.Minutes:D2}";
-                            _logger.LogDebug($"      - Validando horário {horarioFormatado}...");
-
-                            // Se o porteiro tem horários configurados, deve validar
-                            if (!string.IsNullOrWhiteSpace(p.HorariosDisponiveis))
-                            {
-                                var disponivelNoHorario = p.EstaDisponivelNoHorario(dia.Horario.Value);
-                                _logger.LogDebug($"      - Disponível no horário {horarioFormatado}? {(disponivelNoHorario ? "? SIM" : "? NÃO")}");
-
-                                if (!disponivelNoHorario)
-                                {
-                                    return false;
-                                }
-                            }
-                            else
-                            {
-                                _logger.LogDebug($"      - ? Sem horários configurados = disponível em todos os horários");
-                            }
-                        }
-                        else
-                        {
-                            _logger.LogDebug($"      - ? Culto sem horário específico");
+                            if (!p.EstaDisponivelNoHorario(dia.Horario.Value))
+                                return false;
                         }
 
-                        _logger.LogDebug($"      ? Porteiro {p.Nome} é ELEGÍVEL");
                         return true;
                     })
                     .ToList();
 
                 if (!porteirosElegiveis.Any())
                 {
-                    _logger.LogWarning($"?? NENHUM porteiro disponível para {dia.Data:dd/MM/yyyy}{horarioInfo} ({dia.Data.DayOfWeek}). Usando todos os porteiros como fallback.");
+                    var horarioInfo = dia.Horario.HasValue ? $" às {dia.Horario.Value.Hours:D2}:{dia.Horario.Value.Minutes:D2}" : "";
+                    _logger.LogWarning($"Nenhum porteiro disponível para {dia.Data:dd/MM/yyyy}{horarioInfo}. Usando todos como fallback.");
                     porteirosElegiveis = porteiros.ToList();
                 }
-                else
-                {
-                    var nomesElegiveis = string.Join(", ", porteirosElegiveis.Select(p => p.Nome));
-                    _logger.LogInformation($"? Porteiros elegíveis para {dia.Data:dd/MM/yyyy}{horarioInfo}: {nomesElegiveis}");
-                }
 
-                // Selecionar porteiros evitando repetição consecutiva
-                var porteirosSelecionados = new List<int>();
-
-                for (int i = 0; i < quantidadePorteiros; i++)
-                {
-                    var candidatos = porteirosElegiveis
-                        .Where(p => !porteirosSelecionados.Contains(p.Id)) // Não selecionar o mesmo porteiro duas vezes
-                        .Where(p => !ultimosPorteirosIds.Contains(p.Id)) // Evitar últimos escalados
-                        .OrderBy(p => distribuicaoPorteiros[p.Id])
-                        .ThenBy(_ => random.Next())
-                        .ToList();
-
-                    // Se não houver candidatos, permitir qualquer um
-                    if (!candidatos.Any())
-                    {
-                        candidatos = porteirosElegiveis
-                            .Where(p => !porteirosSelecionados.Contains(p.Id))
-                            .OrderBy(p => distribuicaoPorteiros[p.Id])
-                            .ThenBy(_ => random.Next())
-                            .ToList();
-                    }
-
-                    if (candidatos.Any())
-                    {
-                        var porteiroSelecionado = candidatos.First();
-                        porteirosSelecionados.Add(porteiroSelecionado.Id);
-                        distribuicaoPorteiros[porteiroSelecionado.Id]++;
-                    }
-                }
+                var porteirosSelecionados = SelecionarPorteirosBalanceados(
+                    porteirosElegiveis,
+                    quantidadePorteiros,
+                    historicoEscalas,
+                    distribuicaoPorteiros,
+                    porteirosLimitados,
+                    random
+                );
 
                 if (!porteirosSelecionados.Any())
                 {
-                    _logger.LogError($"? Não foi possível selecionar porteiros para {dia.Data:dd/MM/yyyy}");
+                    _logger.LogError($"Não foi possível selecionar porteiros para {dia.Data:dd/MM/yyyy}");
                     continue;
                 }
 
-                // Criar a escala
+                foreach (var porteiroId in porteirosSelecionados)
+                {
+                    distribuicaoPorteiros[porteiroId]++;
+                }
+
                 var escala = new EscalaPorteiro
                 {
                     DataCulto = dia.Data,
-                    Horario = dia.Horario, // ? GARANTIR QUE O HORÁRIO É SALVO
+                    Horario = dia.Horario,
                     TipoCulto = dia.TipoCulto,
                     PorteiroId = porteirosSelecionados[0],
                     Porteiro2Id = porteirosSelecionados.Count > 1 ? porteirosSelecionados[1] : null,
@@ -226,15 +192,79 @@ namespace SistemaTesourariaEclesiastica.Services
 
                 escalasGeradas.Add(escala);
 
-                // Atualizar rastreamento
-                ultimosPorteirosIds = porteirosSelecionados;
-
-                var nomes = string.Join(" e ", porteirosSelecionados.Select(id => porteiros.First(p => p.Id == id).Nome));
-                var horarioLog = dia.Horario.HasValue ? $" às {dia.Horario.Value.Hours:D2}:{dia.Horario.Value.Minutes:D2}" : "";
-                _logger.LogInformation($"? Porteiro(s) selecionado(s) para {dia.Data:dd/MM/yyyy}{horarioLog}: {nomes}");
+                historicoEscalas.Enqueue(porteirosSelecionados);
+                if (historicoEscalas.Count > 3)
+                    historicoEscalas.Dequeue();
             }
 
             return escalasGeradas;
+        }
+
+        /// <summary>
+        /// Seleciona porteiros de forma balanceada, evitando repetições consecutivas
+        /// </summary>
+        private List<int> SelecionarPorteirosBalanceados(
+            List<Porteiro> porteirosElegiveis,
+            int quantidadeNecessaria,
+            Queue<List<int>> historicoEscalas,
+            Dictionary<int, int> distribuicaoPorteiros,
+            HashSet<int> porteirosLimitados,
+            Random random)
+        {
+            var porteirosSelecionados = new List<int>();
+
+            // Obter IDs dos porteiros que estiveram nas últimas 2 escalas (exceto limitados)
+            var porteirosRecentesNaoLimitados = historicoEscalas
+                .SelectMany(h => h)
+                .Where(id => !porteirosLimitados.Contains(id))
+                .Distinct()
+                .ToList();
+
+            for (int i = 0; i < quantidadeNecessaria; i++)
+            {
+                // Fase 1: Tentar selecionar entre porteiros que NÃO estiveram nas últimas 2 escalas
+                var candidatosFase1 = porteirosElegiveis
+                    .Where(p => !porteirosSelecionados.Contains(p.Id))
+                    .Where(p => !porteirosRecentesNaoLimitados.Contains(p.Id))
+                    .OrderBy(p => distribuicaoPorteiros[p.Id])
+                    .ThenBy(_ => random.Next())
+                    .ToList();
+
+                if (candidatosFase1.Any())
+                {
+                    porteirosSelecionados.Add(candidatosFase1.First().Id);
+                    continue;
+                }
+
+                // Fase 2: Aceitar porteiros da penúltima escala (não da última)
+                var porteirosUltimaEscala = historicoEscalas.LastOrDefault() ?? new List<int>();
+                var candidatosFase2 = porteirosElegiveis
+                    .Where(p => !porteirosSelecionados.Contains(p.Id))
+                    .Where(p => !porteirosUltimaEscala.Contains(p.Id))
+                    .OrderBy(p => distribuicaoPorteiros[p.Id])
+                    .ThenBy(_ => random.Next())
+                    .ToList();
+
+                if (candidatosFase2.Any())
+                {
+                    porteirosSelecionados.Add(candidatosFase2.First().Id);
+                    continue;
+                }
+
+                // Fase 3: Último recurso - aceitar qualquer um
+                var candidatosFase3 = porteirosElegiveis
+                    .Where(p => !porteirosSelecionados.Contains(p.Id))
+                    .OrderBy(p => distribuicaoPorteiros[p.Id])
+                    .ThenBy(_ => random.Next())
+                    .ToList();
+
+                if (candidatosFase3.Any())
+                {
+                    porteirosSelecionados.Add(candidatosFase3.First().Id);
+                }
+            }
+
+            return porteirosSelecionados;
         }
 
         /// <summary>
@@ -244,7 +274,7 @@ namespace SistemaTesourariaEclesiastica.Services
         {
             return await _context.ConfiguracoesCultos
                 .Where(c => c.Ativo)
-                .OrderBy(c => c.DataEspecifica.HasValue ? 0 : 1) // Datas específicas primeiro
+                .OrderBy(c => c.DataEspecifica.HasValue ? 0 : 1)
                 .ThenBy(c => c.DataEspecifica)
                 .ThenBy(c => c.DiaSemana)
                 .ToListAsync();
@@ -260,11 +290,9 @@ namespace SistemaTesourariaEclesiastica.Services
 
             if (!configuracoes.Any())
             {
-                // Se não houver configurações, usar padrões
                 configuracoes = ObterConfiguracoesPadrao();
             }
 
-            // Separar configurações por tipo
             var configuracoesSemanais = configuracoes.Where(c => c.DiaSemana.HasValue).ToList();
             var configuracoesDataEspecifica = configuracoes.Where(c => c.DataEspecifica.HasValue).ToList();
 
@@ -284,21 +312,17 @@ namespace SistemaTesourariaEclesiastica.Services
                 }
             }
 
-            // ? CORREÇÃO: Adicionar TODOS os cultos semanais (múltiplos horários no mesmo dia)
+            // Adicionar todos os cultos semanais (múltiplos horários no mesmo dia)
             if (configuracoesSemanais.Any())
             {
-                // Iterar por todos os dias no período
                 for (var data = dataInicio; data <= dataFim; data = data.AddDays(1))
                 {
-                    // ? CORREÇÃO: Buscar TODAS as configurações para este dia da semana
                     var configsDoDia = configuracoesSemanais
                         .Where(c => c.DiaSemana == data.DayOfWeek)
                         .ToList();
 
-                    // Para cada configuração encontrada, adicionar um culto
                     foreach (var config in configsDoDia)
                     {
-                        // ? Verificar se não há data específica para este dia E horário
                         var temDataEspecificaMesmoHorario = diasSugeridos.Any(d =>
                             d.Data.Date == data.Date &&
                             d.Horario == config.Horario);
@@ -309,7 +333,7 @@ namespace SistemaTesourariaEclesiastica.Services
                             {
                                 Data = data,
                                 Horario = config.Horario,
-                                TipoCulto = config.TipoCulto, // ? Agora mantém o tipo correto (EscolaBiblica ou Evangelistico)
+                                TipoCulto = config.TipoCulto,
                                 Observacao = config.Observacao
                             });
                         }
@@ -317,7 +341,6 @@ namespace SistemaTesourariaEclesiastica.Services
                 }
             }
 
-            // Ordenar por data E horário
             return diasSugeridos.OrderBy(d => d.Data).ThenBy(d => d.Horario).ToList();
         }
 
@@ -331,129 +354,32 @@ namespace SistemaTesourariaEclesiastica.Services
                 new ConfiguracaoCulto
                 {
                     DiaSemana = DayOfWeek.Sunday,
-                    Horario = new TimeSpan(9, 0, 0), // 09:00
+                    Horario = new TimeSpan(9, 0, 0),
                     TipoCulto = TipoCulto.EscolaBiblica,
                     Ativo = true
                 },
                 new ConfiguracaoCulto
                 {
                     DiaSemana = DayOfWeek.Sunday,
-                    Horario = new TimeSpan(19, 0, 0), // 19:00
+                    Horario = new TimeSpan(19, 0, 0),
                     TipoCulto = TipoCulto.Evangelistico,
                     Ativo = true
                 },
                 new ConfiguracaoCulto
                 {
                     DiaSemana = DayOfWeek.Wednesday,
-                    Horario = new TimeSpan(19, 30, 0), // 19:30
+                    Horario = new TimeSpan(19, 30, 0),
                     TipoCulto = TipoCulto.DaFamilia,
                     Ativo = true
                 },
                 new ConfiguracaoCulto
                 {
                     DiaSemana = DayOfWeek.Friday,
-                    Horario = new TimeSpan(19, 30, 0), // 19:30
+                    Horario = new TimeSpan(19, 30, 0),
                     TipoCulto = TipoCulto.DeDoutrina,
                     Ativo = true
                 }
             };
-        }
-
-        /// <summary>
-        /// ?? DIAGNÓSTICO: Verifica configuração de disponibilidade de todos os porteiros
-        /// </summary>
-        public async Task<string> DiagnosticarDisponibilidadePorteirosAsync()
-        {
-            var porteiros = await _context.Porteiros
-                .Where(p => p.Ativo)
-                .OrderBy(p => p.Nome)
-                .ToListAsync();
-
-            var diagnostico = new System.Text.StringBuilder();
-            diagnostico.AppendLine("=== ?? DIAGNÓSTICO DE DISPONIBILIDADE DE PORTEIROS ===\n");
-            diagnostico.AppendLine($"Data/Hora: {DateTime.Now:dd/MM/yyyy HH:mm:ss}\n");
-            diagnostico.AppendLine($"Total de porteiros ativos: {porteiros.Count}\n");
-            diagnostico.AppendLine("?????????????????????????????????????????????????????\n");
-
-            foreach (var porteiro in porteiros)
-            {
-                porteiro.CarregarDisponibilidade();
-
-                diagnostico.AppendLine($"?? PORTEIRO: {porteiro.Nome}");
-                diagnostico.AppendLine($"   ID: {porteiro.Id}");
-                diagnostico.AppendLine($"   Telefone: {porteiro.Telefone}");
-                diagnostico.AppendLine($"   Ativo: {(porteiro.Ativo ? "? SIM" : "? NÃO")}");
-                diagnostico.AppendLine();
-
-                // Dias disponíveis (raw)
-                diagnostico.AppendLine($"   ?? DiasDisponiveis (banco): '{porteiro.DiasDisponiveis ?? "(NULL/VAZIO)"}'");
-
-                // Dias disponíveis (interpretado)
-                var diasInterpretados = new List<string>();
-                if (porteiro.DisponibilidadeDomingo) diasInterpretados.Add("Domingo");
-                if (porteiro.DisponibilidadeSegunda) diasInterpretados.Add("Segunda");
-                if (porteiro.DisponibilidadeTerca) diasInterpretados.Add("Terça");
-                if (porteiro.DisponibilidadeQuarta) diasInterpretados.Add("Quarta");
-                if (porteiro.DisponibilidadeQuinta) diasInterpretados.Add("Quinta");
-                if (porteiro.DisponibilidadeSexta) diasInterpretados.Add("Sexta");
-                if (porteiro.DisponibilidadeSabado) diasInterpretados.Add("Sábado");
-
-                if (diasInterpretados.Any())
-                {
-                    diagnostico.AppendLine($"   ?? Dias interpretados: {string.Join(", ", diasInterpretados)}");
-                }
-                else
-                {
-                    diagnostico.AppendLine($"   ?? Dias interpretados: ? NENHUM DIA SELECIONADO (disponível em todos)");
-                }
-                diagnostico.AppendLine();
-
-                // Horários disponíveis (raw)
-                diagnostico.AppendLine($"   ? HorariosDisponiveis (banco): '{porteiro.HorariosDisponiveis ?? "(NULL/VAZIO)"}'");
-
-                // Horários disponíveis (interpretado)
-                if (!string.IsNullOrWhiteSpace(porteiro.HorariosDisponiveis))
-                {
-                    var horarios = porteiro.HorariosDisponiveis.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                    diagnostico.AppendLine($"   ? Horários interpretados: {string.Join(", ", horarios.Select(h => h.Trim()))}");
-                }
-                else
-                {
-                    diagnostico.AppendLine($"   ? Horários interpretados: ? NENHUM HORÁRIO ESPECIFICADO (disponível em todos)");
-                }
-                diagnostico.AppendLine();
-
-                // Testes de disponibilidade
-                diagnostico.AppendLine($"   ?? TESTES DE VALIDAÇÃO:");
-
-                // Teste de dias
-                var testesDias = new[] { DayOfWeek.Sunday, DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday };
-                foreach (var dia in testesDias)
-                {
-                    var disponivel = porteiro.EstaDisponivelNodia(dia);
-                    diagnostico.AppendLine($"      - {dia}: {(disponivel ? "? Disponível" : "? Indisponível")}");
-                }
-                diagnostico.AppendLine();
-
-                // Teste de horários
-                if (!string.IsNullOrWhiteSpace(porteiro.HorariosDisponiveis))
-                {
-                    var testesHorarios = new[] { new TimeSpan(9, 0, 0), new TimeSpan(19, 0, 0), new TimeSpan(19, 30, 0) };
-                    foreach (var horario in testesHorarios)
-                    {
-                        var disponivel = porteiro.EstaDisponivelNoHorario(horario);
-                        // ? CORREÇÃO: Formatação manual de TimeSpan
-                        var horarioFormatado = $"{horario.Hours:D2}:{horario.Minutes:D2}";
-                        diagnostico.AppendLine($"      - {horarioFormatado}: {(disponivel ? "? Disponível" : "? Indisponível")}");
-                    }
-                }
-
-                diagnostico.AppendLine();
-                diagnostico.AppendLine("?????????????????????????????????????????????????????\n");
-            }
-
-            diagnostico.AppendLine("=== FIM DO DIAGNÓSTICO ===");
-            return diagnostico.ToString();
         }
     }
 }

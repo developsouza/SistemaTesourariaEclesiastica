@@ -6,53 +6,21 @@ using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Middleware;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
+using System.Text;
+
+// CORRECAO: Definir encoding UTF-8 como padrao para toda a aplicacao
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ OTIMIZAÇÃO: Response Compression
-// ⚠️ DESABILITADO TEMPORARIAMENTE: Bug no .NET 9 causando IndexOutOfRangeException ao deletar cookies
-// https://github.com/dotnet/aspnetcore/issues/XXXXX
-// builder.Services.AddResponseCompression(options =>
-// {
-//     options.EnableForHttps = true;
-//     options.Providers.Add<GzipCompressionProvider>();
-//     options.Providers.Add<BrotliCompressionProvider>();
-//     options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
-//     {
-//         "application/json",
-//         "application/javascript",
-//         "text/css",
-//         "text/html",
-//         "text/plain"
-//     });
-// });
-
-// builder.Services.Configure<GzipCompressionProviderOptions>(options =>
-// {
-//     options.Level = CompressionLevel.Fastest;
-// });
-
-// builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
-// {
-//     options.Level = CompressionLevel.Fastest;
-// });
-
-// ✅ OTIMIZAÇÃO: Output Caching (novo no .NET 9)
-// ⚠️ DESABILITADO: Causava conflito com TempData (cookies não podiam ser salvos após cache iniciar resposta)
-// builder.Services.AddOutputCache(options =>
-// {
-//     options.AddBasePolicy(policy => policy.Expire(TimeSpan.FromMinutes(5)));
-//     options.AddPolicy("StaticContent", policy => policy.Expire(TimeSpan.FromHours(1)));
-// });
-
-// ✅ OTIMIZAÇÃO: Memory Cache
+// OTIMIZACAO: Memory Cache
 builder.Services.AddMemoryCache();
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
   throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-// ✅ OTIMIZAÇÃO: Configuração do Entity Framework com pooling e timeout otimizado
+// OTIMIZACAO: Configuracao do Entity Framework com pooling e timeout otimizado
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(connectionString, sqlOptions =>
@@ -64,7 +32,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
             errorNumbersToAdd: null);
     });
 
-    // ✅ Melhor performance em produção
+    // Melhor performance em producao
     if (!builder.Environment.IsDevelopment())
     {
         options.EnableSensitiveDataLogging(false);
@@ -74,10 +42,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// Configuração do Identity com roles
+// Configuracao do Identity com roles
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-    // Configurações de senha
+    // Configuracoes de senha
     options.Password.RequireDigit = true;
     options.Password.RequireLowercase = true;
     options.Password.RequireNonAlphanumeric = false;
@@ -85,11 +53,11 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Password.RequiredLength = 6;
     options.Password.RequiredUniqueChars = 1;
 
-    // Configurações de usuário
+    // Configuracoes de usuario
     options.User.RequireUniqueEmail = true;
     options.SignIn.RequireConfirmedAccount = false;
 
-    // Configurações de lockout
+    // Configuracoes de lockout
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
@@ -97,7 +65,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// Configuração dos cookies de autenticação
+// Configuracao dos cookies de autenticacao
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
@@ -110,10 +78,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.Name = "TesourariaAuth";
 
-    // Configurações de evento
+    // Configuracoes de evento
     options.Events.OnRedirectToLogin = context =>
     {
-        // Para requisições AJAX, retornar 401 ao invés de redirect
+        // Para requisicoes AJAX, retornar 401 ao inves de redirect
         if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
         {
             context.Response.StatusCode = 401;
@@ -125,40 +93,40 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // ========================================
-// CONFIGURAÇÕES DE AUTORIZAÇÃO - CRÍTICO!
+// CONFIGURACOES DE AUTORIZACAO - CRITICO!
 // ========================================
 builder.Services.AddAuthorization(options =>
 {
-    // Política apenas para administradores
+    // Politica apenas para administradores
     options.AddPolicy("AdminOnly", policy =>
         policy.RequireRole("Administrador"));
 
-    // Política para tesoureiros (inclui admin)
+    // Politica para tesoureiros (inclui admin)
     options.AddPolicy("Tesoureiros", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal"));
 
-    // Política para relatórios (todos menos usuários básicos)
+    // Politica para relatorios (todos menos usuarios basicos)
     options.AddPolicy("Relatorios", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal", "Pastor"));
 
-    // Política para operações financeiras (entradas, saídas, etc.)
+    // Politica para operacoes financeiras (entradas, saidas, etc.)
     options.AddPolicy("OperacoesFinanceiras", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal"));
 
-    // Política para aprovação de prestações de contas
+    // Politica para aprovacao de prestacoes de contas
     options.AddPolicy("AprovacaoPrestacoes", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral"));
 
-    // Política para gerenciar usuários
+    // Politica para gerenciar usuarios
     options.AddPolicy("GerenciarUsuarios", policy =>
         policy.RequireRole("Administrador"));
 
-    // Política para auditoria
+    // Politica para auditoria
     options.AddPolicy("Auditoria", policy =>
         policy.RequireRole("Administrador"));
 });
 
-// Serviços da aplicação
+// Servicos da aplicacao
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<BusinessRulesService>();
@@ -166,50 +134,60 @@ builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<BalanceteService>();
 builder.Services.AddScoped<EscalaPorteiroService>();
 
-// ✅ SERVIÇO DE AUDITORIA EM BACKGROUND
+// SERVICO DE AUDITORIA EM BACKGROUND
 // Registrado como Singleton para que seja compartilhado e como HostedService para rodar em background
 builder.Services.AddSingleton<AuditQueueService>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<AuditQueueService>());
 
-// Configuração do MVC com filtro global de autorização
+// Configuracao do MVC com filtro global de autorizacao
 builder.Services.AddControllersWithViews(options =>
 {
-    // Aplicar filtro de autorização globalmente
+    // Aplicar filtro de autorizacao globalmente
     var policy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
     options.Filters.Add(new AuthorizeFilter(policy));
 
-    // ✅ ADICIONAR: Filtro de auditoria global (substitui o middleware problemático)
+    // ADICIONAR: Filtro de auditoria global (substitui o middleware problematico)
     options.Filters.Add<SistemaTesourariaEclesiastica.Filters.AuditActionFilter>();
 
-    // Configuração de model binding
-    options.ModelBindingMessageProvider.SetValueIsInvalidAccessor(x => $"O valor '{x}' é inválido.");
-    options.ModelBindingMessageProvider.SetValueMustBeANumberAccessor(x => $"O campo '{x}' deve ser um número.");
-    options.ModelBindingMessageProvider.SetMissingBindRequiredValueAccessor(x => $"O campo '{x}' é obrigatório.");
-    options.ModelBindingMessageProvider.SetAttemptedValueIsInvalidAccessor((x, y) => $"O valor '{x}' não é válido para {y}.");
-    options.ModelBindingMessageProvider.SetMissingKeyOrValueAccessor(() => "Valor obrigatório.");
-    options.ModelBindingMessageProvider.SetUnknownValueIsInvalidAccessor(x => $"O valor fornecido é inválido para {x}.");
-    options.ModelBindingMessageProvider.SetValueIsInvalidAccessor(x => $"O valor '{x}' é inválido.");
-    options.ModelBindingMessageProvider.SetMissingRequestBodyRequiredValueAccessor(() => "O corpo da requisição é obrigatório.");
-    options.ModelBindingMessageProvider.SetNonPropertyAttemptedValueIsInvalidAccessor(x => $"O valor '{x}' não é válido.");
-    options.ModelBindingMessageProvider.SetNonPropertyUnknownValueIsInvalidAccessor(() => "O valor fornecido é inválido.");
-    options.ModelBindingMessageProvider.SetNonPropertyValueMustBeANumberAccessor(() => "O campo deve ser um número.");
+    // Configuracao de model binding
+    options.ModelBindingMessageProvider.SetValueIsInvalidAccessor(x => $"O valor '{x}' e invalido.");
+    options.ModelBindingMessageProvider.SetValueMustBeANumberAccessor(x => $"O campo '{x}' deve ser um numero.");
+    options.ModelBindingMessageProvider.SetMissingBindRequiredValueAccessor(x => $"O campo '{x}' e obrigatorio.");
+    options.ModelBindingMessageProvider.SetAttemptedValueIsInvalidAccessor((x, y) => $"O valor '{x}' nao e valido para {y}.");
+    options.ModelBindingMessageProvider.SetMissingKeyOrValueAccessor(() => "Valor obrigatorio.");
+    options.ModelBindingMessageProvider.SetUnknownValueIsInvalidAccessor(x => $"O valor fornecido e invalido para {x}.");
+    options.ModelBindingMessageProvider.SetValueIsInvalidAccessor(x => $"O valor '{x}' e invalido.");
+    options.ModelBindingMessageProvider.SetMissingRequestBodyRequiredValueAccessor(() => "O corpo da requisicao e obrigatorio.");
+    options.ModelBindingMessageProvider.SetNonPropertyAttemptedValueIsInvalidAccessor(x => $"O valor '{x}' nao e valido.");
+    options.ModelBindingMessageProvider.SetNonPropertyUnknownValueIsInvalidAccessor(() => "O valor fornecido e invalido.");
+    options.ModelBindingMessageProvider.SetNonPropertyValueMustBeANumberAccessor(() => "O campo deve ser um numero.");
 });
 
-// Configuração de localização para português brasileiro
+// CORRECAO: Configuracao de localizacao para portugues brasileiro com encoding correto
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
-    options.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("pt-BR");
-    options.SupportedCultures = new List<System.Globalization.CultureInfo> { new("pt-BR") };
-    options.SupportedUICultures = new List<System.Globalization.CultureInfo> { new("pt-BR") };
+    var ptBR = new System.Globalization.CultureInfo("pt-BR");
+
+    options.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture(ptBR);
+    options.SupportedCultures = new List<System.Globalization.CultureInfo> { ptBR };
+    options.SupportedUICultures = new List<System.Globalization.CultureInfo> { ptBR };
+    options.RequestCultureProviders.Clear();
+    options.RequestCultureProviders.Add(new Microsoft.AspNetCore.Localization.CustomRequestCultureProvider(
+        context => Task.FromResult(new Microsoft.AspNetCore.Localization.ProviderCultureResult("pt-BR"))
+    ));
+});
+
+// CORRECAO: Configurar encoding UTF-8 para WebEncoderOptions
+builder.Services.AddWebEncoders(options =>
+{
+    options.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(
+        System.Text.Unicode.UnicodeRanges.All
+    );
 });
 
 var app = builder.Build();
-
-// ✅ OTIMIZAÇÃO: Adicionar Output Cache
-// ⚠️ DESABILITADO: Causava conflito com TempData/Cookies
-// app.UseOutputCache();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -222,33 +200,38 @@ else
     app.UseHsts();
 }
 
-// Configuração de localização
+// CORRECAO: Configuracao de localizacao DEVE vir antes de UseStaticFiles
 app.UseRequestLocalization();
 
 app.UseHttpsRedirection();
 
-// ✅ OTIMIZAÇÃO: Cache estático para arquivos wwwroot
+// OTIMIZACAO: Cache estatico para arquivos wwwroot
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>
     {
         const int durationInSeconds = 60 * 60 * 24 * 30; // 30 dias
         ctx.Context.Response.Headers["Cache-Control"] = $"public,max-age={durationInSeconds}";
+
+        // CORRECAO: Adicionar headers de charset UTF-8 para arquivos de texto
+        var path = ctx.Context.Request.Path.Value?.ToLower();
+        if (path != null && (path.EndsWith(".html") || path.EndsWith(".htm") ||
+            path.EndsWith(".css") || path.EndsWith(".js") || path.EndsWith(".json")))
+        {
+            var contentType = ctx.Context.Response.ContentType;
+            if (!string.IsNullOrEmpty(contentType) && !contentType.Contains("charset"))
+            {
+                ctx.Context.Response.ContentType = $"{contentType}; charset=utf-8";
+            }
+        }
     }
 });
 
 app.UseRouting();
 
-// ✅ CORREÇÃO CRÍTICA: Response Compression DEVE vir ANTES dos middlewares customizados
-// ⚠️ DESABILITADO TEMPORARIAMENTE: Bug no .NET 9 causando IndexOutOfRangeException
-// app.UseResponseCompression();
-
 app.UseAccessControl();
 app.UseAuthentication();
 app.UseAuthorization();
-// ⚠️ REMOVIDO: AuditMiddleware causava conflitos com cookies/headers
-// Substituído por AuditActionFilter que funciona corretamente
-// app.UseAuditMiddleware();
 
 app.MapControllerRoute(
     name: "default",

@@ -64,7 +64,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                 <style>
                     @page {
                         size: A4;
-                        margin: 15mm;
+                        margin: 10mm;
                     }
         
                     * {
@@ -75,8 +75,8 @@ namespace SistemaTesourariaEclesiastica.Helpers
         
                     body {
                         font-family: 'Arial', 'Helvetica', sans-serif;
-                        font-size: 9pt;
-                        line-height: 1.3;
+                        font-size: 8.5pt;
+                        line-height: 1.2;
                         color: #1a1a1a;
                     }
         
@@ -89,13 +89,13 @@ namespace SistemaTesourariaEclesiastica.Helpers
                     .header {
                         background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
                         color: white;
-                        padding: 12px 15px;
-                        border-radius: 6px;
-                        margin-bottom: 12px;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        padding: 6px 10px;
+                        border-radius: 4px;
+                        margin-bottom: 6px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
                         display: flex;
                         align-items: center;
-                        gap: 15px;
+                        gap: 10px;
                     }
         
                     .header-logo {
@@ -104,8 +104,8 @@ namespace SistemaTesourariaEclesiastica.Helpers
         
                     .header-logo img {
                         width: auto;
-                        height: 70px;
-                        max-width: 280px;
+                        height: 50px;
+                        max-width: 200px;
                         object-fit: contain;
                         background: transparent;
                         border-radius: 0;
@@ -118,21 +118,21 @@ namespace SistemaTesourariaEclesiastica.Helpers
                     }
         
                     .header h1 {
-                        font-size: 18pt;
+                        font-size: 14pt;
                         font-weight: 700;
-                        margin-bottom: 3px;
-                        letter-spacing: 0.5px;
+                        margin-bottom: 2px;
+                        letter-spacing: 0.3px;
                     }
         
                     .header .subtitle {
-                        font-size: 9pt;
+                        font-size: 8pt;
                         opacity: 0.95;
                         font-weight: 500;
                     }
         
                     /* Tabela da Escala */
                     .table-container {
-                        margin-bottom: 12px;
+                        margin-bottom: 10px;
                         margin-left: auto;
                         margin-right: auto;
                         max-width: 100%;
@@ -142,8 +142,8 @@ namespace SistemaTesourariaEclesiastica.Helpers
                         width: 100%;
                         border-collapse: collapse;
                         background: white;
-                        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-                        border-radius: 6px;
+                        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+                        border-radius: 4px;
                         overflow: hidden;
                         margin: 0 auto;
                         border: 1px solid #d1d5db;
@@ -154,10 +154,10 @@ namespace SistemaTesourariaEclesiastica.Helpers
                     }
         
                     th {
-                        padding: 8px 10px;
+                        padding: 7px 10px;
                         text-align: center;
                         font-weight: 700;
-                        font-size: 8.5pt;
+                        font-size: 9pt;
                         color: #1f2937;
                         border-bottom: 2px solid #9ca3af;
                         text-transform: uppercase;
@@ -170,7 +170,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                     }
         
                     td {
-                        padding: 7px 10px;
+                        padding: 6px 10px;
                         border-bottom: 1px solid #e5e7eb;
                         border-right: 1px solid #e5e7eb;
                         font-size: 8.5pt;
@@ -222,8 +222,8 @@ namespace SistemaTesourariaEclesiastica.Helpers
         
                     .badge {
                         display: inline-block;
-                        padding: 3px 8px;
-                        border-radius: 12px;
+                        padding: 3px 7px;
+                        border-radius: 10px;
                         font-size: 7.5pt;
                         font-weight: 600;
                         background: #dbeafe;
@@ -233,93 +233,103 @@ namespace SistemaTesourariaEclesiastica.Helpers
         
                     /* Seção de Contatos */
                     .contacts-section {
-                        margin-top: 12px;
-                        padding-top: 12px;
+                        margin-top: 10px;
+                        padding-top: 10px;
                         border-top: 2px solid #e5e7eb;
                     }
         
                     .section-title {
-                        font-size: 10pt;
+                        font-size: 9.5pt;
                         font-weight: 700;
                         color: #374151;
-                        margin-bottom: 8px;
+                        margin-bottom: 7px;
                         padding-left: 3px;
                         border-left: 3px solid #2563eb;
-                        padding-left: 8px;
+                        padding-left: 6px;
                     }
         
                     /* Responsável - Destaque */
                     .responsible-box {
                         background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
                         border: 2px solid #22c55e;
-                        border-radius: 6px;
-                        padding: 10px;
-                        margin-bottom: 10px;
-                        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+                        border-radius: 4px;
+                        padding: 7px 10px;
+                        margin-bottom: 7px;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+                        text-align: center;
                     }
         
                     .responsible-box .title {
-                        font-size: 9pt;
-                        font-weight: 700;
+                        font-size: 8pt;
+                        font-weight: 600;
                         color: #15803d;
-                        margin-bottom: 4px;
+                        margin-bottom: 2px;
                     }
         
                     .responsible-box .title .check {
                         display: inline-block;
-                        margin-right: 6px;
+                        margin-right: 4px;
                         font-weight: 700;
-                        font-size: 11pt;
+                        font-size: 9pt;
                     }
         
                     .responsible-box .info {
-                        font-size: 8.5pt;
+                        font-size: 7.5pt;
                         color: #166534;
-                        line-height: 1.5;
+                        line-height: 1.3;
                     }
         
                     .responsible-box .info strong {
                         font-weight: 700;
                     }
+
+                    .responsible-box .notice {
+                        font-size: 6.5pt;
+                        color: #166534;
+                        font-style: italic;
+                        margin-top: 3px;
+                        padding-top: 3px;
+                        border-top: 1px solid #86efac;
+                    }
         
                     /* Porteiros Grid */
                     .porters-grid {
                         display: grid;
-                        grid-template-columns: repeat(3, 1fr);
-                        gap: 6px;
-                        margin-top: 8px;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 4px;
+                        margin-top: 4px;
                     }
         
                     .porter-card {
                         background: #f9fafb;
                         border: 1px solid #e5e7eb;
-                        border-radius: 4px;
-                        padding: 6px 8px;
-                        font-size: 8pt;
+                        border-radius: 3px;
+                        padding: 5px 7px;
+                        font-size: 7.5pt;
                     }
         
                     .porter-card .name {
                         font-weight: 700;
                         color: #1f2937;
                         margin-bottom: 2px;
-                        font-size: 8.5pt;
+                        font-size: 8pt;
                     }
         
                     .porter-card .phone {
                         color: #6b7280;
-                        font-size: 7.5pt;
+                        font-size: 7pt;
                     }
         
                     .porter-card .phone .icon {
-                        margin-right: 3px;
+                        margin-right: 2px;
                     }
         
                     /* Footer */
                     .footer {
-                        margin-top: 12px;
-                        padding-top: 8px;
+                        margin-top: 8px;
+                        padding-top: 6px;
                         border-top: 1px solid #e5e7eb;
-                        font-size: 7pt;
+                        font-size: 6.5pt;
                         color: #6b7280;
                         text-align: center;
                     }
@@ -328,16 +338,10 @@ namespace SistemaTesourariaEclesiastica.Helpers
                         display: flex;
                         justify-content: center;
                         align-items: center;
-                        margin-bottom: 4px;
-                        font-size: 7.5pt;
+                        margin-bottom: 3px;
+                        font-size: 7pt;
                         flex-wrap: wrap;
-                        gap: 10px;
-                    }
-        
-                    .footer-note {
-                        font-style: italic;
-                        margin-top: 4px;
-                        text-align: center;
+                        gap: 8px;
                     }
         
                     .footer-credit {
@@ -432,13 +436,8 @@ namespace SistemaTesourariaEclesiastica.Helpers
             {
                 sb.AppendLine($@"
                     <div class='responsible-box'>
-                        <div class='title'>
-                            <span class='check'>&#10003;</span>Responsável pela Escala
-                        </div>
-                        <div class='info'>
-                            <strong>{responsavel.Nome}</strong><br>
-                            Telefone: {LocalizacaoHelper.FormatarTelefone(responsavel.Telefone)}
-                        </div>
+                        <div class='title'><span class='check'>&#10003;</span>Responsável pela Escala: <strong>{responsavel.Nome}</strong> - Tel: {LocalizacaoHelper.FormatarTelefone(responsavel.Telefone)}</div>
+                        <div class='notice'>Em caso de imprevistos, entrar em contato com o(a) responsável.</div>
                     </div>");
             }
 
@@ -477,9 +476,6 @@ namespace SistemaTesourariaEclesiastica.Helpers
                     </div>
                     <div class='footer-credit'>
                         <span>Sistema de Tesouraria - AD Jacumã - Desenvolvido por | Gilney Souza</span>
-                    </div>
-                    <div class='footer-note'>
-                        Em caso de imprevistos, entrar em contato com o(a) responsavel.
                     </div>
                 </div>");
 
