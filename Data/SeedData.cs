@@ -29,7 +29,7 @@ namespace SistemaTesourariaEclesiastica.Data
                 await CreateRoles(roleManager, logger);
 
                 // 2. Criar centros de custo
-                var (sede, fundo) = await CreateCentrosCusto(context, logger);
+                var (sede, fundoRepasse) = await CreateCentrosCusto(context, logger);
 
                 // 3. Criar usuários padrão
                 await CreateDefaultUsers(userManager, sede.Id, logger);
@@ -41,7 +41,7 @@ namespace SistemaTesourariaEclesiastica.Data
                 await CreateMeiosDePagamento(context, logger);
 
                 // 6. Criar Regras de Rateio (Dízimo dos Dízimos)
-                await CreateRegrasRateio(context, sede.Id, fundo.Id, logger);
+                await CreateRegrasRateio(context, sede.Id, fundoRepasse.Id, logger);
 
                 logger.LogInformation("========================================");
                 logger.LogInformation("SEED DE DADOS CONCLUÍDO COM SUCESSO!");
@@ -87,9 +87,9 @@ namespace SistemaTesourariaEclesiastica.Data
         // ==========================================
         // 2. CRIAÇÃO DE CENTROS DE CUSTO
         // ==========================================
-        private static async Task<(CentroCusto sede, CentroCusto fundo)> CreateCentrosCusto(
-        ApplicationDbContext context,
-               ILogger logger)
+        private static async Task<(CentroCusto sede, CentroCusto fundoRepasse)> CreateCentrosCusto(
+            ApplicationDbContext context,
+            ILogger logger)
         {
             logger.LogInformation("2. Criando Centros de Custo...");
 
@@ -114,33 +114,79 @@ namespace SistemaTesourariaEclesiastica.Data
                 logger.LogInformation($"   ○ Centro de Custo 'Sede' já existe (ID: {sede.Id})");
             }
 
-            // FUNDO (Dízimo dos Dízimos - Repasse para Templo Central)
-            var fundo = await context.CentrosCusto.FirstOrDefaultAsync(c =>
-                c.Nome.Contains("FUNDO") ||
-                 c.Nome.Contains("Fundo") ||
-              c.Nome.Contains("REPASSE") ||
-                    c.Nome.Contains("DÍZIMO"));
+            // ✅ FUNDO 1: Repasse Templo Central (20%)
+            var fundoRepasse = await context.CentrosCusto.FirstOrDefaultAsync(c =>
+                c.Nome.Contains("FUNDO - Repasse Templo Central") ||
+                c.Nome.Contains("Repasse Templo Central"));
 
-            if (fundo == null)
+            if (fundoRepasse == null)
             {
-                fundo = new CentroCusto
+                fundoRepasse = new CentroCusto
                 {
                     Nome = "FUNDO - Repasse Templo Central",
-                    Tipo = TipoCentroCusto.Financeiro,
+                    Tipo = TipoCentroCusto.Financeiro, // ✅ CORRIGIDO: Tipo Financeiro
                     Descricao = "Dízimo dos Dízimos (20%) - Valor repassado mensalmente para o Templo Central da Convenção",
                     Ativo = true,
                     DataCriacao = DateTime.Now
                 };
-                context.CentrosCusto.Add(fundo);
+                context.CentrosCusto.Add(fundoRepasse);
                 await context.SaveChangesAsync();
-                logger.LogInformation($"   ✓ Centro de Custo 'FUNDO - Repasse Templo Central' criado (ID: {fundo.Id})");
+                logger.LogInformation($"   ✓ Centro de Custo 'FUNDO - Repasse Templo Central' criado (ID: {fundoRepasse.Id}, Tipo: Financeiro)");
             }
             else
             {
-                logger.LogInformation($"   ○ Centro de Custo 'FUNDO' já existe (ID: {fundo.Id}, Nome: {fundo.Nome})");
+                // ✅ Atualizar tipo se já existir mas estiver errado
+                if (fundoRepasse.Tipo != TipoCentroCusto.Financeiro)
+                {
+                    logger.LogInformation($"   ⚠ Corrigindo tipo do 'FUNDO - Repasse Templo Central' de {fundoRepasse.Tipo} para Financeiro");
+                    fundoRepasse.Tipo = TipoCentroCusto.Financeiro;
+                    context.CentrosCusto.Update(fundoRepasse);
+                    await context.SaveChangesAsync();
+                    logger.LogInformation($"   ✓ Tipo atualizado para Financeiro (ID: {fundoRepasse.Id})");
+                }
+                else
+                {
+                    logger.LogInformation($"   ○ Centro de Custo 'FUNDO - Repasse Templo Central' já existe (ID: {fundoRepasse.Id}, Tipo: Financeiro)");
+                }
             }
 
-            return (sede, fundo);
+            // ✅ FUNDO 2: Despesas Administrativas (20%)
+            var fundoDespesas = await context.CentrosCusto.FirstOrDefaultAsync(c =>
+                c.Nome.Contains("FUNDO - Despesas Administrativas") ||
+                c.Nome.Contains("Despesas Administrativas"));
+
+            if (fundoDespesas == null)
+            {
+                fundoDespesas = new CentroCusto
+                {
+                    Nome = "FUNDO - Despesas Administrativas",
+                    Tipo = TipoCentroCusto.Financeiro, // ✅ Tipo Financeiro
+                    Descricao = "Despesas Administrativas (20%) - Fundo destinado ao pagamento das despesas administrativas mensais",
+                    Ativo = true,
+                    DataCriacao = DateTime.Now
+                };
+                context.CentrosCusto.Add(fundoDespesas);
+                await context.SaveChangesAsync();
+                logger.LogInformation($"   ✓ Centro de Custo 'FUNDO - Despesas Administrativas' criado (ID: {fundoDespesas.Id}, Tipo: Financeiro)");
+            }
+            else
+            {
+                // ✅ Atualizar tipo se já existir mas estiver errado
+                if (fundoDespesas.Tipo != TipoCentroCusto.Financeiro)
+                {
+                    logger.LogInformation($"   ⚠ Corrigindo tipo do 'FUNDO - Despesas Administrativas' de {fundoDespesas.Tipo} para Financeiro");
+                    fundoDespesas.Tipo = TipoCentroCusto.Financeiro;
+                    context.CentrosCusto.Update(fundoDespesas);
+                    await context.SaveChangesAsync();
+                    logger.LogInformation($"   ✓ Tipo atualizado para Financeiro (ID: {fundoDespesas.Id})");
+                }
+                else
+                {
+                    logger.LogInformation($"   ○ Centro de Custo 'FUNDO - Despesas Administrativas' já existe (ID: {fundoDespesas.Id}, Tipo: Financeiro)");
+                }
+            }
+
+            return (sede, fundoRepasse);
         }
 
         // ==========================================
@@ -362,51 +408,92 @@ namespace SistemaTesourariaEclesiastica.Data
         }
 
         // ==========================================
-        // 6. CRIAÇÃO DE REGRAS DE RATEIO (DÍZIMO DOS DÍZIMOS)
+        // 6. CRIAÇÃO DE REGRAS DE RATEIO (DÍZIMO DOS DÍZIMOS + DESPESAS ADMINISTRATIVAS)
         // ==========================================
         private static async Task CreateRegrasRateio(
           ApplicationDbContext context,
             int sedeId,
-                  int fundoId,
+                  int fundoRepasseId,
              ILogger logger)
         {
-            logger.LogInformation("6. Criando Regras de Rateio (Dízimo dos Dízimos)...");
+            logger.LogInformation("6. Criando Regras de Rateio...");
 
-            // Verificar se já existe regra de rateio SEDE → FUNDO
-            var regraExistente = await context.RegrasRateio
-            .FirstOrDefaultAsync(r =>
-            r.CentroCustoOrigemId == sedeId &&
-            r.CentroCustoDestinoId == fundoId);
+            // ✅ REGRA 1: Dízimo dos Dízimos (SEDE → FUNDO Repasse Templo Central - 20%)
+            var regraRepasse = await context.RegrasRateio
+                .FirstOrDefaultAsync(r =>
+                    r.CentroCustoOrigemId == sedeId &&
+                    r.CentroCustoDestinoId == fundoRepasseId);
 
-            if (regraExistente == null)
+            if (regraRepasse == null)
             {
-                var regraRateio = new RegraRateio
+                regraRepasse = new RegraRateio
                 {
                     Nome = "Dízimo dos Dízimos (20%)",
                     Descricao = "Repasse mensal de 20% das receitas da Sede Local para o Templo Central da Convenção",
                     CentroCustoOrigemId = sedeId,
-                    CentroCustoDestinoId = fundoId,
+                    CentroCustoDestinoId = fundoRepasseId,
                     Percentual = 20.00m, // 20%
                     Ativo = true,
                     DataCriacao = DateTime.Now
                 };
 
-                context.RegrasRateio.Add(regraRateio);
+                context.RegrasRateio.Add(regraRepasse);
                 await context.SaveChangesAsync();
 
-                logger.LogInformation($"   ✓ Regra de Rateio 'Dízimo dos Dízimos' criada:");
+                logger.LogInformation($"   ✓ Regra de Rateio 'Dízimo dos Dízimos (20%)' criada:");
                 logger.LogInformation($"      - Origem: Sede Local (ID: {sedeId})");
-                logger.LogInformation($"      - Destino: Templo Central (ID: {fundoId})");
+                logger.LogInformation($"      - Destino: FUNDO - Repasse Templo Central (ID: {fundoRepasseId})");
                 logger.LogInformation($"      - Percentual: 20.00%");
-                logger.LogInformation($"      - Observação: Valor a ser repassado mensalmente ao Templo Central");
             }
             else
             {
-                logger.LogInformation($"   ○ Regra de Rateio SEDE → TEMPLO CENTRAL já existe:");
-                logger.LogInformation($"      - Nome: {regraExistente.Nome}");
-                logger.LogInformation($"      - Percentual: {regraExistente.Percentual:F2}%");
-                logger.LogInformation($"      - Ativo: {regraExistente.Ativo}");
+                logger.LogInformation($"   ○ Regra 'Dízimo dos Dízimos' já existe (ID: {regraRepasse.Id}, Percentual: {regraRepasse.Percentual:F2}%)");
             }
+
+            // ✅ REGRA 2: Despesas Administrativas (SEDE → FUNDO Despesas Administrativas - 20%)
+            var fundoDespesas = await context.CentrosCusto.FirstOrDefaultAsync(c =>
+                c.Nome.Contains("FUNDO - Despesas Administrativas") ||
+                c.Nome.Contains("Despesas Administrativas"));
+
+            if (fundoDespesas != null)
+            {
+                var regraDespesas = await context.RegrasRateio
+                    .FirstOrDefaultAsync(r =>
+                        r.CentroCustoOrigemId == sedeId &&
+                        r.CentroCustoDestinoId == fundoDespesas.Id);
+
+                if (regraDespesas == null)
+                {
+                    regraDespesas = new RegraRateio
+                    {
+                        Nome = "Despesas Administrativas (20%)",
+                        Descricao = "Rateio mensal de 20% das receitas da Sede para o Fundo de Despesas Administrativas",
+                        CentroCustoOrigemId = sedeId,
+                        CentroCustoDestinoId = fundoDespesas.Id,
+                        Percentual = 20.00m, // 20%
+                        Ativo = true,
+                        DataCriacao = DateTime.Now
+                    };
+
+                    context.RegrasRateio.Add(regraDespesas);
+                    await context.SaveChangesAsync();
+
+                    logger.LogInformation($"   ✓ Regra de Rateio 'Despesas Administrativas (20%)' criada:");
+                    logger.LogInformation($"      - Origem: Sede Local (ID: {sedeId})");
+                    logger.LogInformation($"      - Destino: FUNDO - Despesas Administrativas (ID: {fundoDespesas.Id})");
+                    logger.LogInformation($"      - Percentual: 20.00%");
+                }
+                else
+                {
+                    logger.LogInformation($"   ○ Regra 'Despesas Administrativas' já existe (ID: {regraDespesas.Id}, Percentual: {regraDespesas.Percentual:F2}%)");
+                }
+            }
+            else
+            {
+                logger.LogWarning("   ⚠ FUNDO - Despesas Administrativas não encontrado. Regra de rateio não criada.");
+            }
+
+            logger.LogInformation($"   ✓ Total de rateio configurado: 40% (20% Repasse + 20% Despesas)");
         }
     }
 }

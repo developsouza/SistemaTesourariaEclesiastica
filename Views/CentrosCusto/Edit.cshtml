@@ -42,10 +42,14 @@
 
                         <div class="col-md-6 mb-3">
                             <label asp-for="Tipo" class="form-label">Tipo <span class="text-danger">*</span></label>
-                            <select asp-for="Tipo" class="form-select" asp-items="Html.GetEnumSelectList<TipoCentroCusto>()">
+                            <select asp-for="Tipo" class="form-select" asp-items="Html.GetEnumSelectList<TipoCentroCusto>()"
+                                    required>
                                 <option value="">Selecione o tipo</option>
                             </select>
                             <span asp-validation-for="Tipo" class="text-danger"></span>
+                            <div class="invalid-feedback">
+                                Por favor, selecione um tipo para o centro de custo.
+                            </div>
                         </div>
                     </div>
 

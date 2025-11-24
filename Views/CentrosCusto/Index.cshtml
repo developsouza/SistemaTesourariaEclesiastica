@@ -1,4 +1,5 @@
 @model IEnumerable<SistemaTesourariaEclesiastica.Models.CentroCusto>
+@using SistemaTesourariaEclesiastica.Enums
 
 @{
     ViewData["Title"] = "Centros de Custo";
@@ -102,17 +103,91 @@
                                     }
                                 </td>
                                 <td>
-                                    @if (item.Tipo.ToString() == "Sede")
+                                    @switch (item.Tipo)
                                     {
-                                        <span class="badge bg-danger">
-                                            <i class="bi bi-building me-1"></i>Sede
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-info">
-                                            <i class="bi bi-house me-1"></i>Congregação
-                                        </span>
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Sede:
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-building me-1"></i>Sede
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Congregacao:
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-house me-1"></i>Congregação
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Financeiro:
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-cash-stack me-1"></i>Financeiro
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Departamento:
+                                            <span class="badge bg-primary">
+                                                <i class="bi bi-briefcase me-1"></i>Departamento
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Projeto:
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-kanban me-1"></i>Projeto
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Ministerio:
+                                            <span class="badge bg-purple">
+                                                <i class="bi bi-people me-1"></i>Ministério
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Missao:
+                                            <span class="badge bg-dark">
+                                                <i class="bi bi-globe me-1"></i>Missão
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Educacional:
+                                            <span class="badge bg-teal">
+                                                <i class="bi bi-book me-1"></i>Educacional
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Social:
+                                            <span class="badge bg-orange">
+                                                <i class="bi bi-heart me-1"></i>Social
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Evangelistico:
+                                            <span class="badge bg-cyan">
+                                                <i class="bi bi-megaphone me-1"></i>Evangelístico
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Administrativo:
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-gear me-1"></i>Administrativo
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Infraestrutura:
+                                            <span class="badge bg-brown">
+                                                <i class="bi bi-wrench me-1"></i>Infraestrutura
+                                            </span>
+                                            break;
+                                        
+                                        case SistemaTesourariaEclesiastica.Enums.TipoCentroCusto.Outro:
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="bi bi-three-dots me-1"></i>Outro
+                                            </span>
+                                            break;
+                                        
+                                        default:
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-question-circle me-1"></i>@item.Tipo.ToString()
+                                            </span>
+                                            break;
                                     }
                                 </td>
                                 <td class="d-none d-md-table-cell text-center">
@@ -206,3 +281,53 @@
         </div>
     }
 </div>
+
+@section Styles {
+    <style>
+        /* Cores customizadas para badges de tipos de centro de custo */
+        .bg-purple {
+            background-color: #6f42c1 !important;
+            color: white !important;
+        }
+
+        .bg-teal {
+            background-color: #20c997 !important;
+            color: white !important;
+        }
+
+        .bg-orange {
+            background-color: #fd7e14 !important;
+            color: white !important;
+        }
+
+        .bg-cyan {
+            background-color: #0dcaf0 !important;
+            color: black !important;
+        }
+
+        .bg-brown {
+            background-color: #795548 !important;
+            color: white !important;
+        }
+
+        /* Estilos adicionais para o avatar circle */
+        .avatar-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        /* Responsividade para tabela */
+        @@media (max-width: 768px) {
+            .badge {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+}

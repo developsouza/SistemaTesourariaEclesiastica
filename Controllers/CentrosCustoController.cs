@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
+using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
 
@@ -92,6 +93,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Nome,Tipo,Descricao,Ativo")] CentroCusto centroCusto)
         {
+            // ✅ VALIDAÇÃO EXPLÍCITA: Verificar se o Tipo foi realmente selecionado
+            if (centroCusto.Tipo == 0 || !Enum.IsDefined(typeof(TipoCentroCusto), centroCusto.Tipo))
+            {
+                ModelState.AddModelError("Tipo", "Por favor, selecione um tipo válido para o centro de custo.");
+            }
+
             if (ModelState.IsValid)
             {
                 // Verifica se o nome já existe
@@ -144,6 +151,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
             if (id != centroCusto.Id)
             {
                 return NotFound();
+            }
+
+            // ✅ VALIDAÇÃO EXPLÍCITA: Verificar se o Tipo foi realmente selecionado
+            if (centroCusto.Tipo == 0 || !Enum.IsDefined(typeof(TipoCentroCusto), centroCusto.Tipo))
+            {
+                ModelState.AddModelError("Tipo", "Por favor, selecione um tipo válido para o centro de custo.");
             }
 
             if (ModelState.IsValid)
