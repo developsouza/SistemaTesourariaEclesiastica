@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+Ôªøusing Microsoft.EntityFrameworkCore;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
 using SistemaTesourariaEclesiastica.Models;
@@ -19,7 +19,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
         /// <summary>
         /// Gera a escala de porteiros baseado nos dias selecionados
-        /// ? OTIMIZADO: Funciona sem depender de histÛrico no banco (ideal para escalas mensais que s„o deletadas)
+        /// Sistema de variedade m√°xima - evita repeti√ß√µes consecutivas de duplas
         /// </summary>
         public async Task<List<EscalaPorteiro>> GerarEscalaAsync(
             List<DiasCultoViewModel> diasSelecionados,
@@ -27,10 +27,10 @@ namespace SistemaTesourariaEclesiastica.Services
         {
             if (diasSelecionados == null || !diasSelecionados.Any())
             {
-                throw new ArgumentException("… necess·rio selecionar pelo menos um dia para gerar a escala.");
+                throw new ArgumentException("√â necess√°rio selecionar pelo menos um dia para gerar a escala.");
             }
 
-            // Buscar porteiros e respons·veis ativos
+            // Buscar porteiros e respons√°veis ativos
             var porteiros = await _context.Porteiros
                 .Where(p => p.Ativo)
                 .OrderBy(p => p.Nome)
@@ -43,12 +43,12 @@ namespace SistemaTesourariaEclesiastica.Services
 
             if (!porteiros.Any())
             {
-                throw new InvalidOperationException("N„o h· porteiros ativos cadastrados.");
+                throw new InvalidOperationException("N√£o h√° porteiros ativos cadastrados.");
             }
 
             if (!responsaveis.Any())
             {
-                throw new InvalidOperationException("N„o h· respons·veis ativos cadastrados.");
+                throw new InvalidOperationException("N√£o h√° respons√°veis ativos cadastrados.");
             }
 
             // Carregar disponibilidade dos porteiros
@@ -57,27 +57,17 @@ namespace SistemaTesourariaEclesiastica.Services
                 porteiro.CarregarDisponibilidade();
             }
 
-            // Ordenar dias por data e hor·rio
+            // Ordenar dias por data e hor√°rio
             var diasOrdenados = diasSelecionados.OrderBy(d => d.Data).ThenBy(d => d.Horario).ToList();
 
-            // ? NOVO: Sistema de pontuaÁ„o ZERO inicial (sem histÛrico)
+            // Sistema de pontua√ß√£o inicial
             var pontuacaoPorteiros = porteiros.ToDictionary(p => p.Id, p => 0);
 
-            // ? NOVO: Rastrear parceiros apenas da geraÁ„o atual
-            var parceirosDaGeracao = new Dictionary<int, HashSet<int>>();
-            foreach (var porteiro in porteiros)
-            {
-                parceirosDaGeracao[porteiro.Id] = new HashSet<int>();
-            }
+            // NOVO: Hist√≥rico das √∫ltimas 5 duplas usadas (com peso decrescente)
+            var historicoDuplas = new Queue<string>();
 
-            // ? NOVO: Rastrear frequÍncia de duplas apenas nesta geraÁ„o
+            // Rastrear frequ√™ncia global de duplas
             var frequenciaDuplasGeracao = new Dictionary<string, int>();
-
-            // ? NOVO: Janela de duplas recentes menor (˙ltimas 10 duplas)
-            var duplasRecentesQueue = new Queue<string>();
-            var duplasUtilizadas = new HashSet<string>();
-
-            _logger.LogInformation($"Iniciando geraÁ„o de escala para {diasOrdenados.Count} dias (SEM histÛrico do banco)");
 
             // Identificar porteiros com disponibilidade limitada
             var porteirosLimitados = new HashSet<int>();
@@ -92,8 +82,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 if (porteiro.DisponibilidadeSexta) diasDisponiveis++;
                 if (porteiro.DisponibilidadeSabado) diasDisponiveis++;
 
-                if (diasDisponiveis == 0)
-                    diasDisponiveis = 7;
+                if (diasDisponiveis == 0) diasDisponiveis = 7;
 
                 var horariosDisponiveis = 1;
                 if (!string.IsNullOrWhiteSpace(porteiro.HorariosDisponiveis))
@@ -101,15 +90,14 @@ namespace SistemaTesourariaEclesiastica.Services
                     horariosDisponiveis = porteiro.HorariosDisponiveis.Split(',', StringSplitOptions.RemoveEmptyEntries).Length;
                 }
 
-                if (diasDisponiveis == 1 || (horariosDisponiveis == 1 && !string.IsNullOrWhiteSpace(porteiro.HorariosDisponiveis)))
+                if (diasDisponiveis <= 2 || (horariosDisponiveis == 1 && !string.IsNullOrWhiteSpace(porteiro.HorariosDisponiveis)))
                 {
                     porteirosLimitados.Add(porteiro.Id);
                 }
             }
 
-            // ? SIMPLIFICADO: Controle de descanso entre dias (2 dias de intervalo)
-            const int DIAS_DESCANSO_CONSECUTIVO = 2;
-            var filaDiasAnteriores = new Queue<HashSet<int>>();
+            // Controle de descanso entre dias - REMOVIDO para maximizar variedade
+            // Com apenas 4 porteiros dispon√≠veis, o controle de descanso limita demais as combina√ß√µes
             var porteirosDiaAtualTodosHorarios = new HashSet<int>();
             DateTime? dataUltimoDiaProcessado = null;
 
@@ -117,58 +105,48 @@ namespace SistemaTesourariaEclesiastica.Services
             var random = new Random(DateTime.Now.Millisecond);
             var responsavelSelecionado = responsaveis.First();
 
-            // ? SIMPLIFICADO: Rastrear apenas ˙ltimas 3 escalas (n„o do banco, da geraÁ„o)
+            // Rastrear √∫ltimas 3 escalas (para porteiros individuais)
             var historicoEscalasGeracao = new Queue<List<int>>();
+
+            _logger.LogInformation($"Iniciando gera√ß√£o com {porteiros.Count} porteiros ativos");
 
             // Processar cada dia
             foreach (var dia in diasOrdenados)
             {
-                // MudanÁa de dia - resetar controle de hor·rios
+                // Mudan√ßa de dia - resetar controle de hor√°rios (mant√©m apenas controle dentro do mesmo dia)
                 if (dataUltimoDiaProcessado == null || dataUltimoDiaProcessado.Value.Date != dia.Data.Date)
                 {
-                    if (porteirosDiaAtualTodosHorarios.Any())
-                    {
-                        filaDiasAnteriores.Enqueue(new HashSet<int>(porteirosDiaAtualTodosHorarios));
-                        if (filaDiasAnteriores.Count > DIAS_DESCANSO_CONSECUTIVO)
-                            filaDiasAnteriores.Dequeue();
-                    }
-                    
                     porteirosDiaAtualTodosHorarios.Clear();
                     dataUltimoDiaProcessado = dia.Data.Date;
-                    
-                    var bloqueados = filaDiasAnteriores.SelectMany(s => s).Distinct().ToList();
-                    _logger.LogInformation($"Novo dia {dataUltimoDiaProcessado:dd/MM/yyyy}. Porteiros bloqueados por descanso ({DIAS_DESCANSO_CONSECUTIVO} dias): {string.Join(", ", bloqueados)}");
                 }
 
-                // Verificar se j· existe escala para este dia/hor·rio
+                // Verificar se j√° existe escala para este dia/hor√°rio
                 var escalaExistente = await _context.EscalasPorteiros
                     .AnyAsync(e => e.DataCulto.Date == dia.Data.Date && e.Horario == dia.Horario);
-                
+
                 if (escalaExistente)
                 {
-                    var horarioStr = dia.Horario.HasValue ? $" ‡s {dia.Horario.Value:hh\\:mm}" : "";
-                    _logger.LogWarning($"J· existe escala para o dia {dia.Data:dd/MM/yyyy}{horarioStr}. Pulando...");
+                    var horarioStr = dia.Horario.HasValue ? $" √†s {dia.Horario.Value:hh\\:mm}" : "";
+                    _logger.LogWarning($"J√° existe escala para o dia {dia.Data:dd/MM/yyyy}{horarioStr}. Pulando...");
                     continue;
                 }
 
-                // Determinar quantidade de porteiros necess·ria
+                // Determinar quantidade de porteiros necess√°ria
                 int quantidadePorteiros = 1;
-                
+
                 if (dia.Horario.HasValue && dia.Horario.Value >= new TimeSpan(19, 0, 0))
                 {
-                    quantidadePorteiros = 2; // Cultos noturnos: 2 porteiros
+                    quantidadePorteiros = 2;
                 }
                 else if (dia.TipoCulto == TipoCulto.EscolaBiblica)
                 {
-                    quantidadePorteiros = 1; // Escola BÌblica: 1 porteiro
+                    quantidadePorteiros = 1;
                 }
 
-                // IDs bloqueados por descanso
-                var bloqueadosDias = filaDiasAnteriores.SelectMany(s => s).Distinct().ToHashSet();
-                var bloqueadosTotais = new HashSet<int>(bloqueadosDias);
-                bloqueadosTotais.UnionWith(porteirosDiaAtualTodosHorarios); // Bloquear quem j· trabalhou hoje
+                // IDs bloqueados apenas por j√° terem trabalhado no mesmo dia em outro hor√°rio
+                var bloqueadosTotais = new HashSet<int>(porteirosDiaAtualTodosHorarios);
 
-                // Filtrar porteiros elegÌveis
+                // Filtrar porteiros eleg√≠veis
                 var elegiveisBase = porteiros.Where(p => p.EstaDisponivelNodia(dia.Data.DayOfWeek)).ToList();
                 if (dia.Horario.HasValue)
                 {
@@ -177,16 +155,20 @@ namespace SistemaTesourariaEclesiastica.Services
 
                 var porteirosElegiveis = elegiveisBase.Where(p => !bloqueadosTotais.Contains(p.Id)).ToList();
 
-                // Fallback: relaxar bloqueio se necess·rio
+                // NOVO: Randomizar a ordem dos porteiros eleg√≠veis para aumentar variedade
+                porteirosElegiveis = porteirosElegiveis.OrderBy(_ => random.Next()).ToList();
+
+                // Fallback: relaxar bloqueio se necess√°rio
                 if (porteirosElegiveis.Count < quantidadePorteiros)
                 {
-                    _logger.LogWarning($"Relaxando bloqueio em {dia.Data:dd/MM/yyyy} por falta de porteiros (necess·rio {quantidadePorteiros}, disponÌveis {porteirosElegiveis.Count}).");
-                    
+                    _logger.LogWarning($"Relaxando bloqueio em {dia.Data:dd/MM/yyyy} por falta de porteiros (necess√°rio {quantidadePorteiros}, dispon√≠veis {porteirosElegiveis.Count}).");
+
                     var complementares = elegiveisBase
                         .Where(p => bloqueadosTotais.Contains(p.Id))
                         .OrderBy(p => pontuacaoPorteiros[p.Id])
+                        .ThenBy(_ => random.Next()) // Adicionar randomiza√ß√£o para variedade
                         .ToList();
-                    
+
                     foreach (var p in complementares)
                     {
                         if (!porteirosElegiveis.Contains(p)) porteirosElegiveis.Add(p);
@@ -196,21 +178,24 @@ namespace SistemaTesourariaEclesiastica.Services
 
                 if (!porteirosElegiveis.Any())
                 {
-                    _logger.LogError($"Sem porteiros elegÌveis para {dia.Data:dd/MM/yyyy}. Dia ser· ignorado.");
+                    _logger.LogError($"Sem porteiros eleg√≠veis para {dia.Data:dd/MM/yyyy}. Dia ser√° ignorado.");
                     continue;
                 }
 
-                // ? OTIMIZADO: SeleÁ„o focada APENAS na variedade da geraÁ„o atual
-                var selecionados = SelecionarPorteirosComMaximaVariedade(
+                // NOVA SELE√á√ÉO: Baseada em variedade de duplas
+                // IMPORTANTE: Se teve que relaxar o bloqueio, ignorar hist√≥rico recente para permitir mais variedade
+                var precisouRelaxar = porteirosElegiveis.Any(p => bloqueadosTotais.Contains(p.Id));
+                
+                var selecionados = SelecionarPorteirosComVariedade(
                     porteirosElegiveis,
                     quantidadePorteiros,
                     historicoEscalasGeracao,
                     pontuacaoPorteiros,
                     porteirosLimitados,
-                    duplasUtilizadas,
                     frequenciaDuplasGeracao,
-                    parceirosDaGeracao,
-                    random);
+                    historicoDuplas,
+                    random,
+                    precisouRelaxar); // Novo par√¢metro
 
                 if (!selecionados.Any())
                 {
@@ -218,7 +203,7 @@ namespace SistemaTesourariaEclesiastica.Services
                     continue;
                 }
 
-                // Registrar pontuaÁ„o e dia atual
+                // Registrar pontua√ß√£o e dia atual
                 foreach (var id in selecionados)
                 {
                     pontuacaoPorteiros[id]++;
@@ -230,31 +215,25 @@ namespace SistemaTesourariaEclesiastica.Services
                 {
                     var p1 = selecionados[0];
                     var p2 = selecionados[1];
-                    
-                    // Registrar parceiros
-                    parceirosDaGeracao[p1].Add(p2);
-                    parceirosDaGeracao[p2].Add(p1);
-                    
-                    // Registrar frequÍncia da dupla
+
                     var chaveDupla = GerarChaveDupla(p1, p2);
                     frequenciaDuplasGeracao[chaveDupla] = frequenciaDuplasGeracao.GetValueOrDefault(chaveDupla) + 1;
-                    
-                    // Adicionar na janela de duplas recentes
-                    duplasRecentesQueue.Enqueue(chaveDupla);
-                    duplasUtilizadas.Add(chaveDupla);
-                    
-                    // Manter janela de 10 duplas
-                    while (duplasRecentesQueue.Count > 10)
+
+                    // Adicionar ao hist√≥rico de duplas recentes
+                    historicoDuplas.Enqueue(chaveDupla);
+                    if (historicoDuplas.Count > 5)
+                        historicoDuplas.Dequeue();
+
+                    // Se uma dupla est√° sendo usada demais, reduzir o hist√≥rico para permitir mais variedade
+                    if (frequenciaDuplasGeracao[chaveDupla] >= 3 && historicoDuplas.Count > 3)
                     {
-                        var removida = duplasRecentesQueue.Dequeue();
-                        duplasUtilizadas.Remove(removida);
+                        var temp = historicoDuplas.Skip(historicoDuplas.Count - 2).ToList();
+                        historicoDuplas.Clear();
+                        foreach (var d in temp)
+                        {
+                            historicoDuplas.Enqueue(d);
+                        }
                     }
-                    
-                    _logger.LogInformation($"Dupla escalada: {p1} + {p2} (frequÍncia nesta geraÁ„o: {frequenciaDuplasGeracao[chaveDupla]})");
-                }
-                else
-                {
-                    _logger.LogInformation($"Porteiro escalado: {selecionados[0]}");
                 }
 
                 // Criar escala
@@ -272,62 +251,20 @@ namespace SistemaTesourariaEclesiastica.Services
                 };
 
                 escalasGeradas.Add(escala);
-                
-                // Atualizar histÛrico da geraÁ„o
+
                 historicoEscalasGeracao.Enqueue(selecionados);
                 if (historicoEscalasGeracao.Count > 3)
                     historicoEscalasGeracao.Dequeue();
             }
 
-            _logger.LogInformation($"GeraÁ„o concluÌda: {escalasGeradas.Count} escalas criadas");
-            
-            // Log de estatÌsticas
-            LogarEstatisticasGeracao(pontuacaoPorteiros, parceirosDaGeracao, frequenciaDuplasGeracao, porteiros);
+            _logger.LogInformation($"Gera√ß√£o conclu√≠da: {escalasGeradas.Count} escalas criadas");
+            LogarEstatisticasGeracao(pontuacaoPorteiros, frequenciaDuplasGeracao, porteiros);
 
             return escalasGeradas;
         }
 
         /// <summary>
-        /// ? NOVO: Loga estatÌsticas da geraÁ„o para an·lise
-        /// </summary>
-        private void LogarEstatisticasGeracao(
-            Dictionary<int, int> pontuacaoPorteiros,
-            Dictionary<int, HashSet<int>> parceirosDaGeracao,
-            Dictionary<string, int> frequenciaDuplasGeracao,
-            List<Porteiro> porteiros)
-        {
-            _logger.LogInformation("=== ESTATÕSTICAS DA GERA«√O ===");
-            
-            // DistribuiÁ„o de trabalho
-            _logger.LogInformation("DistribuiÁ„o de escalas por porteiro:");
-            foreach (var kvp in pontuacaoPorteiros.OrderByDescending(x => x.Value))
-            {
-                var porteiro = porteiros.First(p => p.Id == kvp.Key);
-                _logger.LogInformation($"  - {porteiro.Nome}: {kvp.Value} escalas");
-            }
-            
-            // Variedade de parceiros
-            _logger.LogInformation("Variedade de parceiros:");
-            foreach (var kvp in parceirosDaGeracao.Where(x => x.Value.Any()))
-            {
-                var porteiro = porteiros.First(p => p.Id == kvp.Key);
-                var parceiros = string.Join(", ", kvp.Value.Select(id => porteiros.First(p => p.Id == id).Nome));
-                _logger.LogInformation($"  - {porteiro.Nome} trabalhou com: {parceiros}");
-            }
-            
-            // FrequÍncia de duplas
-            if (frequenciaDuplasGeracao.Any())
-            {
-                _logger.LogInformation("FrequÍncia de duplas:");
-                foreach (var kvp in frequenciaDuplasGeracao.OrderByDescending(x => x.Value))
-                {
-                    _logger.LogInformation($"  - Dupla {kvp.Key}: {kvp.Value} vezes");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gera uma chave ˙nica para identificar uma dupla de porteiros (independente da ordem)
+        /// Gera uma chave √∫nica para identificar uma dupla de porteiros (independente da ordem)
         /// </summary>
         private string GerarChaveDupla(int porteiro1Id, int porteiro2Id)
         {
@@ -337,268 +274,156 @@ namespace SistemaTesourariaEclesiastica.Services
         }
 
         /// <summary>
-        /// ? OTIMIZADO: Seleciona porteiros com foco em M¡XIMA VARIEDADE dentro da geraÁ„o atual
+        /// NOVO v2: Sistema de sele√ß√£o baseado em VARIEDADE M√ÅXIMA
+        /// Prioriza duplas que n√£o trabalharam juntas recentemente
         /// </summary>
-        private List<int> SelecionarPorteirosComMaximaVariedade(
+        private List<int> SelecionarPorteirosComVariedade(
             List<Porteiro> porteirosElegiveis,
             int quantidadeNecessaria,
             Queue<List<int>> historicoEscalasGeracao,
             Dictionary<int, int> pontuacaoPorteiros,
             HashSet<int> porteirosLimitados,
-            HashSet<string> duplasUtilizadas,
             Dictionary<string, int> frequenciaDuplasGeracao,
-            Dictionary<int, HashSet<int>> parceirosDaGeracao,
-            Random random)
+            Queue<string> historicoDuplas,
+            Random random,
+            bool ignorarHistorico = false) // NOVO par√¢metro
         {
-            var porteirosSelecionados = new List<int>();
-
-            // Porteiros das ˙ltimas 3 escalas geradas
+            // Porteiros das √∫ltimas 3 escalas para evitar repeti√ß√£o imediata
             var porteirosRecentes = historicoEscalasGeracao
-                .Take(3)
                 .SelectMany(h => h)
                 .Distinct()
                 .ToList();
 
-            if (quantidadeNecessaria == 2)
+            if (quantidadeNecessaria == 1)
             {
-                // ? ESTRAT…GIA OTIMIZADA: Priorizar duplas inÈditas e variedade m·xima
-                
-                // Fase 1: Candidatos que N√O est„o nas ˙ltimas 3 escalas
-                var candidatosFase1 = porteirosElegiveis
+                // Para 1 porteiro (Ex: Escola B√≠blica), a l√≥gica √© simples
+                var candidatoSolo = porteirosElegiveis
                     .Where(p => !porteirosRecentes.Contains(p.Id))
-                    .ToList();
+                    .OrderBy(p => pontuacaoPorteiros[p.Id])
+                    .ThenBy(p => porteirosLimitados.Contains(p.Id) ? 0 : 1)
+                    .ThenBy(_ => random.Next())
+                    .FirstOrDefault();
 
-                if (candidatosFase1.Count >= 2)
+                if (candidatoSolo != null)
                 {
-                    var melhorDupla = EncontrarMelhorDuplaVariedade(
-                        candidatosFase1,
-                        pontuacaoPorteiros,
-                        parceirosDaGeracao,
-                        frequenciaDuplasGeracao,
-                        duplasUtilizadas,
-                        porteirosLimitados,
-                        random,
-                        prioridadeMaxima: true);
-
-                    if (melhorDupla != null && melhorDupla.Count == 2)
-                    {
-                        _logger.LogInformation($"? Dupla selecionada (Fase 1): {melhorDupla[0]} + {melhorDupla[1]}");
-                        return melhorDupla;
-                    }
+                    return new List<int> { candidatoSolo.Id };
                 }
 
-                // Fase 2: Aceitar porteiros das ˙ltimas 2 escalas (n„o da ˙ltima)
-                var porteirosUltima1 = historicoEscalasGeracao.Take(1).SelectMany(h => h).Distinct().ToList();
-                var candidatosFase2 = porteirosElegiveis
-                    .Where(p => !porteirosUltima1.Contains(p.Id))
-                    .ToList();
-
-                if (candidatosFase2.Count >= 2)
-                {
-                    var melhorDupla = EncontrarMelhorDuplaVariedade(
-                        candidatosFase2,
-                        pontuacaoPorteiros,
-                        parceirosDaGeracao,
-                        frequenciaDuplasGeracao,
-                        duplasUtilizadas,
-                        porteirosLimitados,
-                        random,
-                        prioridadeMaxima: true);
-
-                    if (melhorDupla != null && melhorDupla.Count == 2)
-                    {
-                        _logger.LogInformation($"? Dupla selecionada (Fase 2): {melhorDupla[0]} + {melhorDupla[1]}");
-                        return melhorDupla;
-                    }
-                }
-
-                // Fase 3: Aceitar qualquer dupla disponÌvel (˙ltima opÁ„o)
-                var melhorDuplaFallback = EncontrarMelhorDuplaVariedade(
-                    porteirosElegiveis.ToList(),
-                    pontuacaoPorteiros,
-                    parceirosDaGeracao,
-                    frequenciaDuplasGeracao,
-                    duplasUtilizadas,
-                    porteirosLimitados,
-                    random,
-                    prioridadeMaxima: false);
-
-                if (melhorDuplaFallback != null && melhorDuplaFallback.Count == 2)
-                {
-                    _logger.LogWarning($"? Dupla selecionada (Fallback): {melhorDuplaFallback[0]} + {melhorDuplaFallback[1]}");
-                    return melhorDuplaFallback;
-                }
-
-                // ⁄ltimo recurso
-                var p1 = porteirosElegiveis.OrderBy(p => pontuacaoPorteiros[p.Id]).First();
-                var p2 = porteirosElegiveis.Where(p => p.Id != p1.Id).OrderBy(p => pontuacaoPorteiros[p.Id]).First();
-                _logger.LogWarning($"? Dupla de emergÍncia: {p1.Id} + {p2.Id}");
-                return new List<int> { p1.Id, p2.Id };
+                // Fallback
+                var fallbackSolo = porteirosElegiveis
+                    .OrderBy(p => pontuacaoPorteiros[p.Id])
+                    .First();
+                return new List<int> { fallbackSolo.Id };
             }
 
-            // Para Escola BÌblica (1 porteiro)
-            var candidatoSolo = porteirosElegiveis
-                .Where(p => !porteirosRecentes.Contains(p.Id))
-                .OrderBy(p => pontuacaoPorteiros[p.Id])
-                .ThenBy(p => porteirosLimitados.Contains(p.Id) ? 0 : 1)
-                .ThenBy(_ => random.Next())
-                .FirstOrDefault();
-
-            if (candidatoSolo != null)
-            {
-                _logger.LogInformation($"? Porteiro solo: {candidatoSolo.Id} ({pontuacaoPorteiros[candidatoSolo.Id]} escalas)");
-                return new List<int> { candidatoSolo.Id };
-            }
-
-            var fallbackSolo = porteirosElegiveis.OrderBy(p => pontuacaoPorteiros[p.Id]).First();
-            return new List<int> { fallbackSolo.Id };
-        }
-
-        /// <summary>
-        /// ? OTIMIZADO: Encontra a melhor dupla focando em VARIEDADE dentro da geraÁ„o
-        /// </summary>
-        private List<int>? EncontrarMelhorDuplaVariedade(
-            List<Porteiro> candidatos,
-            Dictionary<int, int> pontuacaoPorteiros,
-            Dictionary<int, HashSet<int>> parceirosDaGeracao,
-            Dictionary<string, int> frequenciaDuplasGeracao,
-            HashSet<string> duplasUtilizadas,
-            HashSet<int> porteirosLimitados,
-            Random random,
-            bool prioridadeMaxima)
-        {
-            if (candidatos.Count < 2) return null;
-
-            // ?? LOG DETALHADO: Estado atual
-            _logger.LogInformation($"[DEBUG] Candidatos disponÌveis: {string.Join(", ", candidatos.Select(c => $"{c.Id}({c.Nome})"))}");
-            _logger.LogInformation($"[DEBUG] Prioridade M·xima: {prioridadeMaxima}");
+            // L√ìGICA PARA DUPLAS - Variedade √© PRIORIDADE M√ÅXIMA
+            var candidatos = porteirosElegiveis.Where(p => !porteirosRecentes.Contains(p.Id)).ToList();
             
-            // Log de quem j· trabalhou com quem
-            foreach (var kvp in parceirosDaGeracao.Where(x => x.Value.Any()))
+            // Se n√£o tiver candidatos suficientes sem recentes, relaxa
+            if (candidatos.Count < 2)
             {
-                var porteiro = candidatos.FirstOrDefault(p => p.Id == kvp.Key);
-                if (porteiro != null)
-                {
-                    var parceirosNomes = string.Join(", ", kvp.Value.Select(id => {
-                        var p = candidatos.FirstOrDefault(x => x.Id == id);
-                        return p != null ? $"{id}({p.Nome})" : id.ToString();
-                    }));
-                    _logger.LogInformation($"[DEBUG] Porteiro {kvp.Key}({porteiro.Nome}) j· trabalhou com: {parceirosNomes}");
-                }
+                candidatos = porteirosElegiveis.ToList();
             }
 
-            var duplasAvaliadas = new List<(int p1, int p2, double score, string motivo)>();
+            // Avaliar TODAS as duplas poss√≠veis e escolher a MELHOR
+            var duplasAvaliadas = new List<(int p1, int p2, int score)>();
 
-            foreach (var p1 in candidatos)
+            for (int i = 0; i < candidatos.Count; i++)
             {
-                foreach (var p2 in candidatos.Where(p => p.Id != p1.Id))
+                for (int j = i + 1; j < candidatos.Count; j++)
                 {
-                    if (p1.Id >= p2.Id) continue; // Evitar duplicatas (A-B = B-A)
-
+                    var p1 = candidatos[i];
+                    var p2 = candidatos[j];
                     var chaveDupla = GerarChaveDupla(p1.Id, p2.Id);
-                    double score = 0;
-                    var motivos = new List<string>();
 
-                    // ? CritÈrio 1: DUPLAS IN…DITAS na geraÁ„o atual (peso MASSIVO)
-                    var trabalhramJuntosNaGeracao = parceirosDaGeracao[p1.Id].Contains(p2.Id);
-                    
-                    if (prioridadeMaxima)
+                    int score = 0;
+
+                    // 1. PENALIZA√á√ÉO PESADA por estar no hist√≥rico recente
+                    // MAS: Se ignorarHistorico=true (situa√ß√£o cr√≠tica), reduz drasticamente a penaliza√ß√£o
+                    if (!ignorarHistorico)
                     {
-                        if (!trabalhramJuntosNaGeracao)
+                        var historicoLista = historicoDuplas.Reverse().ToList();
+                        for (int k = 0; k < historicoLista.Count; k++)
                         {
-                            score -= 100000; // ?? AUMENTADO 10X - PRIORIDADE ABSOLUTA
-                            motivos.Add($"IN…DITA (-100000)");
-                        }
-                        else
-                        {
-                            score += 50000; // ?? AUMENTADO 10X - PENALIDADE ENORME
-                            motivos.Add($"J¡ TRABALHARAM (+50000)");
+                            if (historicoLista[k] == chaveDupla)
+                            {
+                                // √öltima dupla = +1000, pen√∫ltima = +800, etc
+                                score += 1000 - (k * 200);
+                            }
                         }
                     }
-
-                    // ? CritÈrio 2: FrequÍncia da dupla na geraÁ„o
-                    var freqDupla = frequenciaDuplasGeracao.GetValueOrDefault(chaveDupla, 0);
-                    if (freqDupla > 0)
+                    else
                     {
-                        score += freqDupla * 10000; // ?? AUMENTADO 20X
-                        motivos.Add($"Freq:{freqDupla} (+{freqDupla * 10000})");
+                        // Em situa√ß√£o cr√≠tica, penaliza√ß√£o muito menor (apenas 10% do normal)
+                        var historicoLista = historicoDuplas.Reverse().ToList();
+                        for (int k = 0; k < historicoLista.Count; k++)
+                        {
+                            if (historicoLista[k] == chaveDupla)
+                            {
+                                score += (1000 - (k * 200)) / 10; // Reduz para 10%
+                            }
+                        }
                     }
 
-                    // ? CritÈrio 3: Dupla na janela recente? (˙ltimas 10)
-                    if (duplasUtilizadas.Contains(chaveDupla))
-                    {
-                        score += 5000; // ?? AUMENTADO
-                        motivos.Add($"Recente (+5000)");
-                    }
+                    // 2. Penaliza√ß√£o por frequ√™ncia total de uso (PESO AUMENTADO)
+                    var frequencia = frequenciaDuplasGeracao.GetValueOrDefault(chaveDupla, 0);
+                    score += frequencia * 300; // Aumentado de 100 para 300
 
-                    // ? CritÈrio 4: Balancear carga de trabalho (PESO MENOR)
-                    var pontuacaoTotal = pontuacaoPorteiros[p1.Id] + pontuacaoPorteiros[p2.Id];
-                    score += pontuacaoTotal * 1; // ?? REDUZIDO PARA DAR MAIS PESO ¿ VARIEDADE
-                    motivos.Add($"Carga:{pontuacaoTotal} (+{pontuacaoTotal})");
+                    // 3. Penaliza√ß√£o por pontua√ß√£o individual (balanceamento secund√°rio)
+                    score += pontuacaoPorteiros[p1.Id] * 10;
+                    score += pontuacaoPorteiros[p2.Id] * 10;
 
-                    // ? CritÈrio 5: Priorizar porteiros limitados
-                    if (porteirosLimitados.Contains(p1.Id) || porteirosLimitados.Contains(p2.Id))
-                    {
-                        score -= 1000; // ?? AUMENTADO
-                        motivos.Add($"Limitado (-1000)");
-                    }
+                    // 4. B√îNUS para porteiros limitados (prioridade)
+                    if (porteirosLimitados.Contains(p1.Id)) score -= 300;
+                    if (porteirosLimitados.Contains(p2.Id)) score -= 300;
 
-                    // ? CritÈrio 6: Variedade de parceiros individuais
-                    // Quanto MENOS parceiros cada um teve, MELHOR (bÙnus para novatos em parceria)
-                    var variedadeP1 = parceirosDaGeracao[p1.Id].Count;
-                    var variedadeP2 = parceirosDaGeracao[p2.Id].Count;
-                    
-                    // ?? INVERTIDO: Dar B‘NUS para quem trabalhou com MENOS pessoas
-                    var penalidade = (variedadeP1 + variedadeP2) * 2000; // Penalizar quem j· tem muitos parceiros
-                    score += penalidade;
-                    motivos.Add($"Variedade:{variedadeP1}+{variedadeP2} (+{penalidade})");
-
-                    // ? CritÈrio 7: Aleatoriedade para desempate (peso MÕNIMO)
-                    var aleatorio = random.NextDouble() * 0.1;
-                    score += aleatorio;
-
-                    duplasAvaliadas.Add((p1.Id, p2.Id, score, string.Join(", ", motivos)));
+                    duplasAvaliadas.Add((p1.Id, p2.Id, score));
                 }
             }
 
-            if (!duplasAvaliadas.Any()) 
+            if (!duplasAvaliadas.Any())
             {
-                _logger.LogWarning("[DEBUG] Nenhuma dupla avaliada!");
-                return null;
+                _logger.LogWarning("Nenhuma dupla p√¥de ser formada!");
+                return new List<int> { candidatos[0].Id, candidatos[1].Id };
             }
 
-            // ?? LOG: Top 5 duplas avaliadas
-            _logger.LogInformation("[DEBUG] === TOP 5 DUPLAS AVALIADAS ===");
-            foreach (var dupla in duplasAvaliadas.OrderBy(d => d.score).Take(5))
-            {
-                var p1Nome = candidatos.First(p => p.Id == dupla.p1).Nome;
-                var p2Nome = candidatos.First(p => p.Id == dupla.p2).Nome;
-                var chaveDupla = GerarChaveDupla(dupla.p1, dupla.p2);
-                var freqAtual = frequenciaDuplasGeracao.GetValueOrDefault(chaveDupla, 0);
-                var saoIneditos = !parceirosDaGeracao[dupla.p1].Contains(dupla.p2);
-                
-                _logger.LogInformation(
-                    $"  {dupla.p1}({p1Nome}) + {dupla.p2}({p2Nome}) ? " +
-                    $"Score: {dupla.score:F2} | Freq: {freqAtual} | InÈdita: {saoIneditos} | {dupla.motivo}");
-            }
+            // Ordenar por score (menor = melhor) e pegar a melhor
+            var melhorDupla = duplasAvaliadas.OrderBy(d => d.score).First();
 
-            var melhor = duplasAvaliadas.OrderBy(d => d.score).First();
-            
-            var melhorP1Nome = candidatos.First(p => p.Id == melhor.p1).Nome;
-            var melhorP2Nome = candidatos.First(p => p.Id == melhor.p2).Nome;
-            var melhorChave = GerarChaveDupla(melhor.p1, melhor.p2);
-            var melhorFreq = frequenciaDuplasGeracao.GetValueOrDefault(melhorChave, 0);
-            var melhorInedita = !parceirosDaGeracao[melhor.p1].Contains(melhor.p2);
-            
-            _logger.LogInformation(
-                $"[DEBUG] ? DUPLA ESCOLHIDA: {melhor.p1}({melhorP1Nome}) + {melhor.p2}({melhorP2Nome}) ? " +
-                $"Score: {melhor.score:F2} | Freq: {melhorFreq} | InÈdita: {melhorInedita}");
-            
-            return new List<int> { melhor.p1, melhor.p2 };
+            return new List<int> { melhorDupla.p1, melhorDupla.p2 };
         }
 
         /// <summary>
-        /// Busca as configuraÁıes padr„o de cultos (semanais e datas especÌficas)
+        /// Loga estat√≠sticas da gera√ß√£o para an√°lise
+        /// </summary>
+        private void LogarEstatisticasGeracao(
+            Dictionary<int, int> pontuacaoPorteiros,
+            Dictionary<string, int> frequenciaDuplasGeracao,
+            List<Porteiro> porteiros)
+        {
+            _logger.LogInformation("=== ESTAT√çSTICAS DA GERA√á√ÉO ===");
+
+            // Distribui√ß√£o de trabalho
+            _logger.LogInformation("Distribui√ß√£o de escalas por porteiro:");
+            foreach (var kvp in pontuacaoPorteiros.OrderByDescending(x => x.Value))
+            {
+                var porteiro = porteiros.First(p => p.Id == kvp.Key);
+                _logger.LogInformation($"  - {porteiro.Nome}: {kvp.Value} escalas");
+            }
+
+            // Frequ√™ncia de duplas
+            if (frequenciaDuplasGeracao.Any())
+            {
+                _logger.LogInformation("Frequ√™ncia de duplas:");
+                foreach (var kvp in frequenciaDuplasGeracao.OrderByDescending(x => x.Value).Take(10))
+                {
+                    _logger.LogInformation($"  - Dupla {kvp.Key}: {kvp.Value} vezes");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Busca as configura√ß√µes padr√£o de cultos (semanais e datas espec√≠ficas)
         /// </summary>
         public async Task<List<ConfiguracaoCulto>> ObterConfiguracoesPadraoAsync()
         {
@@ -611,7 +436,7 @@ namespace SistemaTesourariaEclesiastica.Services
         }
 
         /// <summary>
-        /// Gera sugestıes de dias baseado nas configuraÁıes padr„o (semanais) e datas especÌficas
+        /// Gera sugest√µes de dias baseado nas configura√ß√µes padr√£o (semanais) e datas espec√≠ficas
         /// </summary>
         public async Task<List<DiasCultoViewModel>> SugerirDiasAsync(DateTime dataInicio, DateTime dataFim)
         {
@@ -626,7 +451,7 @@ namespace SistemaTesourariaEclesiastica.Services
             var configuracoesSemanais = configuracoes.Where(c => c.DiaSemana.HasValue).ToList();
             var configuracoesDataEspecifica = configuracoes.Where(c => c.DataEspecifica.HasValue).ToList();
 
-            // Adicionar datas especÌficas que est„o no perÌodo
+            // Adicionar datas espec√≠ficas que est√£o no per√≠odo
             foreach (var config in configuracoesDataEspecifica)
             {
                 if (config.DataEspecifica!.Value.Date >= dataInicio.Date &&
@@ -642,7 +467,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 }
             }
 
-            // Adicionar todos os cultos semanais (m˙ltiplos hor·rios no mesmo dia)
+            // Adicionar todos os cultos semanais (m√∫ltiplos hor√°rios no mesmo dia)
             if (configuracoesSemanais.Any())
             {
                 for (var data = dataInicio; data <= dataFim; data = data.AddDays(1))
@@ -675,7 +500,7 @@ namespace SistemaTesourariaEclesiastica.Services
         }
 
         /// <summary>
-        /// Retorna as configuraÁıes padr„o de cultos (fallback)
+        /// Retorna as configura√ß√µes padr√£o de cultos (fallback)
         /// </summary>
         private List<ConfiguracaoCulto> ObterConfiguracoesPadrao()
         {
