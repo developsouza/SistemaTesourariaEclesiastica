@@ -47,50 +47,58 @@
                     </div>
 
                     <div class="card mb-3">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h6 class="mb-0">Dias da Semana</h6>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selecionarTodosDias()">
+                                    <i class="bi bi-check-square me-1"></i>Selecionar Todos
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="removerSelecaoDias()">
+                                    <i class="bi bi-square me-1"></i>Remover Seleção
+                                </button>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
-                                        <input asp-for="DisponibilidadeDomingo" class="form-check-input" type="checkbox" />
+                                        <input asp-for="DisponibilidadeDomingo" class="form-check-input dia-semana" type="checkbox" />
                                         <label asp-for="DisponibilidadeDomingo" class="form-check-label"></label>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
-                                        <input asp-for="DisponibilidadeSegunda" class="form-check-input" type="checkbox" />
+                                        <input asp-for="DisponibilidadeSegunda" class="form-check-input dia-semana" type="checkbox" />
                                         <label asp-for="DisponibilidadeSegunda" class="form-check-label"></label>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
-                                        <input asp-for="DisponibilidadeTerca" class="form-check-input" type="checkbox" />
+                                        <input asp-for="DisponibilidadeTerca" class="form-check-input dia-semana" type="checkbox" />
                                         <label asp-for="DisponibilidadeTerca" class="form-check-label"></label>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
-                                        <input asp-for="DisponibilidadeQuarta" class="form-check-input" type="checkbox" />
+                                        <input asp-for="DisponibilidadeQuarta" class="form-check-input dia-semana" type="checkbox" />
                                         <label asp-for="DisponibilidadeQuarta" class="form-check-label"></label>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
-                                        <input asp-for="DisponibilidadeQuinta" class="form-check-input" type="checkbox" />
+                                        <input asp-for="DisponibilidadeQuinta" class="form-check-input dia-semana" type="checkbox" />
                                         <label asp-for="DisponibilidadeQuinta" class="form-check-label"></label>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
-                                        <input asp-for="DisponibilidadeSexta" class="form-check-input" type="checkbox" />
+                                        <input asp-for="DisponibilidadeSexta" class="form-check-input dia-semana" type="checkbox" />
                                         <label asp-for="DisponibilidadeSexta" class="form-check-label"></label>
                                     </div>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
-                                        <input asp-for="DisponibilidadeSabado" class="form-check-input" type="checkbox" />
+                                        <input asp-for="DisponibilidadeSabado" class="form-check-input dia-semana" type="checkbox" />
                                         <label asp-for="DisponibilidadeSabado" class="form-check-label"></label>
                                     </div>
                                 </div>
@@ -128,4 +136,18 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        function selecionarTodosDias() {
+            document.querySelectorAll('.dia-semana').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+        }
+
+        function removerSelecaoDias() {
+            document.querySelectorAll('.dia-semana').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+    </script>
 }

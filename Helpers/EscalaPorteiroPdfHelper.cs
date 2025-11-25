@@ -231,6 +231,38 @@ namespace SistemaTesourariaEclesiastica.Helpers
                         white-space: nowrap;
                     }
         
+                    /* Estilo para porteiros */
+                    .porters-cell {
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                        flex-wrap: wrap;
+                    }
+        
+                    .porter-name {
+                        font-weight: 700;
+                        color: #1f2937;
+                    }
+        
+                    .dual-porter-badge {
+                        display: inline-block;
+                        padding: 2px 6px;
+                        border-radius: 8px;
+                        font-size: 6.5pt;
+                        font-weight: 700;
+                        background: linear-gradient(135deg, #fef3c7 0%, #fde047 100%);
+                        color: #854d0e;
+                        border: 1px solid #facc15;
+                        white-space: nowrap;
+                        margin-right: 4px;
+                    }
+        
+                    .porter-separator {
+                        color: #2563eb;
+                        font-weight: 700;
+                        margin: 0 3px;
+                    }
+
                     /* Seção de Contatos */
                     .contacts-section {
                         margin-top: 10px;
@@ -405,9 +437,23 @@ namespace SistemaTesourariaEclesiastica.Helpers
                         : "-";
 
                     var porteiros = escala.Porteiro?.Nome ?? "";
+                    var porteirosHtml = "";
+
                     if (escala.Porteiro2 != null)
                     {
-                        porteiros += " e " + escala.Porteiro2.Nome;
+                        // Dois porteiros escalados - com destaque visual
+                        porteirosHtml = $@"
+                            <div class='porters-cell'>
+                                <span class='dual-porter-badge'>DUPLA</span>
+                                <span class='porter-name'>{escala.Porteiro.Nome}</span>
+                                <span class='porter-separator'>|+|</span>
+                                <span class='porter-name'>{escala.Porteiro2.Nome}</span>
+                            </div>";
+                    }
+                    else
+                    {
+                        // Apenas um porteiro
+                        porteirosHtml = $"<strong>{porteiros}</strong>";
                     }
 
                     sb.AppendLine($@"
@@ -416,7 +462,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                                 <td>{diaSemana}</td>
                                 <td style='text-align: center;'>{horarioFormatado}</td>
                                 <td><span class='badge'>{tipoCulto}</span></td>
-                                <td><strong>{porteiros}</strong></td>
+                                <td>{porteirosHtml}</td>
                             </tr>");
                 }
 
