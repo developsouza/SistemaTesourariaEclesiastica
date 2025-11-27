@@ -916,11 +916,23 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return Forbid();
             }
 
-            // Verificar se pode ser excluído
+            // ✅ NOVO: Verificar se pode ser excluído
+            // APENAS ADMINISTRADORES podem excluir fechamentos aprovados
             if (fechamento.Status == StatusFechamentoPeriodo.Aprovado)
             {
-                TempData["ErrorMessage"] = "Fechamentos aprovados não podem ser excluídos.";
-                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+                if (!User.IsInRole(Roles.Administrador))
+                {
+                    TempData["ErrorMessage"] = "Apenas administradores podem excluir fechamentos aprovados. Entre em contato com um administrador do sistema.";
+                    return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+                }
+                
+                // Admin pode ver a página, mas com aviso especial
+                ViewBag.FechamentoAprovado = true;
+                ViewBag.AvisoAdmin = "ATENÇÃO ADMINISTRADOR: Este fechamento está APROVADO. A exclusão afetará relatórios e pode impactar a integridade financeira. Prossiga apenas se tiver certeza absoluta!";
+            }
+            else
+            {
+                ViewBag.FechamentoAprovado = false;
             }
 
             return View(fechamento);
@@ -932,6 +944,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var fechamento = await _context.FechamentosPeriodo
+                .Include(f => f.CentroCusto)
                 .Include(f => f.ItensRateio)
                 .Include(f => f.DetalhesFechamento)
                 .FirstOrDefaultAsync(f => f.Id == id);
@@ -947,17 +960,28 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return Forbid();
             }
 
-            // Verificar se pode ser excluído
+            // ✅ NOVO: Verificar permissão especial para excluir fechamentos aprovados
             if (fechamento.Status == StatusFechamentoPeriodo.Aprovado)
             {
-                TempData["ErrorMessage"] = "Fechamentos aprovados não podem ser excluídos.";
-                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+                if (!User.IsInRole(Roles.Administrador))
+                {
+                    TempData["ErrorMessage"] = "Apenas administradores podem excluir fechamentos aprovados.";
+                    return RedirectToAction(nameof(Details), new { id = fechamento.Id });
+                }
+                
+                _logger.LogWarning($"ATENÇÃO: Administrador {User.Identity.Name} está excluindo fechamento APROVADO ID {id}");
             }
 
             try
             {
                 // ✅ DESMARCAR LANÇAMENTOS ANTES DE EXCLUIR
                 await DesmarcarLancamentosComoIncluidos(fechamento.Id);
+
+                // ✅ NOVO: Liberar fechamentos de congregações se for fechamento da SEDE
+                if (fechamento.EhFechamentoSede)
+                {
+                    await LiberarFechamentosCongregacoesProcessados(fechamento.Id);
+                }
 
                 // Remover itens relacionados primeiro
                 if (fechamento.ItensRateio.Any())
@@ -974,13 +998,22 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 _context.FechamentosPeriodo.Remove(fechamento);
                 await _context.SaveChangesAsync();
 
-                await _auditService.LogAsync("Exclusão", "FechamentoPeriodo",
-                    $"Fechamento {ObterDescricaoFechamento(fechamento)} excluído");
+                // Log de auditoria detalhado
+                var logMensagem = fechamento.Status == StatusFechamentoPeriodo.Aprovado
+                    ? $"⚠️ EXCLUSÃO DE FECHAMENTO APROVADO por ADMINISTRADOR - Fechamento {ObterDescricaoFechamento(fechamento)} do centro {fechamento.CentroCusto.Nome} excluído. Total Entradas: {fechamento.TotalEntradas:C}, Total Saídas: {fechamento.TotalSaidas:C}. Lançamentos liberados."
+                    : $"Fechamento {ObterDescricaoFechamento(fechamento)} excluído. Lançamentos liberados para novo fechamento.";
 
-                TempData["SuccessMessage"] = "Fechamento excluído com sucesso! Os lançamentos foram liberados para novo fechamento.";
+                await _auditService.LogAsync("Exclusão", "FechamentoPeriodo", logMensagem);
+
+                var mensagemSucesso = fechamento.Status == StatusFechamentoPeriodo.Aprovado
+                    ? "Fechamento APROVADO excluído com sucesso! ⚠️ Os lançamentos e fechamentos de congregações foram liberados. Considere refazer o fechamento com os dados corretos."
+                    : "Fechamento excluído com sucesso! Os lançamentos foram liberados para novo fechamento.";
+
+                TempData["SuccessMessage"] = mensagemSucesso;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, $"Erro ao excluir fechamento ID {id}");
                 TempData["ErrorMessage"] = $"Erro ao excluir fechamento: {ex.Message}";
                 return RedirectToAction(nameof(Details), new { id = fechamento.Id });
             }
@@ -1388,7 +1421,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // MÉTODO AUXILIAR: Verificar permissão de acesso ao centro de custo
         private async Task<bool> CanAccessCentroCusto(int centroCustoId)
         {
-            // Administradores e Tesoureiros Gerais podem acessar qualquer centro de custo
+            // Administradores e Tesoureiro Gerais podem acessar qualquer centro de custo
             if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
                 return true;
 
@@ -1711,6 +1744,38 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .SetProperty(s => s.DataInclusaoFechamento, (DateTime?)null));
 
             _logger.LogInformation($"Desmarcados {entradasDesmarcadas} entradas e {saídasDesmarcadas} saídas do fechamento ID {fechamentoId}");
+        }
+
+        /// <summary>
+        /// ✅ NOVO MÉTODO: Libera fechamentos de congregações que foram processados por um fechamento da SEDE excluído.
+        /// Reverte o status de Processado para Aprovado, permitindo que sejam incluídos em novo fechamento da SEDE.
+        /// </summary>
+        private async Task LiberarFechamentosCongregacoesProcessados(int fechamentoSedeId)
+        {
+            var fechamentosCongregacoesProcessados = await _context.FechamentosPeriodo
+                .Where(f => f.FechamentoSedeProcessadorId == fechamentoSedeId)
+                .ToListAsync();
+
+            if (fechamentosCongregacoesProcessados.Any())
+            {
+                _logger.LogInformation($"Liberando {fechamentosCongregacoesProcessados.Count} fechamentos de congregações que estavam processados pelo fechamento da SEDE ID {fechamentoSedeId}");
+
+                foreach (var fechamentoCongregacao in fechamentosCongregacoesProcessados)
+                {
+                    fechamentoCongregacao.FoiProcessadoPelaSede = false;
+                    fechamentoCongregacao.FechamentoSedeProcessadorId = null;
+                    fechamentoCongregacao.DataProcessamentoPelaSede = null;
+                    fechamentoCongregacao.Status = StatusFechamentoPeriodo.Aprovado; // Voltar para Aprovado
+                    _context.Update(fechamentoCongregacao);
+
+                    _logger.LogInformation($"Fechamento congregação ID {fechamentoCongregacao.Id} liberado - Status retornado para Aprovado");
+                }
+
+                await _context.SaveChangesAsync();
+
+                await _auditService.LogAsync("Liberação", "FechamentoPeriodo",
+                    $"Liberados {fechamentosCongregacoesProcessados.Count} fechamento(s) de congregações devido à exclusão do fechamento da SEDE ID {fechamentoSedeId}. Status retornado para Aprovado.");
+            }
         }
 
         // MÉTODO AUXILIAR: Popular Dropdowns

@@ -391,7 +391,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             try
             {
-                var entrada = await _context.Entradas.FindAsync(id);
+                var entrada = await _context.Entradas
+                    .Include(e => e.MeioDePagamento)
+                    .FirstOrDefaultAsync(e => e.Id == id);
+                    
                 if (entrada == null) return NotFound();
 
                 // Verificar permissão de acesso
@@ -401,6 +404,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 var user = await _userManager.GetUserAsync(User);
+
+                // ✅ NOVO: Limpar fechamentos pendentes antes de excluir
+                if (entrada.IncluidaEmFechamento && entrada.FechamentoQueIncluiuId.HasValue)
+                {
+                    await LimparFechamentosPendentesAposExclusaoEntrada(entrada);
+                }
 
                 _context.Entradas.Remove(entrada);
                 await _context.SaveChangesAsync();
@@ -486,6 +495,97 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return _context.Entradas.Any(e => e.Id == id);
         }
 
+        /// <summary>
+        /// ✅ NOVO: Limpa fechamentos PENDENTES que incluíram a entrada excluída.
+        /// Remove DetalheFechamento correspondente e recalcula totais do fechamento.
+        /// </summary>
+        private async Task LimparFechamentosPendentesAposExclusaoEntrada(Entrada entrada)
+        {
+            // Buscar fechamentos PENDENTES que incluíram esta entrada
+            var fechamentosPendentes = await _context.FechamentosPeriodo
+                .Include(f => f.DetalhesFechamento)
+                .Include(f => f.ItensRateio)
+                .Include(f => f.CentroCusto)
+                .Where(f => f.Id == entrada.FechamentoQueIncluiuId.Value && 
+                           f.Status == StatusFechamentoPeriodo.Pendente)
+                .ToListAsync();
+
+            foreach (var fechamento in fechamentosPendentes)
+            {
+                _logger.LogInformation($"Limpando entrada ID {entrada.Id} do fechamento pendente ID {fechamento.Id}");
+
+                // Remover DetalheFechamento correspondente (buscar por Data, Valor e TipoMovimento)
+                var detalhesParaRemover = fechamento.DetalhesFechamento
+                    .Where(d => d.TipoMovimento == "Entrada" &&
+                               d.Data.Date == entrada.Data.Date &&
+                               d.Valor == entrada.Valor &&
+                               (d.Descricao == entrada.Descricao || 
+                                (string.IsNullOrEmpty(d.Descricao) && string.IsNullOrEmpty(entrada.Descricao))))
+                    .ToList();
+
+                if (detalhesParaRemover.Any())
+                {
+                    _context.DetalhesFechamento.RemoveRange(detalhesParaRemover);
+                    _logger.LogInformation($"Removidos {detalhesParaRemover.Count} detalhes do fechamento ID {fechamento.Id}");
+
+                    // Recalcular totais do fechamento
+                    await RecalcularTotaisFechamentoPendente(fechamento, entrada.MeioDePagamento.TipoCaixa, entrada.Valor, isEntrada: true);
+
+                    // Registrar auditoria
+                    await _auditService.LogAsync("Exclusão", "DetalheFechamento",
+                        $"Entrada ID {entrada.Id} (R$ {entrada.Valor:N2}) removida do fechamento pendente ID {fechamento.Id} devido à exclusão do lançamento.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// ✅ NOVO: Recalcula totais de um fechamento PENDENTE após remoção de lançamento.
+        /// </summary>
+        private async Task RecalcularTotaisFechamentoPendente(FechamentoPeriodo fechamento, TipoCaixa tipoCaixa, decimal valorRemovido, bool isEntrada)
+        {
+            // Subtrair o valor removido dos totais correspondentes
+            if (isEntrada)
+            {
+                fechamento.TotalEntradas -= valorRemovido;
+                
+                if (tipoCaixa == TipoCaixa.Fisico)
+                {
+                    fechamento.TotalEntradasFisicas -= valorRemovido;
+                    fechamento.BalancoFisico -= valorRemovido;
+                }
+                else
+                {
+                    fechamento.TotalEntradasDigitais -= valorRemovido;
+                    fechamento.BalancoDigital -= valorRemovido;
+                }
+            }
+            else // Saída
+            {
+                fechamento.TotalSaidas -= valorRemovido;
+                
+                if (tipoCaixa == TipoCaixa.Fisico)
+                {
+                    fechamento.TotalSaidasFisicas -= valorRemovido;
+                    fechamento.BalancoFisico += valorRemovido; // Saída reduz, então soma de volta
+                }
+                else
+                {
+                    fechamento.TotalSaidasDigitais -= valorRemovido;
+                    fechamento.BalancoDigital += valorRemovido;
+                }
+            }
+
+            // Recalcular saldo final (se houver rateios aplicados)
+            var balancoTotal = fechamento.BalancoFisico + fechamento.BalancoDigital;
+            fechamento.SaldoFinal = balancoTotal - fechamento.TotalRateios;
+
+            _context.Update(fechamento);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation($"Totais recalculados para fechamento ID {fechamento.Id} - " +
+                $"Total Entradas: {fechamento.TotalEntradas:C}, Total Saídas: {fechamento.TotalSaidas:C}, " +
+                $"Saldo Final: {fechamento.SaldoFinal:C}");
+        }
         #endregion
     }
 }

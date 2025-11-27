@@ -115,14 +115,24 @@
                             <th class="ps-3">TOTAL CONSOLIDADO</th>
                             <th class="text-end">
                                 <span class="fw-bold text-dark fs-5">
-                                    @((decimal)ViewBag.ResumoPorCentroCusto.Sum((Func<dynamic, decimal>)(x => x.TotalContribuicoes))).ToString("C2")
+                                    @{
+                                        var resumoCentroCusto = (IEnumerable<dynamic>)ViewBag.ResumoPorCentroCusto;
+                                        var totalConsolidado = resumoCentroCusto.Sum(x => (decimal)x.TotalContribuicoes);
+                                    }
+                                    @totalConsolidado.ToString("C2")
                                 </span>
                             </th>
                             <th class="text-center">
-                                @ViewBag.ResumoPorCentroCusto.Sum((Func<dynamic, int>)(x => x.QuantidadeMembros))
+                                @{
+                                    var totalMembros = resumoCentroCusto.Sum(x => (int)x.QuantidadeMembros);
+                                }
+                                @totalMembros
                             </th>
                             <th class="text-center">
-                                @ViewBag.ResumoPorCentroCusto.Sum((Func<dynamic, int>)(x => x.QuantidadeContribuicoes))
+                                @{
+                                    var totalContribuicoes = resumoCentroCusto.Sum(x => (int)x.QuantidadeContribuicoes);
+                                }
+                                @totalContribuicoes
                             </th>
                         </tr>
                     </tfoot>
@@ -198,7 +208,11 @@
                             <th class="ps-3" colspan="2">TOTAL</th>
                             <th class="text-end">
                                 <span class="fw-bold text-success">
-                                    @((decimal)ViewBag.ResumoPorMembro.Sum((Func<dynamic, decimal>)(x => x.TotalContribuicoes))).ToString("C2")
+                                    @{
+                                        var resumoMembro = (IEnumerable<dynamic>)ViewBag.ResumoPorMembro;
+                                        var totalMembro = resumoMembro.Sum(x => (decimal)x.TotalContribuicoes);
+                                    }
+                                    @totalMembro.ToString("C2")
                                 </span>
                             </th>
                             <th colspan="2"></th>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
@@ -17,12 +18,18 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly AuditService _auditService;
+        private readonly ILogger<SaidasController> _logger;
 
-        public SaidasController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, AuditService auditService)
+        public SaidasController(
+            ApplicationDbContext context, 
+            UserManager<ApplicationUser> userManager, 
+            AuditService auditService,
+            ILogger<SaidasController> logger)
         {
             _context = context;
             _userManager = userManager;
             _auditService = auditService;
+            _logger = logger;
         }
 
         // GET: Saidas
@@ -359,13 +366,22 @@ namespace SistemaTesourariaEclesiastica.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var saida = await _context.Saidas.FindAsync(id);
+            var saida = await _context.Saidas
+                .Include(s => s.MeioDePagamento)
+                .FirstOrDefaultAsync(s => s.Id == id);
+                
             if (saida != null)
             {
                 // Verificar permissão de acesso
                 if (!await CanAccessSaida(saida))
                 {
                     return Forbid();
+                }
+
+                // ✅ NOVO: Limpar fechamentos pendentes antes de excluir
+                if (saida.IncluidaEmFechamento && saida.FechamentoQueIncluiuId.HasValue)
+                {
+                    await LimparFechamentosPendentesAposExclusaoSaida(saida);
                 }
 
                 _context.Saidas.Remove(saida);
@@ -404,6 +420,98 @@ namespace SistemaTesourariaEclesiastica.Controllers
         }
 
         #region Métodos Auxiliares
+
+        /// <summary>
+        /// ✅ NOVO: Limpa fechamentos PENDENTES que incluíram a saída excluída.
+        /// Remove DetalheFechamento correspondente e recalcula totais do fechamento.
+        /// </summary>
+        private async Task LimparFechamentosPendentesAposExclusaoSaida(Saida saida)
+        {
+            // Buscar fechamentos PENDENTES que incluíram esta saída
+            var fechamentosPendentes = await _context.FechamentosPeriodo
+                .Include(f => f.DetalhesFechamento)
+                .Include(f => f.ItensRateio)
+                .Include(f => f.CentroCusto)
+                .Where(f => f.Id == saida.FechamentoQueIncluiuId.Value && 
+                           f.Status == StatusFechamentoPeriodo.Pendente)
+                .ToListAsync();
+
+            foreach (var fechamento in fechamentosPendentes)
+            {
+                _logger.LogInformation($"Limpando saída ID {saida.Id} do fechamento pendente ID {fechamento.Id}");
+
+                // Remover DetalheFechamento correspondente (buscar por Data, Valor e TipoMovimento)
+                var detalhesParaRemover = fechamento.DetalhesFechamento
+                    .Where(d => d.TipoMovimento == "Saida" &&
+                               d.Data.Date == saida.Data.Date &&
+                               d.Valor == saida.Valor &&
+                               (d.Descricao == saida.Descricao || 
+                                (string.IsNullOrEmpty(d.Descricao) && string.IsNullOrEmpty(saida.Descricao))))
+                    .ToList();
+
+                if (detalhesParaRemover.Any())
+                {
+                    _context.DetalhesFechamento.RemoveRange(detalhesParaRemover);
+                    _logger.LogInformation($"Removidos {detalhesParaRemover.Count} detalhes do fechamento ID {fechamento.Id}");
+
+                    // Recalcular totais do fechamento
+                    await RecalcularTotaisFechamentoPendente(fechamento, saida.MeioDePagamento.TipoCaixa, saida.Valor, isEntrada: false);
+
+                    // Registrar auditoria
+                    await _auditService.LogAsync("Exclusão", "DetalheFechamento",
+                        $"Saída ID {saida.Id} (R$ {saida.Valor:N2}) removida do fechamento pendente ID {fechamento.Id} devido à exclusão do lançamento.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// ✅ NOVO: Recalcula totais de um fechamento PENDENTE após remoção de lançamento.
+        /// </summary>
+        private async Task RecalcularTotaisFechamentoPendente(FechamentoPeriodo fechamento, TipoCaixa tipoCaixa, decimal valorRemovido, bool isEntrada)
+        {
+            // Subtrair o valor removido dos totais correspondentes
+            if (isEntrada)
+            {
+                fechamento.TotalEntradas -= valorRemovido;
+                
+                if (tipoCaixa == TipoCaixa.Fisico)
+                {
+                    fechamento.TotalEntradasFisicas -= valorRemovido;
+                    fechamento.BalancoFisico -= valorRemovido;
+                }
+                else
+                {
+                    fechamento.TotalEntradasDigitais -= valorRemovido;
+                    fechamento.BalancoDigital -= valorRemovido;
+                }
+            }
+            else // Saída
+            {
+                fechamento.TotalSaidas -= valorRemovido;
+                
+                if (tipoCaixa == TipoCaixa.Fisico)
+                {
+                    fechamento.TotalSaidasFisicas -= valorRemovido;
+                    fechamento.BalancoFisico += valorRemovido; // Saída reduz, então soma de volta
+                }
+                else
+                {
+                    fechamento.TotalSaidasDigitais -= valorRemovido;
+                    fechamento.BalancoDigital += valorRemovido;
+                }
+            }
+
+            // Recalcular saldo final (se houver rateios aplicados)
+            var balancoTotal = fechamento.BalancoFisico + fechamento.BalancoDigital;
+            fechamento.SaldoFinal = balancoTotal - fechamento.TotalRateios;
+
+            _context.Update(fechamento);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation($"Totais recalculados para fechamento ID {fechamento.Id} - " +
+                $"Total Entradas: {fechamento.TotalEntradas:C}, Total Saídas: {fechamento.TotalSaidas:C}, " +
+                $"Saldo Final: {fechamento.SaldoFinal:C}");
+        }
 
         private async Task PopulateDropdowns(Saida? saida = null)
         {
