@@ -63,11 +63,16 @@ namespace SistemaTesourariaEclesiastica.Services
             // Sistema de pontuação inicial
             var pontuacaoPorteiros = porteiros.ToDictionary(p => p.Id, p => 0);
 
-            // NOVO: Histórico das últimas 5 duplas usadas (com peso decrescente)
+            // Histórico ampliado das últimas 10 duplas usadas (com peso decrescente)
             var historicoDuplas = new Queue<string>();
 
             // Rastrear frequência global de duplas
             var frequenciaDuplasGeracao = new Dictionary<string, int>();
+            // Rastrear última data de trabalho de cada porteiro (SOLO ou DUPLA)
+            var ultimaDataTrabalho = porteiros.ToDictionary(p => p.Id, p => (DateTime?)null);
+
+            // NOVO: Rastrear horários trabalhados no dia atual
+            var horariosTrabalhados = porteiros.ToDictionary(p => p.Id, p => new List<TimeSpan>());
 
             // Identificar porteiros com disponibilidade limitada
             var porteirosLimitados = new HashSet<int>();
@@ -96,27 +101,56 @@ namespace SistemaTesourariaEclesiastica.Services
                 }
             }
 
-            // Controle de descanso entre dias - REMOVIDO para maximizar variedade
-            // Com apenas 4 porteiros disponíveis, o controle de descanso limita demais as combinações
-            var porteirosDiaAtualTodosHorarios = new HashSet<int>();
-            DateTime? dataUltimoDiaProcessado = null;
-
             var escalasGeradas = new List<EscalaPorteiro>();
             var random = new Random(DateTime.Now.Millisecond);
             var responsavelSelecionado = responsaveis.First();
 
-            // Rastrear últimas 3 escalas (para porteiros individuais)
+            // Rastrear últimas 5 escalas (para porteiros individuais - SOLO ou DUPLA)
             var historicoEscalasGeracao = new Queue<List<int>>();
 
+            DateTime? dataUltimoDiaProcessado = null;
+
             _logger.LogInformation($"Iniciando geração com {porteiros.Count} porteiros ativos");
+
+            // CALCULAR DESCANSO MÍNIMO VIÁVEL baseado na demanda
+            var totalEscalasNecessarias = diasOrdenados.Count;
+            var totalPosicoesNecessarias = diasOrdenados.Sum(d => 
+                (d.Horario.HasValue && d.Horario.Value >= new TimeSpan(19, 0, 0)) ? 2 : 1);
+            
+            var porteirosDisponiveis = porteiros.Count;
+            var mediaEscalasPorPorteiro = (double)totalPosicoesNecessarias / porteirosDisponiveis;
+            var diasNoMes = (diasOrdenados.Last().Data - diasOrdenados.First().Data).TotalDays + 1;
+            var frequenciaMedia = diasNoMes / mediaEscalasPorPorteiro;
+            
+            // Calcular descanso mínimo viável
+            int DIAS_MINIMO_DESCANSO;
+            if (frequenciaMedia >= 7)
+                DIAS_MINIMO_DESCANSO = 3; // Baixa demanda: pode exigir 3 dias
+            else if (frequenciaMedia >= 5)
+                DIAS_MINIMO_DESCANSO = 2; // Demanda média: 2 dias
+            else
+                DIAS_MINIMO_DESCANSO = 1; // Alta demanda: 1 dia (trabalha dia sim, dia não)
+            
+            _logger.LogInformation($"📊 Análise de Demanda:");
+            _logger.LogInformation($"  - Total de escalas: {totalEscalasNecessarias}");
+            _logger.LogInformation($"  - Total de posições: {totalPosicoesNecessarias}");
+            _logger.LogInformation($"  - Porteiros disponíveis: {porteirosDisponiveis}");
+            _logger.LogInformation($"  - Média por porteiro: {mediaEscalasPorPorteiro:F1} posições");
+            _logger.LogInformation($"  - Frequência média: a cada {frequenciaMedia:F1} dias");
+            _logger.LogInformation($"  - ⚙️ Descanso mínimo definido: {DIAS_MINIMO_DESCANSO} dia(s)");
+            _logger.LogInformation("");
 
             // Processar cada dia
             foreach (var dia in diasOrdenados)
             {
-                // Mudança de dia - resetar controle de horários (mantém apenas controle dentro do mesmo dia)
+                // Mudança de dia - resetar controle de horários
                 if (dataUltimoDiaProcessado == null || dataUltimoDiaProcessado.Value.Date != dia.Data.Date)
                 {
-                    porteirosDiaAtualTodosHorarios.Clear();
+                    // Limpar horários trabalhados de todos os porteiros
+                    foreach (var porteiroId in horariosTrabalhados.Keys.ToList())
+                    {
+                        horariosTrabalhados[porteiroId].Clear();
+                    }
                     dataUltimoDiaProcessado = dia.Data.Date;
                 }
 
@@ -143,8 +177,42 @@ namespace SistemaTesourariaEclesiastica.Services
                     quantidadePorteiros = 1;
                 }
 
-                // IDs bloqueados apenas por já terem trabalhado no mesmo dia em outro horário
-                var bloqueadosTotais = new HashSet<int>(porteirosDiaAtualTodosHorarios);
+                // BLOQUEIO RÍGIDO: Calcular porteiros bloqueados por descanso insuficiente
+                var bloqueadosPorDescanso = new HashSet<int>();
+
+                foreach (var porteiro in porteiros)
+                {
+                    if (ultimaDataTrabalho[porteiro.Id].HasValue)
+                    {
+                        var diasDescanso = (dia.Data - ultimaDataTrabalho[porteiro.Id].Value).TotalDays;
+                        
+                        // Bloqueio ABSOLUTO se descanso < mínimo calculado
+                        if (diasDescanso < DIAS_MINIMO_DESCANSO)
+                        {
+                            bloqueadosPorDescanso.Add(porteiro.Id);
+                            _logger.LogDebug($"  {porteiro.Nome} BLOQUEADO por descanso insuficiente: {diasDescanso:F1} dias (mín: {DIAS_MINIMO_DESCANSO})");
+                        }
+                    }
+                }
+
+                // BLOQUEIO ADICIONAL: Porteiros que já trabalharam em outro horário HOJE
+                var bloqueadosPorHorarioHoje = new HashSet<int>();
+                if (dia.Horario.HasValue)
+                {
+                    foreach (var porteiro in porteiros)
+                    {
+                        // Se já trabalhou hoje em qualquer horário, bloqueia
+                        if (horariosTrabalhados[porteiro.Id].Any())
+                        {
+                            bloqueadosPorHorarioHoje.Add(porteiro.Id);
+                            _logger.LogDebug($"  {porteiro.Nome} BLOQUEADO por já ter trabalhado hoje às {horariosTrabalhados[porteiro.Id][0]:hh\\:mm}");
+                        }
+                    }
+                }
+
+                // Combinar todos os bloqueios
+                var bloqueadosTotais = new HashSet<int>(bloqueadosPorDescanso);
+                bloqueadosTotais.UnionWith(bloqueadosPorHorarioHoje);
 
                 // Filtrar porteiros elegíveis
                 var elegiveisBase = porteiros.Where(p => p.EstaDisponivelNodia(dia.Data.DayOfWeek)).ToList();
@@ -155,37 +223,47 @@ namespace SistemaTesourariaEclesiastica.Services
 
                 var porteirosElegiveis = elegiveisBase.Where(p => !bloqueadosTotais.Contains(p.Id)).ToList();
 
-                // NOVO: Randomizar a ordem dos porteiros elegíveis para aumentar variedade
+                _logger.LogInformation($"Data {dia.Data:dd/MM/yyyy} {dia.Horario?.ToString(@"hh\:mm") ?? "sem horário"}: {porteirosElegiveis.Count} elegíveis de {elegiveisBase.Count} disponíveis (bloqueados: {bloqueadosTotais.Count})");
+
+                // Randomizar a ordem dos porteiros elegíveis para aumentar variedade
                 porteirosElegiveis = porteirosElegiveis.OrderBy(_ => random.Next()).ToList();
 
-                // Fallback: relaxar bloqueio se necessário
+                // Fallback SOMENTE em situação CRÍTICA
+                var precisouRelaxar = false;
                 if (porteirosElegiveis.Count < quantidadePorteiros)
                 {
-                    _logger.LogWarning($"Relaxando bloqueio em {dia.Data:dd/MM/yyyy} por falta de porteiros (necessário {quantidadePorteiros}, disponíveis {porteirosElegiveis.Count}).");
-
+                    _logger.LogWarning($"⚠️ SITUAÇÃO CRÍTICA em {dia.Data:dd/MM/yyyy}: necessário {quantidadePorteiros}, disponíveis {porteirosElegiveis.Count}");
+                    
+                    // Relaxar APENAS bloqueio por descanso (mantém bloqueio de horário do mesmo dia)
                     var complementares = elegiveisBase
-                        .Where(p => bloqueadosTotais.Contains(p.Id))
-                        .OrderBy(p => pontuacaoPorteiros[p.Id])
-                        .ThenBy(_ => random.Next()) // Adicionar randomização para variedade
+                        .Where(p => bloqueadosPorDescanso.Contains(p.Id) && !bloqueadosPorHorarioHoje.Contains(p.Id))
+                        .OrderBy(p => ultimaDataTrabalho[p.Id].HasValue ? (dia.Data - ultimaDataTrabalho[p.Id].Value).TotalDays : 999)
+                        .ThenBy(p => pontuacaoPorteiros[p.Id])
+                        .ThenBy(_ => random.Next())
                         .ToList();
 
                     foreach (var p in complementares)
                     {
-                        if (!porteirosElegiveis.Contains(p)) porteirosElegiveis.Add(p);
+                        if (!porteirosElegiveis.Contains(p))
+                        {
+                            var diasDescanso = ultimaDataTrabalho[p.Id].HasValue 
+                                ? (dia.Data - ultimaDataTrabalho[p.Id].Value).TotalDays 
+                                : 999;
+                            _logger.LogWarning($"    Relaxando bloqueio para {p.Nome} (descanso: {diasDescanso:F1} dias)");
+                            porteirosElegiveis.Add(p);
+                            precisouRelaxar = true;
+                        }
                         if (porteirosElegiveis.Count >= quantidadePorteiros) break;
                     }
                 }
 
                 if (!porteirosElegiveis.Any())
                 {
-                    _logger.LogError($"Sem porteiros elegíveis para {dia.Data:dd/MM/yyyy}. Dia será ignorado.");
+                    _logger.LogError($"❌ Sem porteiros elegíveis para {dia.Data:dd/MM/yyyy}. Dia será ignorado.");
                     continue;
                 }
 
-                // NOVA SELEÇÃO: Baseada em variedade de duplas
-                // IMPORTANTE: Se teve que relaxar o bloqueio, ignorar histórico recente para permitir mais variedade
-                var precisouRelaxar = porteirosElegiveis.Any(p => bloqueadosTotais.Contains(p.Id));
-                
+                // SELEÇÃO: Baseada em variedade de duplas e espaçamento de datas
                 var selecionados = SelecionarPorteirosComVariedade(
                     porteirosElegiveis,
                     quantidadePorteiros,
@@ -194,8 +272,10 @@ namespace SistemaTesourariaEclesiastica.Services
                     porteirosLimitados,
                     frequenciaDuplasGeracao,
                     historicoDuplas,
+                    ultimaDataTrabalho,
+                    dia.Data,
                     random,
-                    precisouRelaxar); // Novo parâmetro
+                    precisouRelaxar);
 
                 if (!selecionados.Any())
                 {
@@ -203,14 +283,23 @@ namespace SistemaTesourariaEclesiastica.Services
                     continue;
                 }
 
-                // Registrar pontuação e dia atual
+                // Registrar pontuação, última data de trabalho e horários trabalhados
                 foreach (var id in selecionados)
                 {
                     pontuacaoPorteiros[id]++;
-                    porteirosDiaAtualTodosHorarios.Add(id);
+                    ultimaDataTrabalho[id] = dia.Data;
+                    
+                    // Registrar horário trabalhado hoje
+                    if (dia.Horario.HasValue)
+                    {
+                        horariosTrabalhados[id].Add(dia.Horario.Value);
+                    }
+                    
+                    var nomePorteiro = porteiros.First(p => p.Id == id).Nome;
+                    _logger.LogInformation($"  ✓ {nomePorteiro} escalado para {dia.Data:dd/MM/yyyy} {dia.Horario?.ToString(@"hh\:mm") ?? ""}");
                 }
 
-                // Atualizar rastreamento de duplas
+                // Atualizar rastreamento de duplas (somente para duplas)
                 if (selecionados.Count == 2)
                 {
                     var p1 = selecionados[0];
@@ -219,21 +308,10 @@ namespace SistemaTesourariaEclesiastica.Services
                     var chaveDupla = GerarChaveDupla(p1, p2);
                     frequenciaDuplasGeracao[chaveDupla] = frequenciaDuplasGeracao.GetValueOrDefault(chaveDupla) + 1;
 
-                    // Adicionar ao histórico de duplas recentes
+                    // Adicionar ao histórico de duplas recentes (aumentado para 10)
                     historicoDuplas.Enqueue(chaveDupla);
-                    if (historicoDuplas.Count > 5)
+                    if (historicoDuplas.Count > 10)
                         historicoDuplas.Dequeue();
-
-                    // Se uma dupla está sendo usada demais, reduzir o histórico para permitir mais variedade
-                    if (frequenciaDuplasGeracao[chaveDupla] >= 3 && historicoDuplas.Count > 3)
-                    {
-                        var temp = historicoDuplas.Skip(historicoDuplas.Count - 2).ToList();
-                        historicoDuplas.Clear();
-                        foreach (var d in temp)
-                        {
-                            historicoDuplas.Enqueue(d);
-                        }
-                    }
                 }
 
                 // Criar escala
@@ -252,8 +330,9 @@ namespace SistemaTesourariaEclesiastica.Services
 
                 escalasGeradas.Add(escala);
 
+                // Atualizar histórico de escalas (PARA TODOS - solo ou dupla)
                 historicoEscalasGeracao.Enqueue(selecionados);
-                if (historicoEscalasGeracao.Count > 3)
+                if (historicoEscalasGeracao.Count > 5)
                     historicoEscalasGeracao.Dequeue();
             }
 
@@ -274,8 +353,8 @@ namespace SistemaTesourariaEclesiastica.Services
         }
 
         /// <summary>
-        /// NOVO v2: Sistema de seleção baseado em VARIEDADE MÁXIMA
-        /// Prioriza duplas que não trabalharam juntas recentemente
+        /// Sistema de seleção baseado em VARIEDADE MÁXIMA com espaçamento temporal
+        /// Prioriza duplas que não trabalharam juntas recentemente e porteiros descansados
         /// </summary>
         private List<int> SelecionarPorteirosComVariedade(
             List<Porteiro> porteirosElegiveis,
@@ -285,10 +364,12 @@ namespace SistemaTesourariaEclesiastica.Services
             HashSet<int> porteirosLimitados,
             Dictionary<string, int> frequenciaDuplasGeracao,
             Queue<string> historicoDuplas,
+            Dictionary<int, DateTime?> ultimaDataTrabalho,
+            DateTime dataAtual,
             Random random,
-            bool ignorarHistorico = false) // NOVO parâmetro
+            bool ignorarHistorico = false)
         {
-            // Porteiros das últimas 3 escalas para evitar repetição imediata
+            // Porteiros das últimas 5 escalas para evitar repetição imediata (inclui solo E dupla)
             var porteirosRecentes = historicoEscalasGeracao
                 .SelectMany(h => h)
                 .Distinct()
@@ -296,22 +377,29 @@ namespace SistemaTesourariaEclesiastica.Services
 
             if (quantidadeNecessaria == 1)
             {
-                // Para 1 porteiro (Ex: Escola Bíblica), a lógica é simples
+                // Para 1 porteiro, prioriza quem está descansado há mais tempo
+                // IMPORTANTE: Agora considera TODOS os trabalhos anteriores (solo ou dupla)
                 var candidatoSolo = porteirosElegiveis
                     .Where(p => !porteirosRecentes.Contains(p.Id))
-                    .OrderBy(p => pontuacaoPorteiros[p.Id])
+                    .OrderByDescending(p => ultimaDataTrabalho[p.Id].HasValue ? (dataAtual - ultimaDataTrabalho[p.Id].Value).TotalDays : double.MaxValue)
+                    .ThenBy(p => pontuacaoPorteiros[p.Id])
                     .ThenBy(p => porteirosLimitados.Contains(p.Id) ? 0 : 1)
                     .ThenBy(_ => random.Next())
                     .FirstOrDefault();
 
                 if (candidatoSolo != null)
                 {
+                    var diasDescanso = ultimaDataTrabalho[candidatoSolo.Id].HasValue 
+                        ? (dataAtual - ultimaDataTrabalho[candidatoSolo.Id].Value).TotalDays 
+                        : 999;
+                    _logger.LogDebug($"Porteiro SOLO selecionado: {candidatoSolo.Nome} (descanso: {diasDescanso:F1} dias)");
                     return new List<int> { candidatoSolo.Id };
                 }
 
                 // Fallback
                 var fallbackSolo = porteirosElegiveis
-                    .OrderBy(p => pontuacaoPorteiros[p.Id])
+                    .OrderByDescending(p => ultimaDataTrabalho[p.Id].HasValue ? (dataAtual - ultimaDataTrabalho[p.Id].Value).TotalDays : double.MaxValue)
+                    .ThenBy(p => pontuacaoPorteiros[p.Id])
                     .First();
                 return new List<int> { fallbackSolo.Id };
             }
@@ -326,7 +414,7 @@ namespace SistemaTesourariaEclesiastica.Services
             }
 
             // Avaliar TODAS as duplas possíveis e escolher a MELHOR
-            var duplasAvaliadas = new List<(int p1, int p2, int score)>();
+            var duplasAvaliadas = new List<(int p1, int p2, double score)>();
 
             for (int i = 0; i < candidatos.Count; i++)
             {
@@ -336,10 +424,9 @@ namespace SistemaTesourariaEclesiastica.Services
                     var p2 = candidatos[j];
                     var chaveDupla = GerarChaveDupla(p1.Id, p2.Id);
 
-                    int score = 0;
+                    double score = 0;
 
-                    // 1. PENALIZAÇÃO PESADA por estar no histórico recente
-                    // MAS: Se ignorarHistorico=true (situação crítica), reduz drasticamente a penalização
+                    // 1. PENALIZAÇÃO MUITO PESADA por estar no histórico recente de duplas
                     if (!ignorarHistorico)
                     {
                         var historicoLista = historicoDuplas.Reverse().ToList();
@@ -347,35 +434,89 @@ namespace SistemaTesourariaEclesiastica.Services
                         {
                             if (historicoLista[k] == chaveDupla)
                             {
-                                // Última dupla = +1000, penúltima = +800, etc
-                                score += 1000 - (k * 200);
+                                // Última dupla = +8000, penúltima = +7000, etc (peso MUITO maior)
+                                score += 8000 - (k * 800);
                             }
                         }
                     }
                     else
                     {
-                        // Em situação crítica, penalização muito menor (apenas 10% do normal)
+                        // Em situação crítica, penalização reduzida
                         var historicoLista = historicoDuplas.Reverse().ToList();
                         for (int k = 0; k < historicoLista.Count; k++)
                         {
                             if (historicoLista[k] == chaveDupla)
                             {
-                                score += (1000 - (k * 200)) / 10; // Reduz para 10%
+                                score += (8000 - (k * 800)) / 5;
                             }
                         }
                     }
 
-                    // 2. Penalização por frequência total de uso (PESO AUMENTADO)
+                    // 2. Penalização FORTE por frequência total de uso da dupla
                     var frequencia = frequenciaDuplasGeracao.GetValueOrDefault(chaveDupla, 0);
-                    score += frequencia * 300; // Aumentado de 100 para 300
+                    score += frequencia * 1200; // Aumentado ainda mais
 
-                    // 3. Penalização por pontuação individual (balanceamento secundário)
-                    score += pontuacaoPorteiros[p1.Id] * 10;
-                    score += pontuacaoPorteiros[p2.Id] * 10;
+                    // 3. PENALIZAÇÃO CRÍTICA por trabalho recente individual
+                    // ESTE É O AJUSTE PRINCIPAL - considera trabalhos solo E dupla
+                    if (ultimaDataTrabalho[p1.Id].HasValue)
+                    {
+                        var diasDescanso = (dataAtual - ultimaDataTrabalho[p1.Id].Value).TotalDays;
+                        
+                        // PENALIZAÇÃO GRADUADA (ajustada dinamicamente):
+                        if (diasDescanso < 1.5)
+                            score += 15000; // Bloqueio muito pesado
+                        else if (diasDescanso < 2.5)
+                            score += 8000;  // Pesado
+                        else if (diasDescanso < 3.5)
+                            score += 3000;  // Moderado
+                        else if (diasDescanso < 5)
+                            score += 1000;  // Leve
+                        else if (diasDescanso < 7)
+                            score += 300;   // Muito leve
+                        // 7+ dias = sem penalização
+                    }
+                    else
+                    {
+                        // Bônus grande para quem nunca trabalhou
+                        score -= 1500;
+                    }
 
-                    // 4. BÔNUS para porteiros limitados (prioridade)
-                    if (porteirosLimitados.Contains(p1.Id)) score -= 300;
-                    if (porteirosLimitados.Contains(p2.Id)) score -= 300;
+                    if (ultimaDataTrabalho[p2.Id].HasValue)
+                    {
+                        var diasDescanso = (dataAtual - ultimaDataTrabalho[p2.Id].Value).TotalDays;
+                        
+                        if (diasDescanso < 1.5)
+                            score += 15000;
+                        else if (diasDescanso < 2.5)
+                            score += 8000;
+                        else if (diasDescanso < 3.5)
+                            score += 3000;
+                        else if (diasDescanso < 5)
+                            score += 1000;
+                        else if (diasDescanso < 7)
+                            score += 300;
+                    }
+                    else
+                    {
+                        score -= 1500;
+                    }
+
+                    // 4. Penalização por pontuação individual (balanceamento secundário)
+                    score += pontuacaoPorteiros[p1.Id] * 100;
+                    score += pontuacaoPorteiros[p2.Id] * 100;
+
+                    // 5. BÔNUS para porteiros limitados (prioridade)
+                    if (porteirosLimitados.Contains(p1.Id)) score -= 500;
+                    if (porteirosLimitados.Contains(p2.Id)) score -= 500;
+
+                    // 6. BÔNUS GRANDE para porteiros que nunca trabalharam juntos
+                    if (frequencia == 0) score -= 2000;
+
+                    // 7. BÔNUS para porteiros bem descansados (7+ dias)
+                    if (ultimaDataTrabalho[p1.Id].HasValue && (dataAtual - ultimaDataTrabalho[p1.Id].Value).TotalDays >= 7)
+                        score -= 300;
+                    if (ultimaDataTrabalho[p2.Id].HasValue && (dataAtual - ultimaDataTrabalho[p2.Id].Value).TotalDays >= 7)
+                        score -= 300;
 
                     duplasAvaliadas.Add((p1.Id, p2.Id, score));
                 }
@@ -389,6 +530,18 @@ namespace SistemaTesourariaEclesiastica.Services
 
             // Ordenar por score (menor = melhor) e pegar a melhor
             var melhorDupla = duplasAvaliadas.OrderBy(d => d.score).First();
+
+            var p1Nome = porteirosElegiveis.First(p => p.Id == melhorDupla.p1).Nome;
+            var p2Nome = porteirosElegiveis.First(p => p.Id == melhorDupla.p2).Nome;
+            
+            var p1Descanso = ultimaDataTrabalho[melhorDupla.p1].HasValue 
+                ? (dataAtual - ultimaDataTrabalho[melhorDupla.p1].Value).TotalDays 
+                : 999;
+            var p2Descanso = ultimaDataTrabalho[melhorDupla.p2].HasValue 
+                ? (dataAtual - ultimaDataTrabalho[melhorDupla.p2].Value).TotalDays 
+                : 999;
+            
+            _logger.LogDebug($"Dupla selecionada para {dataAtual:dd/MM/yyyy}: {p1Nome} ({p1Descanso:F1}d) + {p2Nome} ({p2Descanso:F1}d) (score: {melhorDupla.score:F2})");
 
             return new List<int> { melhorDupla.p1, melhorDupla.p2 };
         }

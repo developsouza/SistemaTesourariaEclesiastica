@@ -1,0 +1,468 @@
+/* ========================================
+   ESCALA MANUAL - DRAG AND DROP STYLES
+   ? COMPATÍVEL COM TEMA DARK/LIGHT
+   ======================================== */
+
+/* ===== VARIÁVEIS DE TEMA ===== */
+:root {
+    --escala-bg-primary: #ffffff;
+    --escala-bg-secondary: #f8f9fa;
+    --escala-bg-hover: #e7f3ff;
+    --escala-border: #dee2e6;
+    --escala-text-primary: #212529;
+    --escala-text-secondary: #6c757d;
+    --escala-text-muted: #adb5bd;
+    --escala-shadow: rgba(0, 0, 0, 0.1);
+    --escala-shadow-hover: rgba(0, 0, 0, 0.15);
+}
+
+[data-bs-theme="dark"] {
+    --escala-bg-primary: #1a1d20;
+    --escala-bg-secondary: #212529;
+    --escala-bg-hover: #2c3034;
+    --escala-border: #495057;
+    --escala-text-primary: #dee2e6;
+    --escala-text-secondary: #adb5bd;
+    --escala-text-muted: #6c757d;
+    --escala-shadow: rgba(0, 0, 0, 0.3);
+    --escala-shadow-hover: rgba(0, 0, 0, 0.5);
+}
+
+/* ===== CURSOR PARA ITENS ARRASTÁVEIS ===== */
+.cursor-move {
+    cursor: move !important;
+    cursor: grab !important;
+}
+
+.cursor-move:active {
+    cursor: grabbing !important;
+}
+
+/* ===== PORTEIRO ITEM - LISTA DISPONÍVEL ===== */
+.porteiro-item {
+    transition: all 0.2s ease;
+}
+
+.porteiro-item:hover {
+    transform: translateX(5px);
+}
+
+.porteiro-item .bg-light {
+    background-color: var(--escala-bg-secondary) !important;
+    border-color: var(--escala-border) !important;
+    transition: all 0.2s ease;
+}
+
+.porteiro-item:hover .bg-light {
+    background-color: var(--escala-bg-hover) !important;
+    border-color: var(--bs-primary) !important;
+    box-shadow: 0 2px 4px var(--escala-shadow);
+}
+
+/* Porteiro sendo arrastado */
+.porteiro-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+/* ===== AVATAR DO PORTEIRO ===== */
+.porteiro-avatar {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    border-radius: 50%;
+}
+
+/* ===== DIA CARD ===== */
+.dia-card {
+    transition: all 0.3s ease;
+    border-color: var(--escala-border) !important;
+    background-color: var(--escala-bg-primary) !important;
+}
+
+.dia-card:hover {
+    box-shadow: 0 4px 12px var(--escala-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.dia-card .card-header {
+    background-color: var(--escala-bg-secondary) !important;
+    border-bottom-color: var(--escala-border) !important;
+}
+
+/* ===== DROP ZONE PARA PORTEIROS ===== */
+.porteiros-drop-zone {
+    min-height: 150px;
+    border: 2px dashed transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+    background-color: var(--escala-bg-secondary) !important;
+}
+
+/* Estado: Hover sobre Drop Zone */
+.porteiros-drop-zone.drag-over {
+    background-color: rgba(var(--bs-info-rgb), 0.1) !important;
+    border-color: var(--bs-info) !important;
+    border-style: dashed;
+    box-shadow: inset 0 0 10px rgba(var(--bs-info-rgb), 0.3);
+}
+
+.porteiros-drop-zone.drag-over::before {
+    content: "Solte aqui";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--bs-info);
+    z-index: 10;
+    background-color: var(--escala-bg-primary);
+    padding: 10px 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px var(--escala-shadow);
+}
+
+/* Drop Zone com limite atingido */
+.porteiros-drop-zone.limite-atingido {
+    background-color: rgba(var(--bs-danger-rgb), 0.1) !important;
+    border-color: var(--bs-danger) !important;
+}
+
+.porteiros-drop-zone.limite-atingido::after {
+    content: "? Completo";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: var(--bs-success);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+/* ===== PORTEIRO ATRIBUÍDO ===== */
+.porteiro-atribuido {
+    transition: all 0.2s ease;
+    animation: fadeInScale 0.3s ease;
+    background-color: rgba(var(--bs-success-rgb), 0.1) !important;
+    border-color: var(--bs-success) !important;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.porteiro-atribuido:hover {
+    box-shadow: 0 2px 6px rgba(var(--bs-success-rgb), 0.3);
+}
+
+.porteiro-atribuido .btn-remover-porteiro {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.porteiro-atribuido:hover .btn-remover-porteiro {
+    opacity: 1;
+}
+
+/* Badge de Posição */
+.porteiro-atribuido .badge {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+/* ===== CONTADOR DE PORTEIROS ===== */
+.contador-porteiros {
+    font-weight: bold;
+    color: var(--bs-success);
+}
+
+.dia-card.completo .card-footer {
+    background-color: rgba(var(--bs-success-rgb), 0.1) !important;
+    border-top-color: var(--bs-success) !important;
+}
+
+.dia-card.incompleto .card-footer {
+    background-color: rgba(var(--bs-warning-rgb), 0.1) !important;
+    border-top-color: var(--bs-warning) !important;
+}
+
+.dia-card.incompleto .contador-porteiros {
+    color: var(--bs-danger);
+}
+
+.dia-card .card-footer {
+    background-color: var(--escala-bg-primary) !important;
+    border-top-color: var(--escala-border) !important;
+}
+
+/* Destaque visual para card com atenção */
+.dia-card.precisa-atencao {
+    border-color: var(--bs-warning) !important;
+    border-width: 2px !important;
+}
+
+.dia-card.precisa-atencao .card-header {
+    background-color: rgba(var(--bs-warning-rgb), 0.1) !important;
+}
+
+/* ===== CARD STICKY (PORTEIROS DISPONÍVEIS) ===== */
+.card.sticky-top {
+    background-color: var(--escala-bg-primary) !important;
+}
+
+.card.sticky-top .card-header {
+    background-color: var(--bs-primary) !important;
+    color: white !important;
+}
+
+.card.sticky-top .card-body {
+    background-color: var(--escala-bg-primary) !important;
+}
+
+/* ===== LOADING STATE ===== */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loading-overlay .spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* ===== BADGES DE TIPO DE CULTO ===== */
+.badge {
+    font-weight: 600;
+}
+
+/* ===== CARDS DE FILTROS ===== */
+.card.shadow-sm {
+    background-color: var(--escala-bg-primary) !important;
+    border-color: var(--escala-border) !important;
+}
+
+.card-header {
+    border-bottom-color: var(--escala-border) !important;
+}
+
+.card-body {
+    background-color: var(--escala-bg-primary) !important;
+}
+
+/* ===== FORMS ===== */
+.form-control,
+.form-select {
+    background-color: var(--escala-bg-primary) !important;
+    border-color: var(--escala-border) !important;
+    color: var(--escala-text-primary) !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--escala-bg-primary) !important;
+    border-color: var(--bs-primary) !important;
+    color: var(--escala-text-primary) !important;
+}
+
+.form-label {
+    color: var(--escala-text-primary) !important;
+}
+
+/* ===== TEXTO MUTED ===== */
+.text-muted {
+    color: var(--escala-text-muted) !important;
+}
+
+small.text-muted {
+    color: var(--escala-text-muted) !important;
+}
+
+/* ===== RESPONSIVIDADE ===== */
+@media (max-width: 992px) {
+    .porteiros-drop-zone {
+        min-height: 120px;
+    }
+
+    .dia-card {
+        margin-bottom: 1rem;
+    }
+
+    .sticky-top {
+        position: relative !important;
+        top: 0 !important;
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* ===== ACESSIBILIDADE ===== */
+.porteiro-item:focus-visible,
+.dia-card:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+/* ===== ANIMAÇÕES ===== */
+@keyframes successPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+}
+
+.success-animation {
+    animation: successPulse 0.5s ease;
+}
+
+/* Estilo para indicar erro */
+.error-shake {
+    animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+/* ===== TOOLTIP PERSONALIZADO ===== */
+.custom-tooltip {
+    position: relative;
+}
+
+.custom-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--escala-text-primary);
+    color: var(--escala-bg-primary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    z-index: 1000;
+    margin-bottom: 5px;
+}
+
+/* ===== ESTADOS DE VALIDAÇÃO ===== */
+.dia-card.validation-error {
+    border-color: var(--bs-danger) !important;
+    animation: shake 0.5s ease;
+}
+
+.dia-card.validation-success {
+    border-color: var(--bs-success) !important;
+}
+
+/* ===== BOTÕES DE AÇÃO ===== */
+#btnLimparEscala {
+    transition: all 0.3s ease;
+}
+
+#btnLimparEscala:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(var(--bs-warning-rgb), 0.3);
+}
+
+#btnLimparEscala:active {
+    transform: translateY(0);
+}
+
+#btnSalvarEscala {
+    transition: all 0.3s ease;
+}
+
+#btnSalvarEscala:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px var(--escala-shadow);
+}
+
+#btnSalvarEscala:active {
+    transform: translateY(0);
+}
+
+/* ===== SCROLLBAR PERSONALIZADA (OPCIONAL) ===== */
+.card-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.card-body::-webkit-scrollbar-track {
+    background: var(--escala-bg-secondary);
+    border-radius: 4px;
+}
+
+.card-body::-webkit-scrollbar-thumb {
+    background: var(--escala-border);
+    border-radius: 4px;
+}
+
+.card-body::-webkit-scrollbar-thumb:hover {
+    background: var(--escala-text-muted);
+}
+
+/* ===== TEMA DARK - AJUSTES ESPECÍFICOS ===== */
+[data-bs-theme="dark"] .porteiro-item .bg-light {
+    background-color: #2c3034 !important;
+}
+
+[data-bs-theme="dark"] .porteiro-item:hover .bg-light {
+    background-color: #343a40 !important;
+    border-color: var(--bs-primary) !important;
+}
+
+[data-bs-theme="dark"] .porteiros-drop-zone.drag-over::before {
+    background-color: #1a1d20;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+[data-bs-theme="dark"] .card {
+    border-color: var(--escala-border) !important;
+}
+
+[data-bs-theme="dark"] .card-header {
+    border-bottom-color: var(--escala-border) !important;
+}
+
+/* ===== IMPRESSÃO (OPCIONAL) ===== */
+@media print {
+    .btn,
+    .porteiro-item {
+        display: none !important;
+    }
+    
+    .dia-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
