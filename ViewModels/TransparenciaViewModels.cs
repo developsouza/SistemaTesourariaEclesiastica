@@ -1,0 +1,34 @@
+using System.ComponentModel.DataAnnotations;
+using SistemaTesourariaEclesiastica.Models;
+
+namespace SistemaTesourariaEclesiastica.ViewModels
+{
+    /// <summary>
+    /// ViewModel para validação de acesso à transparência
+    /// </summary>
+    public class TransparenciaValidacaoViewModel
+    {
+        [Display(Name = "Nome Completo")]
+        [StringLength(100, ErrorMessage = "O nome deve ter no máximo 100 caracteres.")]
+        public string? NomeCompleto { get; set; }
+
+        [Display(Name = "CPF")]
+        [StringLength(14, ErrorMessage = "CPF inválido.")]
+        public string? CPF { get; set; }
+    }
+
+    /// <summary>
+    /// ViewModel para exibição do histórico de contribuições
+    /// </summary>
+    public class TransparenciaHistoricoViewModel
+    {
+        public string MembroNome { get; set; } = string.Empty;
+        public string? MembroApelido { get; set; }
+        public string? CentroCustoNome { get; set; }
+        public DateTime DataCadastro { get; set; }
+        public List<Entrada> Contribuicoes { get; set; } = new List<Entrada>();
+        public decimal TotalContribuido { get; set; }
+        public int QuantidadeContribuicoes { get; set; }
+        public DateTime? UltimaContribuicao { get; set; }
+    }
+}

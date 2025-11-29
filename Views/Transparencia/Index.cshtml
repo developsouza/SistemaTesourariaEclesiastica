@@ -1,0 +1,355 @@
+@model SistemaTesourariaEclesiastica.ViewModels.TransparenciaValidacaoViewModel
+
+@{
+    ViewData["Title"] = "Portal de Transparência";
+    Layout = "_LoginLayout";
+}
+
+<div class="container-fluid h-100">
+    <div class="row h-100 g-0">
+        <!-- Painel Esquerdo - Informações -->
+        <div class="col-lg-6 d-none d-lg-flex"
+             style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.95) 0%, rgba(5, 150, 105, 0.95) 100%),
+             url('data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 1000 1000&quot;><defs><pattern id=&quot;church-pattern&quot; x=&quot;0&quot; y=&quot;0&quot; width=&quot;80&quot; height=&quot;80&quot; patternUnits=&quot;userSpaceOnUse&quot;><circle cx=&quot;40&quot; cy=&quot;40&quot; r=&quot;2&quot; fill=&quot;rgba(255,255,255,0.1)&quot;/></pattern></defs><rect width=&quot;1000&quot; height=&quot;1000&quot; fill=&quot;url(%23church-pattern)&quot;/></svg>');
+                    background-size: cover; background-position: center;">
+            <div class="d-flex flex-column justify-content-center align-items-center w-100 p-5 text-white">
+                <div class="text-center mb-5" style="animation: fadeInDown 0.8s ease-out;">
+                    <div class="mb-4" style="animation: pulse 2s infinite;">
+                        <i class="bi bi-eye" style="font-size: 5rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));"></i>
+                    </div>
+                    <h1 class="display-4 fw-bold mb-3">Portal de Transparência</h1>
+                    <p class="lead mb-0 opacity-90">Consulte seu histórico de contribuições</p>
+                </div>
+
+                <div class="w-100" style="max-width: 400px; animation: fadeInUp 0.8s ease-out 0.2s backwards;">
+                    <div class="feature-item mb-4 p-3 rounded-3" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); transition: all 0.3s;">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 48px; height: 48px; background: rgba(255,255,255,0.15); flex-shrink: 0;">
+                                <i class="bi bi-shield-check" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-semibold mb-1">Acesso Seguro</h5>
+                                <p class="mb-0 small opacity-90">Validação por nome completo ou CPF</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-item mb-4 p-3 rounded-3" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); transition: all 0.3s;">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 48px; height: 48px; background: rgba(255,255,255,0.15); flex-shrink: 0;">
+                                <i class="bi bi-wallet2" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-semibold mb-1">Histórico Completo</h5>
+                                <p class="mb-0 small opacity-90">Visualize todas as suas contribuições</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-item mb-4 p-3 rounded-3" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); transition: all 0.3s;">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 48px; height: 48px; background: rgba(255,255,255,0.15); flex-shrink: 0;">
+                                <i class="bi bi-graph-up" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-semibold mb-1">Total Contribuído</h5>
+                                <p class="mb-0 small opacity-90">Acompanhe seus dízimos e ofertas</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-item p-3 rounded-3" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); transition: all 0.3s;">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 48px; height: 48px; background: rgba(255,255,255,0.15); flex-shrink: 0;">
+                                <i class="bi bi-clock-history" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-semibold mb-1">Consulta Rápida</h5>
+                                <p class="mb-0 small opacity-90">Acesso disponível 24 horas por dia</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Painel Direito - Formulário -->
+        <div class="col-lg-6 d-flex align-items-center justify-content-center login-form-panel position-relative">
+            <div class="w-100 p-4 p-md-5" style="max-width: 450px; animation: fadeInRight 0.8s ease-out;">
+                <!-- Logo Mobile -->
+                <div class="text-center mb-5 d-lg-none">
+                    <div class="mb-3">
+                        <i class="bi bi-eye" style="font-size: 4rem; color: #10b981;"></i>
+                    </div>
+                    <h2 class="fw-bold">Transparência</h2>
+                </div>
+
+                <!-- Título -->
+                <div class="mb-4">
+                    <h2 class="fw-bold mb-2">Consulte suas Contribuições</h2>
+                    <p class="text-muted">Informe seu nome completo ou CPF para acessar seu histórico</p>
+                </div>
+
+                <!-- Mensagens de Erro -->
+                @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ErrorCount > 0)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="animation: shake 0.5s;">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-x-circle-fill me-2 mt-1" style="font-size: 1.2rem;"></i>
+                            <div class="flex-grow-1">
+                                <strong>Erro ao validar acesso</strong>
+                                <ul class="mb-0 mt-2 ps-3">
+                                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                                    {
+                                        <li class="small">@error.ErrorMessage</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                <!-- Formulário -->
+                <form asp-action="Validar" method="post" id="transparenciaForm">
+                    <!-- Nome Completo -->
+                    <div class="mb-3">
+                        <label asp-for="NomeCompleto" class="form-label fw-semibold">
+                            <i class="bi bi-person me-2" style="color: #10b981;"></i>Nome Completo
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-person-circle"></i>
+                            </span>
+                            <input asp-for="NomeCompleto" type="text"
+                                   class="form-control form-control-lg"
+                                   placeholder="Digite seu nome completo"
+                                   autocomplete="name"
+                                   autofocus />
+                        </div>
+                        <span asp-validation-for="NomeCompleto" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Divider OU -->
+                    <div class="position-relative my-4">
+                        <hr class="text-muted">
+                        <span class="position-absolute top-50 start-50 translate-middle px-3 text-muted small fw-semibold" style="background: var(--auth-bg-main);">OU</span>
+                    </div>
+
+                    <!-- CPF -->
+                    <div class="mb-4">
+                        <label asp-for="CPF" class="form-label fw-semibold">
+                            <i class="bi bi-credit-card me-2" style="color: #10b981;"></i>CPF
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-person-badge"></i>
+                            </span>
+                            <input asp-for="CPF" type="text"
+                                   class="form-control form-control-lg"
+                                   placeholder="000.000.000-00"
+                                   maxlength="14"
+                                   id="cpfInput" />
+                        </div>
+                        <span asp-validation-for="CPF" class="text-danger small"></span>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Informe o nome completo <strong>OU</strong> o CPF
+                        </div>
+                    </div>
+
+                    <!-- Botão Consultar -->
+                    <button type="submit" class="btn btn-success w-100 btn-lg mb-3 py-3" id="consultarBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                        <i class="bi bi-search me-2"></i>
+                        Consultar Histórico
+                    </button>
+
+                    <!-- Divider -->
+                    <div class="position-relative my-4">
+                        <hr class="text-muted">
+                        <span class="position-absolute top-50 start-50 translate-middle px-3 text-muted small" style="background: var(--auth-bg-main);">ou</span>
+                    </div>
+
+                    <!-- Voltar para Login -->
+                    <div class="text-center">
+                        <p class="mb-0 text-muted">
+                            <a asp-controller="Account" asp-action="Login" class="fw-semibold text-decoration-none" style="color: #10b981;">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Voltar para Login
+                            </a>
+                        </p>
+                    </div>
+                </form>
+
+                <!-- Footer -->
+                <div class="text-center mt-5 pt-4">
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-shield-lock me-1"></i>
+                        Suas informações estão protegidas
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Máscara para CPF
+            const cpfInput = document.getElementById('cpfInput');
+            if (cpfInput) {
+                cpfInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 11) {
+                        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                        value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                        e.target.value = value;
+                    }
+                });
+            }
+
+            // Validação: pelo menos um campo deve ser preenchido
+            const form = document.getElementById('transparenciaForm');
+            const nomeInput = document.querySelector('input[name="NomeCompleto"]');
+            
+            form.addEventListener('submit', function(e) {
+                const nomePreenchido = nomeInput.value.trim() !== '';
+                const cpfPreenchido = cpfInput.value.trim() !== '';
+
+                if (!nomePreenchido && !cpfPreenchido) {
+                    e.preventDefault();
+                    alert('Por favor, informe o Nome Completo OU o CPF para consultar.');
+                    return false;
+                }
+
+                // Loading no botão
+                const btn = document.getElementById('consultarBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Consultando...';
+            });
+
+            // Animação dos inputs
+            const inputs = document.querySelectorAll('.form-control');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.parentElement.style.transform = 'translateY(-2px)';
+                    this.parentElement.style.transition = 'all 0.3s ease';
+                });
+
+                input.addEventListener('blur', function() {
+                    this.parentElement.style.transform = 'translateY(0)';
+                });
+            });
+
+            // Efeito hover nos feature items
+            const features = document.querySelectorAll('.feature-item');
+            features.forEach(feature => {
+                feature.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateX(8px)';
+                    this.style.background = 'rgba(255,255,255,0.15)';
+                });
+
+                feature.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateX(0)';
+                    this.style.background = 'rgba(255,255,255,0.1)';
+                });
+            });
+
+            // Animação do botão
+            const consultarBtn = document.getElementById('consultarBtn');
+            consultarBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 8px 16px rgba(16, 185, 129, 0.3)';
+            });
+
+            consultarBtn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = '';
+            });
+
+            // Auto-dismiss alerts
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+        });
+    </script>
+}
+
+<style>
+    /* Animações */
+    @@keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @@keyframes pulse {
+        0%, 100% {
+            opacity: 0.9;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+    }
+
+    @@keyframes shake {
+        0%, 100% {
+            transform: translateX(0);
+        }
+
+        10%, 30%, 50%, 70%, 90% {
+            transform: translateX(-5px);
+        }
+
+        20%, 40%, 60%, 80% {
+            transform: translateX(5px);
+        }
+    }
+</style>
