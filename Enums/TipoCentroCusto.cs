@@ -3,7 +3,7 @@
 namespace SistemaTesourariaEclesiastica.Enums
 {
     /// <summary>
-    /// Tipos de Centro de Custo disponíveis no sistema
+    /// Tipos de Unidade Financeira disponíveis no sistema
     /// </summary>
     public enum TipoCentroCusto
     {

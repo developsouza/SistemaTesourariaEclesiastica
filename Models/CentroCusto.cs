@@ -8,12 +8,12 @@ namespace SistemaTesourariaEclesiastica.Models
     {
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "O nome do centro de custo é obrigatório.")]
+        [Required(ErrorMessage = "O nome da unidade financeira é obrigatório.")]
         [StringLength(100, ErrorMessage = "O nome deve ter no máximo 100 caracteres.")]
         [Display(Name = "Nome")]
         public string Nome { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "O tipo do centro de custo é obrigatório.")]
+        [Required(ErrorMessage = "O tipo da unidade financeira é obrigatório.")]
         [Display(Name = "Tipo")]
         public TipoCentroCusto Tipo { get; set; }
 

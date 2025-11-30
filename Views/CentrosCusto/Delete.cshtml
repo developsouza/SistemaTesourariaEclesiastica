@@ -1,7 +1,7 @@
 @model SistemaTesourariaEclesiastica.Models.CentroCusto
 
 @{
-    ViewData["Title"] = "Excluir Centro de Custo";
+    ViewData["Title"] = "Excluir Unidade Financeira";
     var possuiDependencias = (bool)(ViewBag.PossuiDependencias ?? false);
     var totalMembros = (int)(ViewBag.TotalMembros ?? 0);
     var totalUsuarios = (int)(ViewBag.TotalUsuarios ?? 0);
@@ -13,7 +13,7 @@
     <div>
         <h1 class="h3 mb-0">
             <i class="bi bi-trash me-2 text-danger"></i>
-            Excluir Centro de Custo
+            Excluir Unidade Financeira
         </h1>
         <p class="text-muted mb-0">Confirmar exclusão do registro</p>
     </div>
@@ -27,8 +27,8 @@
     <div class="alert alert-danger d-flex align-items-center" role="alert">
         <i class="bi bi-exclamation-octagon me-3 fs-3"></i>
         <div>
-            <h5 class="alert-heading mb-2">Não é possível excluir este centro de custo!</h5>
-            <p class="mb-2">Este centro de custo possui registros associados:</p>
+            <h5 class="alert-heading mb-2">Não é possível excluir esta unidade financeira!</h5>
+            <p class="mb-2">Esta unidade financeira possui registros associados:</p>
             <ul class="mb-0">
                 @if (totalMembros > 0)
                 {
@@ -47,7 +47,7 @@
                     <li><strong>@totalSaidas</strong> saída(s) registrada(s)</li>
                 }
             </ul>
-            <p class="mb-0 mt-2">Para preservar a integridade do histórico do sistema, não é permitido excluir centros de custo com registros associados. <strong>Recomendamos desativar o centro de custo ao invés de excluí-lo.</strong></p>
+            <p class="mb-0 mt-2">Para preservar a integridade do histórico do sistema, não é permitido excluir unidades financeiras com registros associados. <strong>Recomendamos desativar a unidade financeira ao invés de excluí-la.</strong></p>
         </div>
     </div>
 }
@@ -57,7 +57,7 @@ else
         <i class="bi bi-exclamation-triangle me-3 fs-3"></i>
         <div>
             <h5 class="alert-heading mb-2">Atenção!</h5>
-            <p class="mb-0">Você está prestes a excluir este centro de custo. Esta ação não pode ser desfeita.</p>
+            <p class="mb-0">Você está prestes a excluir esta unidade financeira. Esta ação não pode ser desfeita.</p>
         </div>
     </div>
 }
@@ -68,7 +68,7 @@ else
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="bi bi-info-circle me-2"></i>
-                    Detalhes do Centro de Custo
+                    Detalhes da Unidade Financeira
                 </h5>
             </div>
             <div class="card-body">
@@ -144,7 +144,7 @@ else
                 {
                     <div class="d-flex justify-content-end">
                         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning me-2">
-                            <i class="bi bi-pencil me-2"></i>Desativar Centro de Custo
+                            <i class="bi bi-pencil me-2"></i>Desativar Unidade Financeira
                         </a>
                         <a asp-action="Index" class="btn btn-secondary">
                             <i class="bi bi-arrow-left me-2"></i>Voltar à Lista
@@ -213,7 +213,7 @@ else
 
             <div class="alert alert-info mt-3" role="alert">
                 <i class="bi bi-lightbulb me-2"></i>
-                <strong>Dica:</strong> Você pode desativar este centro de custo para mantê-lo no histórico sem permitir novos registros.
+                <strong>Dica:</strong> Você pode desativar esta unidade financeira para mantê-la no histórico sem permitir novos registros.
             </div>
         </div>
     }

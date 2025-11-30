@@ -12,7 +12,7 @@ namespace SistemaTesourariaEclesiastica.ViewModels
         [Display(Name = "Nome Completo")]
         public string NomeCompleto { get; set; } = string.Empty;
 
-        [Display(Name = "Centro de Custo")]
+        [Display(Name = "Unidade Financeira")]
         public string? CentroCustoNome { get; set; }
 
         [Display(Name = "Data de Criação")]

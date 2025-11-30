@@ -8,10 +8,12 @@ namespace SistemaTesourariaEclesiastica.ViewModels
     /// </summary>
     public class TransparenciaValidacaoViewModel
     {
+        [Required(ErrorMessage = "O nome completo é obrigatório.")]
         [Display(Name = "Nome Completo")]
         [StringLength(100, ErrorMessage = "O nome deve ter no máximo 100 caracteres.")]
         public string? NomeCompleto { get; set; }
 
+        [Required(ErrorMessage = "O CPF é obrigatório.")]
         [Display(Name = "CPF")]
         [StringLength(14, ErrorMessage = "CPF inválido.")]
         public string? CPF { get; set; }

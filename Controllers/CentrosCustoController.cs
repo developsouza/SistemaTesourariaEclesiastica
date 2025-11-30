@@ -96,7 +96,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             // ✅ VALIDAÇÃO EXPLÍCITA: Verificar se o Tipo foi realmente selecionado
             if (centroCusto.Tipo == 0 || !Enum.IsDefined(typeof(TipoCentroCusto), centroCusto.Tipo))
             {
-                ModelState.AddModelError("Tipo", "Por favor, selecione um tipo válido para o centro de custo.");
+                ModelState.AddModelError("Tipo", "Por favor, selecione um tipo válido para a unidade financeira.");
             }
 
             if (ModelState.IsValid)
@@ -116,10 +116,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var user = await _userManager.GetUserAsync(User);
                 if (user != null)
                 {
-                    await _auditService.LogAuditAsync(user.Id, "Criar", "CentroCusto", centroCusto.Id.ToString(), $"Centro de Custo {centroCusto.Nome} criado.");
+                    await _auditService.LogAuditAsync(user.Id, "Criar", "CentroCusto", centroCusto.Id.ToString(), $"Unidade Financeira {centroCusto.Nome} criada.");
                 }
 
-                TempData["SuccessMessage"] = "Centro de custo cadastrado com sucesso!";
+                TempData["SuccessMessage"] = "Unidade financeira cadastrada com sucesso!";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -156,7 +156,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             // ✅ VALIDAÇÃO EXPLÍCITA: Verificar se o Tipo foi realmente selecionado
             if (centroCusto.Tipo == 0 || !Enum.IsDefined(typeof(TipoCentroCusto), centroCusto.Tipo))
             {
-                ModelState.AddModelError("Tipo", "Por favor, selecione um tipo válido para o centro de custo.");
+                ModelState.AddModelError("Tipo", "Por favor, selecione um tipo válido para a unidade financeira.");
             }
 
             if (ModelState.IsValid)
@@ -167,7 +167,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     var nomeExistente = await _context.CentrosCusto.AnyAsync(c => c.Nome == centroCusto.Nome && c.Id != centroCusto.Id);
                     if (nomeExistente)
                     {
-                        ModelState.AddModelError("Nome", "Este nome já está cadastrado para outro centro de custo.");
+                        ModelState.AddModelError("Nome", "Este nome já está cadastrado para outra unidade financeira.");
                         return View(centroCusto);
                     }
 
@@ -177,10 +177,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     var user = await _userManager.GetUserAsync(User);
                     if (user != null)
                     {
-                        await _auditService.LogAuditAsync(user.Id, "Editar", "CentroCusto", centroCusto.Id.ToString(), $"Centro de Custo {centroCusto.Nome} atualizado.");
+                        await _auditService.LogAuditAsync(user.Id, "Editar", "CentroCusto", centroCusto.Id.ToString(), $"Unidade Financeira {centroCusto.Nome} atualizada.");
                     }
 
-                    TempData["SuccessMessage"] = "Centro de custo atualizado com sucesso!";
+                    TempData["SuccessMessage"] = "Unidade financeira atualizada com sucesso!";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -255,7 +255,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 if (possuiMembros || possuiUsuarios || possuiEntradas || possuiSaidas ||
                     possuiContasBancarias || possuiRegrasRateio || possuiTransferencias || possuiFechamentos)
                 {
-                    TempData["ErrorMessage"] = "Não é possível excluir este centro de custo pois ele possui registros associados.";
+                    TempData["ErrorMessage"] = "Não é possível excluir esta unidade financeira pois ela possui registros associados.";
                     return RedirectToAction(nameof(Index));
                 }
 
@@ -265,10 +265,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var user = await _userManager.GetUserAsync(User);
                 if (user != null)
                 {
-                    await _auditService.LogAuditAsync(user.Id, "Excluir", "CentroCusto", centroCusto.Id.ToString(), $"Centro de Custo {centroCusto.Nome} excluído.");
+                    await _auditService.LogAuditAsync(user.Id, "Excluir", "CentroCusto", centroCusto.Id.ToString(), $"Unidade Financeira {centroCusto.Nome} excluída.");
                 }
 
-                TempData["SuccessMessage"] = "Centro de custo excluído com sucesso!";
+                TempData["SuccessMessage"] = "Unidade financeira excluída com sucesso!";
             }
 
             return RedirectToAction(nameof(Index));

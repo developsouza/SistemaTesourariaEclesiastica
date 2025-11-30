@@ -2,16 +2,16 @@
 @using SistemaTesourariaEclesiastica.Enums
 
 @{
-    ViewData["Title"] = "Novo Centro de Custo";
+    ViewData["Title"] = "Nova Unidade Financeira";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">
             <i class="bi bi-plus-circle me-2"></i>
-            Novo Centro de Custo
+            Nova Unidade Financeira
         </h1>
-        <p class="text-muted mb-0">Cadastrar novo centro de custo ou congregação</p>
+        <p class="text-muted mb-0">Cadastrar nova unidade financeira ou congregação</p>
     </div>
     <a asp-action="Index" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-2"></i>Voltar
@@ -24,7 +24,7 @@
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="bi bi-info-circle me-2"></i>
-                    Informações do Centro de Custo
+                    Informações da Unidade Financeira
                 </h5>
             </div>
             <div class="card-body">
@@ -46,7 +46,7 @@
                             </select>
                             <span asp-validation-for="Tipo" class="text-danger"></span>
                             <div class="invalid-feedback">
-                                Por favor, selecione um tipo para o centro de custo.
+                                Por favor, selecione um tipo para a unidade financeira.
                             </div>
                         </div>
                     </div>
@@ -54,7 +54,7 @@
                     <div class="mb-3">
                         <label asp-for="Descricao" class="form-label">Descrição</label>
                         <textarea asp-for="Descricao" class="form-control" rows="3"
-                                  placeholder="Descreva o propósito deste centro de custo..."></textarea>
+                                  placeholder="Descreva o propósito desta unidade financeira..."></textarea>
                         <span asp-validation-for="Descricao" class="text-danger"></span>
                         <div class="form-text">Máximo de 250 caracteres</div>
                     </div>
@@ -62,9 +62,9 @@
                     <div class="mb-4">
                         <div class="form-check form-switch">
                             <input asp-for="Ativo" class="form-check-input" type="checkbox" checked />
-                            <label asp-for="Ativo" class="form-check-label">Centro de custo ativo</label>
+                            <label asp-for="Ativo" class="form-check-label">Unidade financeira ativa</label>
                         </div>
-                        <div class="form-text">Desative se este centro de custo não estiver em uso no momento</div>
+                        <div class="form-text">Desative se esta unidade financeira não estiver em uso no momento</div>
                     </div>
 
                     <hr class="my-4">
@@ -91,13 +91,13 @@
             </div>
             <div class="card-body">
                 <p class="small text-muted mb-3">
-                    Os centros de custo são utilizados para organizar e categorizar as receitas e
+                    As unidades financeiras são utilizadas para organizar e categorizar as receitas e
                     despesas da igreja, permitindo um melhor controle financeiro e geração de relatórios específicos.
                 </p>
 
                 <hr class="my-3">
 
-                <h6 class="small fw-bold mb-2">Tipos de Centro de Custo:</h6>
+                <h6 class="small fw-bold mb-2">Tipos de Unidade Financeira:</h6>
                 <ul class="small text-muted ps-3">
                     <li class="mb-1"><strong>Sede:</strong> Igreja matriz</li>
                     <li class="mb-1"><strong>Congregacao:</strong> Congregações locais</li>
@@ -110,7 +110,7 @@
 
                 <div class="alert alert-info small mb-0">
                     <i class="bi bi-info-circle me-1"></i>
-                    <strong>Importante:</strong> O nome do centro de custo deve ser único no sistema.
+                    <strong>Importante:</strong> O nome da unidade financeira deve ser único no sistema.
                 </div>
             </div>
         </div>

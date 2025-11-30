@@ -91,7 +91,7 @@
                 <!-- Título -->
                 <div class="mb-4">
                     <h2 class="fw-bold mb-2">Consulte suas Contribuições</h2>
-                    <p class="text-muted">Informe seu nome completo ou CPF para acessar seu histórico</p>
+                    <p class="text-muted">Informe seu nome completo <strong>e</strong> CPF para acessar seu histórico</p>
                 </div>
 
                 <!-- Mensagens de Erro -->
@@ -120,6 +120,7 @@
                     <div class="mb-3">
                         <label asp-for="NomeCompleto" class="form-label fw-semibold">
                             <i class="bi bi-person me-2" style="color: #10b981;"></i>Nome Completo
+                            <span class="text-danger">*</span>
                         </label>
                         <div class="input-group">
                             <span class="input-group-text">
@@ -129,21 +130,17 @@
                                    class="form-control form-control-lg"
                                    placeholder="Digite seu nome completo"
                                    autocomplete="name"
+                                   required
                                    autofocus />
                         </div>
                         <span asp-validation-for="NomeCompleto" class="text-danger small"></span>
-                    </div>
-
-                    <!-- Divider OU -->
-                    <div class="position-relative my-4">
-                        <hr class="text-muted">
-                        <span class="position-absolute top-50 start-50 translate-middle px-3 text-muted small fw-semibold" style="background: var(--auth-bg-main);">OU</span>
                     </div>
 
                     <!-- CPF -->
                     <div class="mb-4">
                         <label asp-for="CPF" class="form-label fw-semibold">
                             <i class="bi bi-credit-card me-2" style="color: #10b981;"></i>CPF
+                            <span class="text-danger">*</span>
                         </label>
                         <div class="input-group">
                             <span class="input-group-text">
@@ -153,12 +150,13 @@
                                    class="form-control form-control-lg"
                                    placeholder="000.000.000-00"
                                    maxlength="14"
+                                   required
                                    id="cpfInput" />
                         </div>
                         <span asp-validation-for="CPF" class="text-danger small"></span>
                         <div class="form-text">
                             <i class="bi bi-info-circle me-1"></i>
-                            Informe o nome completo <strong>OU</strong> o CPF
+                            Ambos os campos são obrigatórios para validação
                         </div>
                     </div>
 
@@ -218,7 +216,7 @@
                 });
             }
 
-            // Validação: pelo menos um campo deve ser preenchido
+            // Validação: AMBOS os campos devem ser preenchidos
             const form = document.getElementById('transparenciaForm');
             const nomeInput = document.querySelector('input[name="NomeCompleto"]');
             
@@ -226,9 +224,9 @@
                 const nomePreenchido = nomeInput.value.trim() !== '';
                 const cpfPreenchido = cpfInput.value.trim() !== '';
 
-                if (!nomePreenchido && !cpfPreenchido) {
+                if (!nomePreenchido || !cpfPreenchido) {
                     e.preventDefault();
-                    alert('Por favor, informe o Nome Completo OU o CPF para consultar.');
+                    alert('Por favor, informe o Nome Completo E o CPF para consultar.');
                     return false;
                 }
 
