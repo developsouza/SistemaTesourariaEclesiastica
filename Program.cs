@@ -133,13 +133,17 @@ builder.Services.AddScoped<BusinessRulesService>();
 builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<BalanceteService>();
 builder.Services.AddScoped<EscalaPorteiroService>();
+builder.Services.AddScoped<RateLimitService>();
 
 // SERVICO DE AUDITORIA EM BACKGROUND
 // Registrado como Singleton para que seja compartilhado e como HostedService para rodar em background
 builder.Services.AddSingleton<AuditQueueService>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<AuditQueueService>());
 
-// Configuracao do MVC com filtro global de autorizacao
+// SERVICO DE LIMPEZA DE RATE LIMITING EM BACKGROUND
+builder.Services.AddHostedService<SistemaTesourariaEclesiastica.BackgroundServices.RateLimitCleanupService>();
+
+
 builder.Services.AddControllersWithViews(options =>
 {
     // Aplicar filtro de autorizacao globalmente

@@ -151,7 +151,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: Membros/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("NomeCompleto,Apelido,CPF,CentroCustoId")] Membro membro)
+        public async Task<IActionResult> Create([Bind("NomeCompleto,Apelido,CPF,DataNascimento,CentroCustoId")] Membro membro)
         {
             if (ModelState.IsValid)
             {
@@ -221,7 +221,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: Membros/Edit
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,NomeCompleto,Apelido,CPF,CentroCustoId,Ativo")] Membro membro)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,NomeCompleto,Apelido,CPF,DataNascimento,CentroCustoId,Ativo")] Membro membro)
         {
             if (id != membro.Id)
             {

@@ -45,7 +45,7 @@
                             <span asp-validation-for="Apelido" class="text-danger"></span>
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label asp-for="CPF" class="form-label"></label>
                             <input asp-for="CPF" class="form-control" data-mask="cpf" readonly>
                             <span asp-validation-for="CPF" class="text-danger"></span>
@@ -55,7 +55,18 @@
                             </div>
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <label asp-for="DataNascimento" class="form-label"></label>
+                            <input asp-for="DataNascimento" type="date" class="form-control" 
+                                   max="@DateTime.Today.ToString("yyyy-MM-dd")">
+                            <span asp-validation-for="DataNascimento" class="text-danger"></span>
+                            <div class="form-text">
+                                <i class="bi bi-shield-lock me-1"></i>
+                                Necessária para acesso à transparência (LGPD)
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
                             <label asp-for="CentroCustoId" class="form-label"></label>
                             @if (isDisabled)
                             {

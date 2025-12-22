@@ -17,6 +17,11 @@ namespace SistemaTesourariaEclesiastica.ViewModels
         [Display(Name = "CPF")]
         [StringLength(14, ErrorMessage = "CPF inválido.")]
         public string? CPF { get; set; }
+
+        [Required(ErrorMessage = "A data de nascimento é obrigatória.")]
+        [Display(Name = "Data de Nascimento")]
+        [DataType(DataType.Date)]
+        public DateTime? DataNascimento { get; set; }
     }
 
     /// <summary>

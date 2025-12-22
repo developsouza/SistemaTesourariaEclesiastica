@@ -14,15 +14,18 @@ namespace SistemaTesourariaEclesiastica.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly AuditService _auditService;
+        private readonly RateLimitService _rateLimitService;
         private readonly ILogger<TransparenciaController> _logger;
 
         public TransparenciaController(
             ApplicationDbContext context,
             AuditService auditService,
+            RateLimitService rateLimitService,
             ILogger<TransparenciaController> logger)
         {
             _context = context;
             _auditService = auditService;
+            _rateLimitService = rateLimitService;
             _logger = logger;
         }
 
@@ -48,15 +51,39 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Limpar e formatar dados de entrada COM NORMALIZAÇÃO RIGOROSA
                 var nomeCompleto = model.NomeCompleto?.Trim().ToUpperInvariant();
                 var cpf = LimparCPF(model.CPF);
+                var dataNascimento = model.DataNascimento?.Date;
 
                 _logger.LogInformation($"Tentativa de acesso - Nome digitado: '{nomeCompleto}', CPF digitado: '{cpf}'");
 
-                // ✅ VALIDAÇÃO: Verificar se ambos foram fornecidos
-                if (string.IsNullOrWhiteSpace(nomeCompleto) || string.IsNullOrWhiteSpace(cpf))
+                // ✅ VALIDAÇÃO LGPD: Verificar se todos os dados foram fornecidos
+                if (string.IsNullOrWhiteSpace(nomeCompleto) || string.IsNullOrWhiteSpace(cpf) || dataNascimento == null)
                 {
-                    ModelState.AddModelError(string.Empty, "É necessário informar tanto o nome completo quanto o CPF para acessar a transparência.");
+                    ModelState.AddModelError(string.Empty, "É necessário informar o nome completo, CPF e data de nascimento para acessar a transparência.");
                     await _auditService.LogAsync("TRANSPARENCIA_ACESSO_NEGADO", "Transparencia",
                         $"Tentativa de acesso sem todos os dados obrigatórios");
+                    return View("Index", model);
+                }
+
+                // 🔒 RATE LIMITING: Verificar se CPF está bloqueado
+                var (bloqueado, dataDesbloqueio, tentativasRestantes) = await _rateLimitService.VerificarBloqueioAsync(cpf);
+
+                if (bloqueado)
+                {
+                    var tempoRestante = dataDesbloqueio.HasValue 
+                        ? $"{(dataDesbloqueio.Value - DateTime.Now).TotalMinutes:F0} minutos"
+                        : "alguns minutos";
+
+                    ModelState.AddModelError(string.Empty, 
+                        $"Acesso temporariamente bloqueado devido a múltiplas tentativas falhadas. " +
+                        $"Tente novamente em {tempoRestante}. " +
+                        $"Se você é o titular dos dados e está tendo dificuldades, entre em contato com a secretaria.");
+
+                    await _rateLimitService.RegistrarTentativaAsync(cpf, false, "Bloqueio por rate limit");
+                    await _auditService.LogAsync("TRANSPARENCIA_BLOQUEIO_RATE_LIMIT", "Transparencia",
+                        $"Tentativa de acesso bloqueada por rate limit: CPF={cpf?.Substring(0, 3)}***");
+
+                    _logger.LogWarning($"Acesso bloqueado por rate limit: CPF={cpf?.Substring(0, 3)}***, Desbloqueio em: {dataDesbloqueio}");
+
                     return View("Index", model);
                 }
 
@@ -72,32 +99,43 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .Where(m => m.Ativo)
                     .ToListAsync();
 
+                // ✅ SEGURANÇA LGPD: Validação com Nome + CPF + Data de Nascimento
                 var membro = membrosAtivos.FirstOrDefault(m => 
                     m.NomeCompleto.Trim().ToUpperInvariant() == nomeCompleto &&
-                    m.CPF.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf);
+                    m.CPF.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf &&
+                    m.DataNascimento.HasValue &&
+                    m.DataNascimento.Value.Date == dataNascimento.Value);
 
                 if (membro == null)
                 {
-                    // Log detalhado para debug
-                    _logger.LogWarning($"Membro não encontrado - Nome: '{nomeCompleto}', CPF: '{cpf}'");
-                    
-                    // Verificar se existe por nome
-                    var existePorNome = membrosAtivos
-                        .Any(m => m.NomeCompleto.Trim().ToUpperInvariant() == nomeCompleto);
-                    
-                    // Verificar se existe por CPF
-                    var existePorCPF = membrosAtivos
-                        .Any(m => m.CPF.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf);
+                    // 🔒 RATE LIMITING: Registrar tentativa falhada
+                    await _rateLimitService.RegistrarTentativaAsync(cpf, false, "Dados não conferem");
 
-                    _logger.LogWarning($"Existe por nome: {existePorNome}, Existe por CPF: {existePorCPF}");
+                    // Verificar tentativas restantes após esta falha
+                    var (novoBloqueio, novaDataDesbloqueio, novasTentativasRestantes) = 
+                        await _rateLimitService.VerificarBloqueioAsync(cpf);
 
-                    ModelState.AddModelError(string.Empty, "Membro não encontrado ou dados não conferem. Verifique se o nome completo e CPF estão corretos e correspondem ao mesmo cadastro.");
+                    var mensagemAviso = novasTentativasRestantes > 0
+                        ? $" Você tem {novasTentativasRestantes} tentativa(s) restante(s)."
+                        : "";
+
+                    // Log detalhado para debug (sem expor dados sensíveis)
+                    _logger.LogWarning($"Acesso negado - Dados não conferem. Tentativas restantes: {novasTentativasRestantes}");
+                    
+                    ModelState.AddModelError(string.Empty, 
+                        $"Dados não conferem. Verifique se o nome completo, CPF e data de nascimento estão corretos e correspondem ao mesmo cadastro. " +
+                        $"Esta verificação é necessária para proteger seus dados conforme a LGPD.{mensagemAviso}");
+
                     await _auditService.LogAsync("TRANSPARENCIA_ACESSO_NEGADO", "Transparencia",
-                        $"Tentativa de acesso com dados inválidos: Nome={nomeCompleto}, CPF={cpf?.Substring(0, 3)}***");
+                        $"Tentativa de acesso com dados inválidos ou incompletos: CPF={cpf?.Substring(0, 3)}***");
+
                     return View("Index", model);
                 }
 
-                _logger.LogInformation($"Membro encontrado: {membro.NomeCompleto} (ID: {membro.Id})");
+                // 🔒 RATE LIMITING: Registrar tentativa bem-sucedida (limpa tentativas falhadas)
+                await _rateLimitService.RegistrarTentativaAsync(cpf, true, "Acesso autorizado");
+
+                _logger.LogInformation($"Membro autenticado com sucesso: {membro.NomeCompleto} (ID: {membro.Id})");
 
                 // Buscar apenas entradas APROVADAS do membro
                 var idsEntradasAprovadas = await _context.Entradas
@@ -130,7 +168,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 // Registrar acesso bem-sucedido
                 await _auditService.LogAsync("TRANSPARENCIA_ACESSO_SUCESSO", "Transparencia",
-                    $"Acesso autorizado: Membro={membro.NomeCompleto}, CPF={cpf?.Substring(0, 3)}***");
+                    $"Acesso autorizado com autenticação adicional LGPD: Membro={membro.NomeCompleto}, CPF={cpf?.Substring(0, 3)}***");
 
                 return View("Historico", viewModel);
             }

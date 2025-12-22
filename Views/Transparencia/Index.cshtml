@@ -29,8 +29,8 @@
                                 <i class="bi bi-shield-check" style="font-size: 1.5rem;"></i>
                             </div>
                             <div>
-                                <h5 class="fw-semibold mb-1">Acesso Seguro</h5>
-                                <p class="mb-0 small opacity-90">Validação por nome completo ou CPF</p>
+                                <h5 class="fw-semibold mb-1">Acesso Seguro LGPD</h5>
+                                <p class="mb-0 small opacity-90">Validação tripla: Nome, CPF e Data de Nascimento</p>
                             </div>
                         </div>
                     </div>
@@ -73,6 +73,19 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="feature-item p-3 rounded-3 mt-3" style="background: rgba(255,193,7,0.2); backdrop-filter: blur(10px); transition: all 0.3s;">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3 d-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 48px; height: 48px; background: rgba(255,193,7,0.3); flex-shrink: 0;">
+                                <i class="bi bi-shield-exclamation" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-semibold mb-1">Proteção Anti-Fraude</h5>
+                                <p class="mb-0 small opacity-90">Limite de 3 tentativas a cada 3 horas</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -91,7 +104,15 @@
                 <!-- Título -->
                 <div class="mb-4">
                     <h2 class="fw-bold mb-2">Consulte suas Contribuições</h2>
-                    <p class="text-muted">Informe seu nome completo <strong>e</strong> CPF para acessar seu histórico</p>
+                    <p class="text-muted">Informe seu nome completo, CPF <strong>e data de nascimento</strong> para acessar seu histórico</p>
+                    <div class="alert alert-info border-0 py-2 px-3 small mb-2" style="background: rgba(16, 185, 129, 0.1);">
+                        <i class="bi bi-shield-lock me-1"></i>
+                        <strong>Proteção LGPD:</strong> A validação adicional protege seus dados pessoais
+                    </div>
+                    <div class="alert alert-warning border-0 py-2 px-3 small" style="background: rgba(255, 193, 7, 0.1);">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <strong>Atenção:</strong> Limite de 3 tentativas a cada 3 horas. Após exceder, o acesso será temporariamente bloqueado.
+                    </div>
                 </div>
 
                 <!-- Mensagens de Erro -->
@@ -137,7 +158,7 @@
                     </div>
 
                     <!-- CPF -->
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label asp-for="CPF" class="form-label fw-semibold">
                             <i class="bi bi-credit-card me-2" style="color: #10b981;"></i>CPF
                             <span class="text-danger">*</span>
@@ -154,9 +175,28 @@
                                    id="cpfInput" />
                         </div>
                         <span asp-validation-for="CPF" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Data de Nascimento -->
+                    <div class="mb-4">
+                        <label asp-for="DataNascimento" class="form-label fw-semibold">
+                            <i class="bi bi-calendar-event me-2" style="color: #10b981;"></i>Data de Nascimento
+                            <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-calendar-check"></i>
+                            </span>
+                            <input asp-for="DataNascimento" type="date"
+                                   class="form-control form-control-lg"
+                                   required
+                                   max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                                   id="dataNascimentoInput" />
+                        </div>
+                        <span asp-validation-for="DataNascimento" class="text-danger small"></span>
                         <div class="form-text">
                             <i class="bi bi-info-circle me-1"></i>
-                            Ambos os campos são obrigatórios para validação
+                            Todos os campos são obrigatórios para validação segura
                         </div>
                     </div>
 
@@ -216,17 +256,19 @@
                 });
             }
 
-            // Validação: AMBOS os campos devem ser preenchidos
+            // Validação: TODOS os campos devem ser preenchidos
             const form = document.getElementById('transparenciaForm');
             const nomeInput = document.querySelector('input[name="NomeCompleto"]');
+            const dataNascimentoInput = document.getElementById('dataNascimentoInput');
             
             form.addEventListener('submit', function(e) {
                 const nomePreenchido = nomeInput.value.trim() !== '';
                 const cpfPreenchido = cpfInput.value.trim() !== '';
+                const dataPreenchida = dataNascimentoInput.value.trim() !== '';
 
-                if (!nomePreenchido || !cpfPreenchido) {
+                if (!nomePreenchido || !cpfPreenchido || !dataPreenchida) {
                     e.preventDefault();
-                    alert('Por favor, informe o Nome Completo E o CPF para consultar.');
+                    alert('Por favor, informe o Nome Completo, CPF E Data de Nascimento para consultar.');
                     return false;
                 }
 

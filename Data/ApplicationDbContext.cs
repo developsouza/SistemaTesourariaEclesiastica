@@ -35,6 +35,7 @@ namespace SistemaTesourariaEclesiastica.Data
         public DbSet<ResponsavelPorteiro> ResponsaveisPorteiros { get; set; }
         public DbSet<EscalaPorteiro> EscalasPorteiros { get; set; }
         public DbSet<ConfiguracaoCulto> ConfiguracoesCultos { get; set; }
+        public DbSet<TentativaAcessoTransparencia> TentativasAcessoTransparencia { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -659,6 +660,44 @@ namespace SistemaTesourariaEclesiastica.Data
 
                 entity.HasIndex(e => e.DataCulto)
                     .HasDatabaseName("IX_EscalaPorteiro_DataCulto");
+            });
+
+            // ========================================
+            // 🔒 CONFIGURAÇÕES - MÓDULO DE RATE LIMITING (LGPD)
+            // ========================================
+            
+            // TentativaAcessoTransparencia
+            builder.Entity<TentativaAcessoTransparencia>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.CPF)
+                    .IsRequired()
+                    .HasMaxLength(11);
+
+                entity.Property(e => e.DataHoraTentativa)
+                    .IsRequired()
+                    .HasDefaultValueSql("GETDATE()");
+
+                entity.Property(e => e.Sucesso)
+                    .IsRequired();
+
+                entity.Property(e => e.EnderecoIP)
+                    .HasMaxLength(45);
+
+                entity.Property(e => e.UserAgent)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.Mensagem)
+                    .HasMaxLength(200);
+
+                // Índice composto para otimizar verificação de rate limiting
+                entity.HasIndex(e => new { e.CPF, e.DataHoraTentativa, e.Sucesso })
+                    .HasDatabaseName("IX_TentativaAcesso_CPF_Data_Sucesso");
+
+                // Índice para limpeza de registros antigos
+                entity.HasIndex(e => e.DataHoraTentativa)
+                    .HasDatabaseName("IX_TentativaAcesso_DataHora");
             });
         }
     }

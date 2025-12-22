@@ -22,6 +22,10 @@ namespace SistemaTesourariaEclesiastica.Models
         [Display(Name = "CPF")]
         public string CPF { get; set; } = string.Empty;
 
+        [Display(Name = "Data de Nascimento")]
+        [DataType(DataType.Date)]
+        public DateTime? DataNascimento { get; set; }
+
         [Required(ErrorMessage = "O centro de custo é obrigatório.")]
         [Display(Name = "Centro de Custo")]
         public int CentroCustoId { get; set; }

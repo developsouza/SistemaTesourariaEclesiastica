@@ -50,6 +50,24 @@
                     <dt class="col-sm-4">@Html.DisplayNameFor(model => model.CPF)</dt>
                     <dd class="col-sm-8"><span class="font-monospace">@Html.DisplayFor(model => model.CPF)</span></dd>
 
+                    <dt class="col-sm-4">@Html.DisplayNameFor(model => model.DataNascimento)</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.DataNascimento.HasValue)
+                        {
+                            @Model.DataNascimento.Value.ToString("dd/MM/yyyy")
+                            <i class="bi bi-shield-check text-success ms-2" title="Habilitado para transparência"></i>
+                        }
+                        else
+                        {
+                            <span class="text-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Não informado
+                            </span>
+                            <br>
+                            <small class="text-muted">Membro não poderá acessar a transparência sem esta informação</small>
+                        }
+                    </dd>
+
                     <dt class="col-sm-4">@Html.DisplayNameFor(model => model.CentroCusto)</dt>
                     <dd class="col-sm-8">
                         <span class="badge bg-info">@Model.CentroCusto.Nome</span>
