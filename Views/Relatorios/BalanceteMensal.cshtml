@@ -1,7 +1,7 @@
 ﻿@model SistemaTesourariaEclesiastica.ViewModels.BalanceteMensalViewModel
 
 @{
-    ViewData["Title"] = "Balancete Mensal";
+    ViewData["Title"] = "Balancete de Verificação";
     var mes = Model.DataInicio.ToString("MMMM", new System.Globalization.CultureInfo("pt-BR")).ToUpper();
     var ano = Model.DataInicio.Year;
 }
@@ -9,105 +9,177 @@
 <!-- Estilos customizados para o balancete -->
 <style>
     .balancete-container {
-        background: var(--bg-card);
+        background: white;
         padding: 30px;
         box-shadow: var(--shadow-lg);
         font-family: Arial, sans-serif;
-    color: var(--text-primary);
+        color: black;
+        max-width: 800px;
+        margin: 0 auto;
     }
 
     .balancete-header {
         text-align: center;
-        border: 2px solid var(--text-primary);
-        padding: 15px;
-        margin-bottom: 20px;
-  background: var(--bg-card);
+        border: 2px solid black;
+        padding: 10px;
+        margin-bottom: 0;
+        background: white;
     }
 
-        .balancete-header h1 {
-            font-size: 14px;
-  font-weight: bold;
-      margin: 0;
-            text-transform: uppercase;
-            color: var(--text-primary);
-  }
-
-        .balancete-header p {
-         font-size: 12px;
-    margin: 5px 0;
-      color: var(--text-secondary);
-  }
-
-    .periodo-info {
+    .balancete-header-content {
         display: flex;
-        justify-content: space-between;
-    border: 1px solid var(--border);
-      padding: 10px;
-  margin-bottom: 20px;
-        font-size: 12px;
-        background: var(--bg-card);
-     color: var(--text-primary);
+        align-items: center;
+        justify-content: flex-start;
+        gap: 15px;
     }
 
-     .periodo-info .local {
-    font-weight: bold;
-        }
+    .balancete-header-content img {
+        height: 100px;
+        width: 100px;
+        object-fit: contain;
+        flex-shrink: 0;
+    }
 
-   .periodo-info .data {
-            text-align: right;
-   }
+    .balancete-header-text {
+        text-align: center;
+        flex-grow: 1;
+    }
+
+    .balancete-header h1 {
+        font-size: 14px;
+        font-weight: bold;
+        margin: 0;
+        padding: 0;
+        text-transform: uppercase;
+        color: black;
+        line-height: 1.2;
+    }
+
+    .balancete-header p {
+        font-size: 10px;
+        margin: 3px 0 0 0;
+        color: black;
+    }
+
+    .balancete-header .subtitle {
+        font-size: 11px;
+        font-weight: bold;
+        margin: 8px 0 3px 0;
+    }
+
+    .periodo-info-container {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        border-left: 2px solid black;
+        border-right: 2px solid black;
+        border-bottom: 2px solid black;
+        margin-bottom: 5px;
+    }
+
+    .periodo-box {
+        border: 1px solid black;
+        padding: 4px 8px;
+        font-size: 11px;
+        text-align: center;
+        font-weight: bold;
+        background: white;
+    }
+
+    .periodo-box.left {
+        border-right: none;
+    }
+
+    .periodo-box.center {
+        border-right: none;
+        border-left: none;
+    }
+
+    .periodo-box.right {
+        border-left: none;
+    }
 
     .secao-titulo {
-        background: var(--text-primary);
-        color: var(--bg-card);
-      padding: 8px;
+        background: transparent;
+        color: black;
+        padding: 4px 8px;
         font-weight: bold;
-        font-size: 12px;
- text-transform: uppercase;
-        margin-top: 15px;
-        margin-bottom: 5px;
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-top: 5px;
+        margin-bottom: 0;
+        border: 2px solid black;
+        border-bottom: none;
+        width: 55%;
+        display: inline-block;
+        text-align: center;
+        box-sizing: border-box;
     }
 
     .balancete-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 10px;
-   font-size: 11px;
-   background: var(--bg-card);
+        margin-bottom: 0;
+        margin-top: 0;
+        font-size: 10px;
+        background: white;
+        border-left: 2px solid black;
+        border-right: 2px solid black;
+        border-top: 2px solid black;
     }
 
-        .balancete-table td {
-    padding: 4px 8px;
- border: 1px solid var(--border);
-            color: var(--text-primary);
-   }
+    .balancete-table td {
+        padding: 2px 6px;
+        border-bottom: 1px solid black;
+        color: black;
+        line-height: 1.4;
+    }
 
-      .balancete-table .item-descricao {
-  width: 70%;
-        }
+    .balancete-table .item-descricao {
+        width: 55%;
+        text-align: left;
+        border-right: 1px solid black;
+    }
 
-        .balancete-table .item-valor {
-            width: 30%;
-     text-align: right;
-            font-family: 'Courier New', monospace;
-  }
+    .balancete-table .item-label {
+        width: 5%;
+        text-align: center;
+        border-right: 1px solid black;
+        font-weight: normal;
+    }
 
-        .balancete-table .total-row {
-            background: var(--bg-hover);
-            font-weight: bold;
-      }
+    .balancete-table .item-valor {
+        width: 20%;
+        text-align: right;
+        padding-right: 10px;
+        border-right: 1px solid black;
+    }
 
-     .balancete-table .subtotal-row {
-        background: var(--bg-hover);
-            font-weight: bold;
-        opacity: 0.8;
+    .balancete-table .item-total {
+        width: 20%;
+        text-align: right;
+        padding-right: 10px;
+    }
+
+    .balancete-table .total-row td {
+        font-weight: bold;
+        padding: 4px 6px;
+        border-bottom: 2px solid black;
+    }
+
+    .balancete-table .total-row .item-total {
+        font-weight: bold;
+    }
+
+    .balancete-table .last-section {
+        border-bottom: 2px solid black;
     }
 
     .assinaturas {
-    display: flex;
-    justify-content: space-around;
+        display: flex;
+        justify-content: space-around;
         margin-top: 60px;
-      padding-top: 20px;
+        padding-top: 20px;
+        gap: 40px;
     }
 
     .assinatura {
@@ -116,90 +188,40 @@
     }
 
     .assinatura-linha {
-  border-top: 1px solid var(--text-primary);
-  width: 250px;
+        border-top: 1px solid black;
+        width: 100%;
+        max-width: 250px;
         margin: 0 auto 5px;
         padding-top: 5px;
-        color: var(--text-primary);
+        color: black;
+        font-size: 10px;
     }
 
     .assinatura-cargo {
         font-size: 10px;
-        color: var(--text-secondary);
-    }
-
-    .valor-positivo {
-     color: var(--success);
-    }
-
-    .valor-negativo {
-        color: var(--danger);
+        color: black;
+        margin-top: 3px;
     }
 
     .no-print {
         margin-bottom: 20px;
     }
 
-    .saldo-final-box {
-        background: var(--bg-hover);
-      border: 2px solid var(--text-primary);
-        padding: 1rem;
-        border-radius: var(--radius-sm);
-    }
-
-    .rodape-relatorio {
-        color: var(--text-muted);
-    }
-
     /* Ajustes para impressão */
     @@media print {
         .no-print {
-        display: none !important;
-     }
+            display: none !important;
+        }
 
         .balancete-container {
             box-shadow: none;
-     padding: 0;
+            padding: 0;
+            max-width: 100%;
         }
 
         body, .balancete-container {
- background: white !important;
-            color: black !important;
-      }
-
- .balancete-header,
-        .periodo-info,
-        .balancete-table,
-        .balancete-table td,
-        .secao-titulo,
-        .assinatura-linha,
-        .saldo-final-box {
-       border-color: black !important;
-          color: black !important;
             background: white !important;
-        }
-
-        .secao-titulo {
-            background: #333 !important;
-  color: white !important;
-        }
-
- .balancete-table .total-row,
-        .balancete-table .subtotal-row {
-       background: #f0f0f0 !important;
-        }
-
-        .valor-positivo {
-       color: #006400 !important;
-  }
-
-        .valor-negativo {
-    color: #8B0000 !important;
-        }
-
-        .rodape-relatorio,
-        .assinatura-cargo {
-    color: #666 !important;
+            color: black !important;
         }
     }
 </style>
@@ -207,58 +229,58 @@
 <!-- Botões de ação -->
 <div class="no-print mb-4">
     <div class="d-flex justify-content-between align-items-center">
-    <div>
-            <h3><i class="bi bi-file-earmark-spreadsheet me-2"></i>Balancete Mensal</h3>
-<p class="text-muted mb-0">Relatório de verificação de entradas e congregações</p>
+        <div>
+            <h3><i class="bi bi-file-earmark-spreadsheet me-2"></i>Balancete de Verificação</h3>
+            <p class="text-muted mb-0">Relatório de verificação das igrejas representadas e congregações</p>
         </div>
         <div>
-        <button onclick="window.print()" class="btn btn-primary">
-        <i class="bi bi-printer me-1"></i>Imprimir
-   </button>
-<a href="@Url.Action("BalanceteMensalPdf", new { centroCustoId = ViewBag.CentroCustoId, dataInicio = ViewBag.DataInicio, dataFim = ViewBag.DataFim })"
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="bi bi-printer me-1"></i>Imprimir
+            </button>
+            <a href="@Url.Action("BalanceteMensalPdf", new { centroCustoId = ViewBag.CentroCustoId, dataInicio = ViewBag.DataInicio, dataFim = ViewBag.DataFim })"
                class="btn btn-danger">
-          <i class="bi bi-file-pdf me-1"></i>Exportar PDF
-     </a>
-         <a asp-action="Index" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>Voltar
-        </a>
- </div>
+                <i class="bi bi-file-pdf me-1"></i>Exportar PDF
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Voltar
+            </a>
+        </div>
     </div>
 
     <!-- Filtros -->
-  @if (ViewBag.PodeEscolherCentroCusto)
+    @if (ViewBag.PodeEscolherCentroCusto)
     {
         <div class="card mt-3">
-  <div class="card-body">
- <form method="get" class="row g-3">
-          <div class="col-md-4">
-     <label class="form-label small fw-semibold">Centro de Custo</label>
-             <select name="centroCustoId" class="form-select">
-    @if (ViewBag.CentrosCusto != null)
-      {
-  foreach (var item in ViewBag.CentrosCusto)
-     {
-      <option value="@item.Value" selected="@(item.Selected)">@item.Text</option>
-   }
-    }
-    </select>
-       </div>
-      <div class="col-md-3">
-     <label class="form-label small fw-semibold">Data Início</label>
-          <input type="date" name="dataInicio" class="form-control" value="@ViewBag.DataInicio" />
-     </div>
-      <div class="col-md-3">
-      <label class="form-label small fw-semibold">Data Fim</label>
-    <input type="date" name="dataFim" class="form-control" value="@ViewBag.DataFim" />
-    </div>
-     <div class="col-md-2 d-flex align-items-end">
-       <button type="submit" class="btn btn-primary w-100">
-<i class="bi bi-search me-1"></i>Filtrar
-   </button>
-      </div>
-         </form>
-     </div>
- </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Centro de Custo</label>
+                        <select name="centroCustoId" class="form-select">
+                            @if (ViewBag.CentrosCusto != null)
+                            {
+                                foreach (var item in ViewBag.CentrosCusto)
+                                {
+                                    <option value="@item.Value" selected="@(item.Selected)">@item.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Data Início</label>
+                        <input type="date" name="dataInicio" class="form-control" value="@ViewBag.DataInicio" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Data Fim</label>
+                        <input type="date" name="dataFim" class="form-control" value="@ViewBag.DataFim" />
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search me-1"></i>Filtrar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     }
 </div>
 
@@ -266,193 +288,178 @@
 <div class="balancete-container">
     <!-- Cabeçalho Oficial -->
     <div class="balancete-header">
-      <div class="d-flex align-items-center justify-content-center mb-2">
-  <img src="/images/logo-convencao.png" alt="Logo" style="height: 50px; margin-right: 15px;" onerror="this.style.display='none'" />
-            <div>
-     <h1>CONVENÇÃO DE MINISTROS DAS ASSEMBLEIAS DE DEUS</h1>
-       <h1>NO ESTADO DA PARAÍBA - COMADEP</h1>
-  <p class="mb-0">PBJ 04.362.336/0001-58 - Rua 1º de Maio, 239,Jaguaribe - João Pessoa</p>
-      </div>
+        <div class="balancete-header-content">
+            <img src="/images/logoadpb.png" alt="Logo ADPB" onerror="this.style.display='none'" />
+            <div class="balancete-header-text">
+                <h1>CONVENÇÃO DE MINISTROS DAS ASSEMBLÉIAS DE DEUS</h1>
+                <h1>NO ESTADO DA PARAÍBA - COMADEP</h1>
+                <p>CNPJ 04.362.336/0001-55 - Rua 1° de Maio, 239,Jaguaribe - João Pessoa-PB</p>
+                <p class="subtitle">Balancete de Verificação das Igrejas Representadas e Congregações</p>
+                <p style="margin-bottom: 0;">Realizado em</p>
+            </div>
         </div>
-     <h1 class="mt-2 mb-0">Balancete de Verificação de Igrejas Representadas e Congregações</h1>
-        <p class="mb-0">Realizado em</p>
     </div>
 
     <!-- Informações do Período -->
-  <div class="periodo-info">
-        <div class="local">@Model.CentroCustoNome</div>
-        <div class="cidade">PB</div>
-     <div class="data">@Model.DataInicio.Day / @mes / @ano</div>
+    <div class="periodo-info-container">
+        <div class="periodo-box left">@Model.CentroCustoNome</div>
+        <div class="periodo-box center">PB</div>
+        <div class="periodo-box right">@Model.DataInicio.Day / @mes / @ano</div>
     </div>
 
     <!-- ========================================
          RECEITAS OPERACIONAIS
          ======================================== -->
     <div class="secao-titulo">RECEITAS OPERACIONAIS</div>
-
-    @if (Model.SaldoMesAnterior != 0)
-    {
-     <table class="balancete-table">
-            <tr>
-                <td class="item-descricao">Saldo do Mês Anterior</td>
-        <td class="item-valor">R$ @Model.SaldoMesAnterior.ToString("N2")</td>
- </tr>
-    </table>
-    }
-
-    <table class="balancete-table">
-        @foreach (var item in Model.ReceitasOperacionais)
-        {
- <tr>
-    <td class="item-descricao">@item.Descricao</td>
-          <td class="item-valor">R$ @item.Valor.ToString("N2")</td>
-            </tr>
-        }
-    </table>
-
     <table class="balancete-table">
         <tr>
-            <td class="item-descricao"><strong>Oferta</strong></td>
-          <td class="item-valor"><strong>R$</strong></td>
-   </tr>
-     <tr class="total-row">
- <td class="item-descricao"><strong>Total do crédito</strong></td>
-         <td class="item-valor valor-positivo"><strong>R$ @Model.TotalCredito.ToString("N2")</strong></td>
-     </tr>
+            <td class="item-descricao">Saldo do Mês Anterior</td>
+            <td class="item-label">R$</td>
+            <td class="item-valor"></td>
+            <td class="item-total">R$</td>
+        </tr>
+        <tr>
+            <td class="item-descricao">Dízimos e ofertas do Tempo Centra</td>
+            <td class="item-label">R$</td>
+            <td class="item-valor">@(Model.ReceitasOperacionais.FirstOrDefault(r => r.Descricao.Contains("Dízimo"))?.Valor.ToString("N2") ?? "")</td>
+            <td class="item-total"></td>
+        </tr>
+        <tr>
+            <td class="item-descricao">Ofertas do Círculo de Oração (Adultos e Mocidades</td>
+            <td class="item-label">R$</td>
+            <td class="item-valor">@(Model.ReceitasOperacionais.FirstOrDefault(r => r.Descricao.Contains("Círculo"))?.Valor.ToString("N2") ?? "")</td>
+            <td class="item-total"></td>
+        </tr>
+        <tr>
+            <td class="item-descricao">Ofertas</td>
+            <td class="item-label">R$</td>
+            <td class="item-valor">@(Model.ReceitasOperacionais.FirstOrDefault(r => r.Descricao == "Ofertas")?.Valor.ToString("N2") ?? "")</td>
+            <td class="item-total"></td>
+        </tr>
+        <tr class="total-row">
+            <td class="item-descricao">Total do crédito</td>
+            <td class="item-label"></td>
+            <td class="item-valor"></td>
+            <td class="item-total">R$ @Model.TotalCredito.ToString("N2")</td>
+        </tr>
     </table>
 
     <!-- ========================================
          IMOBILIZADOS
-    ======================================== -->
-    @if (Model.Imobilizados.Any())
-    {
-        <div class="secao-titulo">IMOBILIZADOS</div>
-        <table class="balancete-table">
-            @foreach (var item in Model.Imobilizados)
-        {
-      <tr>
-           <td class="item-descricao">@item.Descricao</td>
-      <td class="item-valor">R$ @item.Valor.ToString("N2")</td>
-    </tr>
-            }
-<tr class="total-row">
-      <td class="item-descricao"><strong>Total do Crédito</strong></td>
-  <td class="item-valor valor-positivo"><strong>R$ @Model.TotalCreditoComImobilizados.ToString("N2")</strong></td>
-    </tr>
-        </table>
-    }
+         ======================================== -->
+    <div class="secao-titulo">IMOBILIZADOS</div>
+    <table class="balancete-table">
+        <tr>
+            <td class="item-descricao">Imóveis</td>
+            <td class="item-label">R$</td>
+            <td class="item-valor"></td>
+            <td class="item-total"></td>
+        </tr>
+        <tr>
+            <td class="item-descricao">Veículo</td>
+            <td class="item-label">R$</td>
+            <td class="item-valor"></td>
+            <td class="item-total"></td>
+        </tr>
+        <tr>
+            <td class="item-descricao">Móveis e Utensílio</td>
+            <td class="item-label">R$</td>
+            <td class="item-valor"></td>
+            <td class="item-total"></td>
+        </tr>
+        <tr>
+            <td class="item-descricao">Instalações</td>
+            <td class="item-label">R$</td>
+            <td class="item-valor"></td>
+            <td class="item-total"></td>
+        </tr>
+        <tr>
+            <td class="item-descricao">Máquinas e Equipamentos</td>
+            <td class="item-label">R$</td>
+            <td class="item-valor"></td>
+            <td class="item-total"></td>
+        </tr>
+        <tr class="total-row">
+            <td class="item-descricao">Total do Crédito</td>
+            <td class="item-label"></td>
+            <td class="item-valor"></td>
+            <td class="item-total">R$ @Model.TotalCreditoComImobilizados.ToString("N2")</td>
+        </tr>
+    </table>
 
     <!-- ========================================
-   DESPESAS ADMINISTRATIVAS
+         DESPESAS ADMINISTRATIVAS
          ======================================== -->
-    <div class="secao-titulo">DESPESAS ADMINISTRATIVAS</div>
+    <div class="secao-titulo">DESPESAS ADIMINISTRATIVAS</div>
     <table class="balancete-table">
-      @foreach (var item in Model.DespesasAdministrativas)
+        @{
+            var lastAdm = Model.DespesasAdministrativas.LastOrDefault();
+        }
+        @foreach (var item in Model.DespesasAdministrativas)
         {
-   <tr>
-      <td class="item-descricao">@item.Descricao</td>
-  <td class="item-valor">R$ @item.Valor.ToString("N2")</td>
-   </tr>
-     }
+            <tr>
+                <td class="item-descricao">@item.Descricao</td>
+                <td class="item-label">R$</td>
+                <td class="item-valor">@(item.Valor > 0 ? item.Valor.ToString("N2") : "")</td>
+                <td class="item-total">@(item == lastAdm ? "R$ 0,00" : "")</td>
+            </tr>
+        }
     </table>
 
     <!-- ========================================
          DESPESAS TRIBUTÁRIAS
-     ======================================== -->
-    @if (Model.DespesasTributarias.Any())
-    {
-        <div class="secao-titulo">Despesas Tributárias</div>
-        <table class="balancete-table">
-            @foreach (var item in Model.DespesasTributarias)
-    {
-      <tr>
-  <td class="item-descricao">@item.Descricao</td>
-     <td class="item-valor">R$ @item.Valor.ToString("N2")</td>
-     </tr>
-   }
-    <tr class="subtotal-row">
-        <td class="item-descricao"><strong>Subtotal Tributárias</strong></td>
-           <td class="item-valor"><strong>R$ @Model.SubtotalDespesasTributarias.ToString("N2")</strong></td>
-        </tr>
-        </table>
-    }
-
-    <!-- ========================================
- DESPESAS FINANCEIRAS
          ======================================== -->
-    @if (Model.DespesasFinanceiras.Any())
-    {
-        <div class="secao-titulo">DESPESAS FINANCEIRAS</div>
-     <table class="balancete-table">
- @foreach (var item in Model.DespesasFinanceiras)
-    {
- <tr>
-  <td class="item-descricao">@item.Descricao</td>
-            <td class="item-valor">R$ @item.Valor.ToString("N2")</td>
-        </tr>
- }
-       <tr class="subtotal-row">
-     <td class="item-descricao"><strong>Subtotal Financeiras</strong></td>
-       <td class="item-valor"><strong>R$ @Model.SubtotalDespesasFinanceiras.ToString("N2")</strong></td>
+    <div class="secao-titulo">Despesas Tributárias</div>
+    <table class="balancete-table">
+        @{
+            var lastTrib = Model.DespesasTributarias.LastOrDefault();
+        }
+        @foreach (var item in Model.DespesasTributarias)
+        {
+            <tr>
+                <td class="item-descricao">@item.Descricao</td>
+                <td class="item-label">R$</td>
+                <td class="item-valor">@(item.Valor > 0 ? item.Valor.ToString("N2") : "")</td>
+                <td class="item-total">@(item == lastTrib ? "R$ 0,00" : "")</td>
             </tr>
-        </table>
-    }
-
-    <!-- ========================================
-         RECOLHIMENTOS (RATEIOS)
-         ======================================== -->
-    @if (Model.Recolhimentos.Any())
-    {
-        <table class="balancete-table mt-3">
-       @foreach (var recolhimento in Model.Recolhimentos)
-       {
-          <tr>
-      <td class="item-descricao">@recolhimento.Destino (@recolhimento.Percentual.ToString("N2")%)</td>
-     <td class="item-valor">R$ @recolhimento.Valor.ToString("N2")</td>
-             </tr>
-   }
-        </table>
-    }
-
-  <!-- ========================================
-     TOTAIS FINAIS
-         ======================================== -->
-    <table class="balancete-table mt-3">
-        <tr class="total-row">
-        <td class="item-descricao"><strong>Total do Débito</strong></td>
-            <td class="item-valor valor-negativo"><strong>R$ @Model.TotalDebito.ToString("N2")</strong></td>
-        </tr>
+        }
     </table>
 
-    <!-- Saldo Final -->
-    <div class="text-center mt-4 saldo-final-box">
-        <h4 class="mb-0">
-    SALDO:
-<span class="@(Model.Saldo >= 0 ? "valor-positivo" : "valor-negativo")">
-                <strong>R$ @Model.Saldo.ToString("N2")</strong>
- </span>
-      </h4>
-    </div>
+    <!-- ========================================
+         DESPESAS FINANCEIRAS
+         ======================================== -->
+    <div class="secao-titulo">DESPESAS FINANCEIRAS</div>
+    <table class="balancete-table">
+        @foreach (var item in Model.DespesasFinanceiras)
+        {
+            <tr>
+                <td class="item-descricao">@item.Descricao</td>
+                <td class="item-label">R$</td>
+                <td class="item-valor">@(item.Valor > 0 ? item.Valor.ToString("N2") : "")</td>
+                <td class="item-total"></td>
+            </tr>
+        }
+        <tr class="total-row last-section">
+            <td class="item-descricao">Total do Débito</td>
+            <td class="item-label"></td>
+            <td class="item-valor"></td>
+            <td class="item-total">R$ @Model.TotalDebito.ToString("N2")</td>
+        </tr>
+    </table>
 
     <!-- Assinaturas -->
     <div class="assinaturas">
         <div class="assinatura">
-    <div class="assinatura-linha">
-       @(Model.TesoureriroResponsavel ?? "_____________________________")
-      </div>
-  <div class="assinatura-cargo">Tesoureiro</div>
- </div>
-      <div class="assinatura">
-         <div class="assinatura-linha">
-            @(Model.VistoDoPastor ?? "_____________________________")
-       </div>
- <div class="assinatura-cargo">Visto do Pastor</div>
+            <div class="assinatura-linha">
+                @(string.IsNullOrEmpty(Model.TesoureriroResponsavel) ? "" : Model.TesoureriroResponsavel)
+            </div>
+            <div class="assinatura-cargo">Tesoureiro</div>
+        </div>
+        <div class="assinatura">
+            <div class="assinatura-linha">
+                @(string.IsNullOrEmpty(Model.VistoDoPastor) ? "" : Model.VistoDoPastor)
+            </div>
+            <div class="assinatura-cargo">Visto do Pastor</div>
+        </div>
     </div>
-    </div>
-
-    <!-- Rodapé com data de geração -->
-    <div class="text-center mt-4 rodape-relatorio" style="font-size: 10px;">
-        <p class="mb-0">Relatório gerado em @Model.DataGeracao.ToString("dd/MM/yyyy HH:mm")</p>
-        <p class="mb-0">Sistema Integrado de Gestão de Tesouraria Eclesiástica</p>
-    </div>
-</div>
+</div></div>

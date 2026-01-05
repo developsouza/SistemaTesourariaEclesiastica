@@ -427,6 +427,13 @@ namespace SistemaTesourariaEclesiastica.Data
 .HasIndex(f => f.Nome)
        .IsUnique();
 
+            // ✅ ÍNDICE ÚNICO para Regras de Rateio - Evita duplicatas
+            builder.Entity<RegraRateio>()
+                .HasIndex(r => new { r.CentroCustoOrigemId, r.CentroCustoDestinoId, r.Ativo })
+                .HasFilter("[Ativo] = 1")
+                .IsUnique()
+                .HasDatabaseName("IX_RegrasRateio_OrigemDestino_Ativo");
+
             // ========================================
             // ✅ ÍNDICES COMPOSTOS PARA MELHOR PERFORMANCE
             // ========================================

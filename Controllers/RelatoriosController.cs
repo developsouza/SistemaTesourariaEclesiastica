@@ -14,7 +14,7 @@ using SistemaTesourariaEclesiastica.ViewModels;
 
 namespace SistemaTesourariaEclesiastica.Controllers
 {
-    [Authorize(Roles = "Administrador,TesoureiroGeral,Pastor")]
+    [Authorize(Roles = "Administrador,TesoureiroGeral,Pastor,TesoureiroLocal")]
     public class RelatoriosController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -1033,7 +1033,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // BALANCETE MENSAL
         // =====================================================
         [HttpGet]
-        [Authorize(Policy = "Relatorios")]
         public async Task<IActionResult> BalanceteMensal(
             int? centroCustoId,
             DateTime? dataInicio,
@@ -1058,7 +1057,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 int selectedCentroCustoId;
 
-                if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
+                // ✅ CORRIGIDO: Incluir Pastor para gerar PDF de qualquer centro de custo
+                if (User.IsInRole(Roles.Administrador) || 
+                    User.IsInRole(Roles.TesoureiroGeral) || 
+                    User.IsInRole(Roles.Pastor))
                 {
                     if (centroCustoId.HasValue)
                     {
@@ -1078,10 +1080,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                         selectedCentroCustoId = sede.Id;
                     }
-
-                    ViewBag.CentrosCusto = new SelectList(
-                        await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
-                        "Id", "Nome", selectedCentroCustoId);
                 }
                 else
                 {
@@ -1092,7 +1090,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     }
 
                     selectedCentroCustoId = user.CentroCustoId.Value;
-                    ViewBag.CentrosCusto = null;
                 }
 
                 var balancete = await _balanceteService.GerarBalanceteMensalAsync(
@@ -1104,7 +1101,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
                 ViewBag.CentroCustoId = selectedCentroCustoId;
                 ViewBag.PodeEscolherCentroCusto = User.IsInRole(Roles.Administrador) ||
-                                                  User.IsInRole(Roles.TesoureiroGeral);
+                                                  User.IsInRole(Roles.TesoureiroGeral) ||
+                                                  User.IsInRole(Roles.Pastor);
 
                 await _auditService.LogAsync("Visualização", "Relatório",
                     $"Balancete mensal: {balancete.CentroCustoNome} - {balancete.Periodo}");
@@ -1115,6 +1113,93 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 _logger.LogError(ex, "Erro ao gerar balancete mensal");
                 TempData["ErrorMessage"] = $"Erro ao gerar balancete: {ex.Message}";
+                return RedirectToAction("Index");
+            }
+        }
+
+        // =====================================================
+        // EXPORTAÇÃO PARA PDF - BALANCETE MENSAL
+        // =====================================================
+        [HttpGet]
+        public async Task<IActionResult> BalanceteMensalPdf(
+            int? centroCustoId,
+            DateTime? dataInicio,
+            DateTime? dataFim)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return RedirectToAction("Login", "Account");
+                }
+
+                if (!dataInicio.HasValue)
+                {
+                    dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                }
+                if (!dataFim.HasValue)
+                {
+                    dataFim = dataInicio.Value.AddMonths(1).AddDays(-1);
+                }
+
+                int selectedCentroCustoId;
+
+                // ✅ CORRIGIDO: Incluir Pastor para gerar PDF de qualquer centro de custo
+                if (User.IsInRole(Roles.Administrador) || 
+                    User.IsInRole(Roles.TesoureiroGeral) || 
+                    User.IsInRole(Roles.Pastor))
+                {
+                    if (centroCustoId.HasValue)
+                    {
+                        selectedCentroCustoId = centroCustoId.Value;
+                    }
+                    else
+                    {
+                        var sede = await _context.CentrosCusto
+                            .Where(c => c.Nome.Contains("Sede") || c.Nome.Contains("SEDE"))
+                            .FirstOrDefaultAsync();
+
+                        if (sede == null)
+                        {
+                            TempData["ErrorMessage"] = "Nenhum centro de custo encontrado.";
+                            return RedirectToAction("Index");
+                        }
+
+                        selectedCentroCustoId = sede.Id;
+                    }
+                }
+                else
+                {
+                    if (!user.CentroCustoId.HasValue)
+                    {
+                        TempData["ErrorMessage"] = "Você não está vinculado a nenhum centro de custo.";
+                        return RedirectToAction("Index");
+                    }
+
+                    selectedCentroCustoId = user.CentroCustoId.Value;
+                }
+
+                // Gerar balancete
+                var balancete = await _balanceteService.GerarBalanceteMensalAsync(
+                    selectedCentroCustoId,
+                    dataInicio.Value,
+                    dataFim.Value);
+
+                // Gerar PDF
+                var pdfBytes = Helpers.BalancetePdfHelper.GerarPdfBalanceteMensal(balancete);
+
+                var nomeArquivo = $"Balancete_{balancete.CentroCustoNome.Replace(" ", "_")}_{dataInicio.Value:yyyyMM}.pdf";
+
+                await _auditService.LogAsync("Exportação", "Relatório",
+                    $"Balancete mensal PDF: {balancete.CentroCustoNome} - {balancete.Periodo}");
+
+                return File(pdfBytes, "application/pdf", nomeArquivo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao exportar balancete mensal para PDF");
+                TempData["ErrorMessage"] = $"Erro ao exportar PDF: {ex.Message}";
                 return RedirectToAction("Index");
             }
         }
@@ -1676,7 +1761,5 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return RedirectToAction("SaidasPorPeriodo");
             }
         }
-
-        // ...existing code continues...
     }
 }

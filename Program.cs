@@ -105,11 +105,11 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Tesoureiros", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal"));
 
-    // Politica para relatorios (todos menos usuarios basicos)
+    // Politica para relatorios (todos menos usuarios basicos) - PASTOR TEM ACESSO
     options.AddPolicy("Relatorios", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal", "Pastor"));
 
-    // Politica para operacoes financeiras (entradas, saidas, etc.)
+    // Politica para operacoes financeiras (entradas, saidas, etc.) - PASTOR NÃO TEM ACESSO
     options.AddPolicy("OperacoesFinanceiras", policy =>
         policy.RequireRole("Administrador", "TesoureiroGeral", "TesoureiroLocal"));
 

@@ -29,7 +29,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
         /// <summary>
         /// Gera o balancete mensal para um centro de custo específico
-        /// ? OTIMIZADO com cache e queries mais eficientes
+        /// ? CORRIGIDO: Executar sequencialmente para evitar concorrência no DbContext
         /// </summary>
         public async Task<BalanceteMensalViewModel> GerarBalanceteMensalAsync(
             int centroCustoId,
@@ -94,17 +94,13 @@ namespace SistemaTesourariaEclesiastica.Services
                     _logger.LogInformation($"Balancete da SEDE incluirá {congregacoesIncluidas.Count} congregações");
                 }
 
-                // ? OTIMIZAÇÃO: Processar tudo em paralelo quando possível
-                var saldoTask = CalcularSaldoMesAnteriorAsync(centrosCustoParaIncluir, dataInicio);
-                var receitasTask = ProcessarReceitasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
-                var imobilizadosTask = ProcessarImobilizadosAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
-                var despesasAdmTask = ProcessarDespesasAdministrativasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
-                var despesasTribTask = ProcessarDespesasTributariasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
-                var despesasFinTask = ProcessarDespesasFinanceirasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
-
-                await Task.WhenAll(saldoTask, receitasTask, imobilizadosTask, despesasAdmTask, despesasTribTask, despesasFinTask);
-
-                viewModel.SaldoMesAnterior = await saldoTask;
+                // ? CORREÇÃO CRÍTICA: Executar SEQUENCIALMENTE para evitar concorrência no DbContext
+                viewModel.SaldoMesAnterior = await CalcularSaldoMesAnteriorAsync(centrosCustoParaIncluir, dataInicio);
+                await ProcessarReceitasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
+                await ProcessarImobilizadosAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
+                await ProcessarDespesasAdministrativasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
+                await ProcessarDespesasTributariasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
+                await ProcessarDespesasFinanceirasAsync(viewModel, centrosCustoParaIncluir, dataInicio, dataFim);
 
                 // Recolhimentos devem ser processados após as outras tasks
                 await ProcessarRecolhimentosAsync(viewModel, centroCustoId, dataInicio, dataFim, fechamentoSede);
@@ -228,13 +224,26 @@ namespace SistemaTesourariaEclesiastica.Services
         {
             var categoriasAdministrativas = new[]
             {
-       "Mat. de Expediente", "Mat. Higiene e Limpeza", "Despesas com Telefone",
-   "Despesas com Veículo", "Auxílio Oferta", "Mão de Obra Qualificada",
-          "Despesas com Medicamentos", "Energia Elétrica (Luz)", "Água",
-             "Despesas Diversas", "Despesas com Viagens", "Material de Construção",
-        "Material de Conservação (Tintas, etc.)", "Despesas com Som (Peças e Acessórios)",
-     "Aluguel", "INSS", "Pagamento de Inscrição da CGADB",
-  "Previdência Privada", "Caixa de Evangelização"
+                "Material de expediente",
+                "Material de Higiene e Limpesa",
+                "Despesas com Telefone",
+                "Despesas com Veículo",
+                "Auxílio e Ofertas",
+                "Mão de Obra Qualificada",
+                "Despesas Com Medicamentos",
+                "Luz",
+                "Água e esgoto",
+                "Despesas Diversas",
+                "Despesas com Viagens",
+                "Material de Construção",
+                "Manutenção Pastoral / Ajuda Pastoral",
+                "Material de Conservação (Tintas, etc.)",
+                "Despesas c/ Som (Peças e Acessórios)",
+                "Aluguel",
+                "Pagamento de inscrição da CGADB",
+                "I.N.S.S.",
+                "Caixa de Evangelização",
+                "Previdência Privada"
             };
 
             var despesas = await _context.Saidas
@@ -253,7 +262,7 @@ namespace SistemaTesourariaEclesiastica.Services
          })
                 .ToListAsync();
 
-            // ? Garantir todas as categorias apareçam
+            // ? Garantir todas as categorias apareçam (inclusive com valor zero)
             var despesasCompletas = categoriasAdministrativas.Select(cat => new ItemBalanceteViewModel
             {
                 Descricao = cat,
@@ -275,7 +284,7 @@ namespace SistemaTesourariaEclesiastica.Services
             DateTime dataInicio,
   DateTime dataFim)
         {
-            var categoriasTributarias = new[] { "IPTU", "Imposto Predial IPTR" };
+            var categoriasTributarias = new[] { "Imposto Predial (IPTU)" };
 
             var despesas = await _context.Saidas
      .AsNoTracking()
@@ -293,8 +302,15 @@ namespace SistemaTesourariaEclesiastica.Services
 })
              .ToListAsync();
 
-            viewModel.DespesasTributarias = despesas;
-            viewModel.SubtotalDespesasTributarias = despesas.Sum(d => d.Valor);
+            // ? Garantir que apareçam todas as categorias
+            var despesasCompletas = categoriasTributarias.Select(cat => new ItemBalanceteViewModel
+            {
+                Descricao = cat,
+                Valor = despesas.FirstOrDefault(d => d.Descricao == cat)?.Valor ?? 0
+            }).ToList();
+
+            viewModel.DespesasTributarias = despesasCompletas;
+            viewModel.SubtotalDespesasTributarias = despesasCompletas.Sum(d => d.Valor);
         }
 
         private async Task ProcessarDespesasFinanceirasAsync(
@@ -303,7 +319,7 @@ namespace SistemaTesourariaEclesiastica.Services
                     DateTime dataInicio,
            DateTime dataFim)
         {
-            var categoriasFinanceiras = new[] { "Imposto Taxas Diversas", "Saldo para o mês" };
+            var categoriasFinanceiras = new[] { "Imposto Taxas Diversas", "Saldo para o mês de" };
 
             var despesas = await _context.Saidas
                     .AsNoTracking()
@@ -321,8 +337,15 @@ namespace SistemaTesourariaEclesiastica.Services
               })
           .ToListAsync();
 
-            viewModel.DespesasFinanceiras = despesas;
-            viewModel.SubtotalDespesasFinanceiras = despesas.Sum(d => d.Valor);
+            // ? Garantir que apareçam todas as categorias
+            var despesasCompletas = categoriasFinanceiras.Select(cat => new ItemBalanceteViewModel
+            {
+                Descricao = cat,
+                Valor = despesas.FirstOrDefault(d => d.Descricao == cat)?.Valor ?? 0
+            }).ToList();
+
+            viewModel.DespesasFinanceiras = despesasCompletas;
+            viewModel.SubtotalDespesasFinanceiras = despesasCompletas.Sum(d => d.Valor);
         }
 
         /// <summary>

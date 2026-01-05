@@ -89,7 +89,7 @@
                             </a>
                         </li>
 
-                        @* ==================== MENU FINANCEIRO - CORRIGIDO ==================== *@
+                        @* ==================== MENU FINANCEIRO - APENAS TESOUREIROS ==================== *@
                         @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.TesoureiroLocal))
                         {
                             <li class="nav-item has-submenu">
@@ -133,8 +133,7 @@
                             </li>
                         }
 
-                        @* ==================== PRESTAÇÃO DE CONTAS - CORRIGIDO ==================== *@
-                        @* TODOS OS TESOUREIROS (Geral E Local) têm acesso *@
+                        @* ==================== PRESTAÇÃO DE CONTAS - APENAS TESOUREIROS ==================== *@
                         @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.TesoureiroLocal))
                         {
                             <li class="nav-item">
@@ -145,7 +144,7 @@
                             </li>
                         }
 
-                        @* ==================== ESCALA DE PORTEIROS ==================== *@
+                        @* ==================== ESCALA DE PORTEIROS - APENAS TESOUREIROS ==================== *@
                         @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.TesoureiroLocal))
                         {
                             <li class="nav-item has-submenu">
@@ -189,7 +188,7 @@
                             </li>
                         }
 
-                        @* ==================== MENU RELATÓRIOS ==================== *@
+                        @* ==================== MENU RELATÓRIOS - INCLUI PASTOR ==================== *@
                         @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.Pastor))
                         {
                             <li class="nav-item has-submenu">
@@ -581,4 +580,4 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
-</html>
+</html></html>

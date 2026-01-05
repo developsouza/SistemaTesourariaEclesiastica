@@ -32,123 +32,173 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine("<style>");
             html.AppendLine(@"
                 @page { 
-                    size: A4; 
-                    margin: 15mm 10mm 10mm 10mm; 
+                    size: A4 portrait; 
+                    margin: 10mm 10mm 10mm 10mm; 
                 }
                 body {
                     font-family: Arial, sans-serif;
                     margin: 0;
                     padding: 0;
-                    font-size: 9px;
+                    font-size: 10px;
                     line-height: 1.3;
-                    color: #333;
+                    color: #000;
+                    background: white;
                 }
                 .balancete-header {
                     text-align: center;
                     border: 2px solid #000;
-                    padding: 12px;
-                    margin-bottom: 15px;
+                    padding: 6px;
+                    margin-bottom: 0;
+                    background: white;
+                    position: relative;
+                }
+                .balancete-header-content {
+                    display: table;
+                    width: 100%;
+                }
+                .balancete-header-logo {
+                    display: table-cell;
+                    width: 80px;
+                    vertical-align: middle;
+                    padding-right: 10px;
+                }
+                .balancete-header-logo img {
+                    width: 100px;
+                    height: 100px;
+                    object-fit: contain;
+                }
+                .balancete-header-text {
+                    display: table-cell;
+                    vertical-align: middle;
+                    text-align: center;
                 }
                 .balancete-header h1 {
-                    font-size: 11px;
+                    font-size: 13px;
                     font-weight: bold;
-                    margin: 0 0 3px 0;
+                    margin: 1px 0;
                     text-transform: uppercase;
+                    line-height: 1.2;
                 }
                 .balancete-header p {
                     font-size: 9px;
                     margin: 2px 0;
                 }
-                .periodo-info {
-                    display: flex;
-                    justify-content: space-between;
-                    border: 1px solid #000;
-                    padding: 8px;
-                    margin-bottom: 15px;
-                    font-size: 9px;
-                }
-                .periodo-info .local {
+                .balancete-header .subtitle {
+                    font-size: 10px;
                     font-weight: bold;
+                    margin: 4px 0 2px 0;
+                }
+                .periodo-info-container {
+                    display: table;
+                    width: 100%;
+                    border-left: 2px solid #000;
+                    border-right: 2px solid #000;
+                    border-bottom: 2px solid #000;
+                    margin-bottom: 4px;
+                }
+                .periodo-info-row {
+                    display: table-row;
+                }
+                .periodo-box {
+                    display: table-cell;
+                    border: 1px solid #000;
+                    padding: 3px 6px;
+                    font-size: 10px;
+                    text-align: center;
+                    font-weight: bold;
+                    background: white;
+                }
+                .periodo-box.center {
+                    border-left: none;
+                    border-right: none;
                 }
                 .secao-titulo {
-                    background: #333;
-                    color: white;
-                    padding: 6px 8px;
+                    background: transparent;
+                    color: black;
+                    padding: 3px 6px;
                     font-weight: bold;
-                    font-size: 9px;
+                    font-size: 10px;
                     text-transform: uppercase;
-                    margin-top: 12px;
-                    margin-bottom: 4px;
+                    margin-top: 4px;
+                    margin-bottom: 0;
+                    border: 2px solid #000;
+                    border-bottom: none;
+                    width: 55%;
+                    display: inline-block;
+                    text-align: center;
+                    box-sizing: border-box;
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 8px;
-                    font-size: 8.5px;
+                    margin-bottom: 0;
+                    margin-top: 0;
+                    font-size: 9px;
+                    background: white;
+                    border-left: 2px solid #000;
+                    border-right: 2px solid #000;
+                    border-top: 2px solid #000;
                 }
                 table td {
-                    padding: 3px 6px;
-                    border: 1px solid #ccc;
+                    padding: 2px 5px;
+                    border-bottom: 1px solid #000;
+                    line-height: 1.3;
                 }
                 .item-descricao {
-                    width: 70%;
+                    width: 55%;
+                    text-align: left;
+                    border-right: 1px solid #000;
+                }
+                .item-label {
+                    width: 5%;
+                    text-align: center;
+                    border-right: 1px solid #000;
+                    font-weight: normal;
                 }
                 .item-valor {
-                    width: 30%;
+                    width: 20%;
                     text-align: right;
-                    font-family: 'Courier New', monospace;
+                    padding-right: 8px;
+                    border-right: 1px solid #000;
                 }
-                .total-row {
-                    background: #f0f0f0;
+                .item-total {
+                    width: 20%;
+                    text-align: right;
+                    padding-right: 8px;
+                }
+                .total-row td {
                     font-weight: bold;
+                    padding: 3px 5px;
+                    border-bottom: 2px solid #000;
                 }
-                .subtotal-row {
-                    background: #fafafa;
-                    font-weight: bold;
-                }
-                .valor-positivo {
-                    color: #006400;
-                }
-                .valor-negativo {
-                    color: #8B0000;
-                }
-                .saldo-final {
-                    text-align: center;
-                    margin: 15px 0;
-                    padding: 10px;
-                    background: #f8f9fa;
-                    border: 2px solid #333;
-                }
-                .saldo-final h4 {
-                    margin: 0;
-                    font-size: 12px;
+                .last-section {
+                    border-bottom: 2px solid #000;
                 }
                 .assinaturas {
-                    display: flex;
-                    justify-content: space-around;
+                    display: table;
+                    width: 100%;
                     margin-top: 40px;
                     padding-top: 15px;
                 }
+                .assinaturas-row {
+                    display: table-row;
+                }
                 .assinatura {
+                    display: table-cell;
                     text-align: center;
-                    flex: 1;
+                    width: 50%;
+                    vertical-align: top;
                 }
                 .assinatura-linha {
                     border-top: 1px solid #000;
-                    width: 200px;
+                    width: 220px;
                     margin: 0 auto 4px;
                     padding-top: 4px;
-                    font-size: 8px;
+                    font-size: 9px;
                 }
                 .assinatura-cargo {
-                    font-size: 7.5px;
-                    color: #666;
-                }
-                .rodape {
-                    text-align: center;
-                    margin-top: 15px;
-                    font-size: 7px;
-                    color: #666;
+                    font-size: 9px;
+                    margin-top: 2px;
                 }
             ");
             html.AppendLine("</style>");
@@ -157,171 +207,161 @@ namespace SistemaTesourariaEclesiastica.Helpers
 
             // Cabeçalho
             html.AppendLine("<div class='balancete-header'>");
-            html.AppendLine("<h1>CONVENÇÃO DE MINISTROS DAS ASSEMBLEIAS DE DEUS</h1>");
+            html.AppendLine("<div class='balancete-header-content'>");
+            html.AppendLine("<div class='balancete-header-logo'>");
+            // Adicionando a imagem do logo aqui
+            html.AppendLine("<img src='cid:logo'/>");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class='balancete-header-text'>");
+            html.AppendLine("<h1>CONVENÇÃO DE MINISTROS DAS ASSEMBLÉIAS DE DEUS</h1>");
             html.AppendLine("<h1>NO ESTADO DA PARAÍBA - COMADEP</h1>");
-            html.AppendLine("<p>PBJ 04.362.336/0001-58 - Rua 1º de Maio, 239, Jaguaribe - João Pessoa</p>");
-            html.AppendLine("<h1 style='margin-top: 8px;'>Balancete de Verificação de Igrejas Representadas e Congregações</h1>");
-            html.AppendLine("<p>Realizado em</p>");
+            html.AppendLine("<p>CNPJ 04.362.336/0001-55 - Rua 1° de Maio, 239,Jaguaribe - João Pessoa-PB</p>");
+            html.AppendLine("<p class='subtitle'>Balancete de Verificação das Igrejas Representadas e Congregações</p>");
+            html.AppendLine("<p style='margin-bottom: 0;'>Realizado em</p>");
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
             html.AppendLine("</div>");
 
             // Informações do Período
-            html.AppendLine("<div class='periodo-info'>");
-            html.AppendLine($"<div class='local'>{model.CentroCustoNome}</div>");
-            html.AppendLine("<div class='cidade'>PB</div>");
-            html.AppendLine($"<div class='data'>{model.DataInicio.Day} / {mes} / {ano}</div>");
+            html.AppendLine("<div class='periodo-info-container'>");
+            html.AppendLine("<div class='periodo-info-row'>");
+            html.AppendLine($"<div class='periodo-box left'>{model.CentroCustoNome}</div>");
+            html.AppendLine("<div class='periodo-box center'>PB</div>");
+            html.AppendLine($"<div class='periodo-box right'>{model.DataInicio.Day} / {mes} / {ano}</div>");
+            html.AppendLine("</div>");
             html.AppendLine("</div>");
 
-            // Saldo Mês Anterior
-            if (model.SaldoMesAnterior != 0)
-            {
-                html.AppendLine("<table>");
-                html.AppendLine("<tr>");
-                html.AppendLine("<td class='item-descricao'>Saldo do Mês Anterior</td>");
-                html.AppendLine($"<td class='item-valor'>R$ {model.SaldoMesAnterior:N2}</td>");
-                html.AppendLine("</tr>");
-                html.AppendLine("</table>");
-            }
-
-            // Receitas Operacionais
+            // RECEITAS OPERACIONAIS
             html.AppendLine("<div class='secao-titulo'>RECEITAS OPERACIONAIS</div>");
             html.AppendLine("<table>");
-            foreach (var item in model.ReceitasOperacionais)
-            {
-                html.AppendLine("<tr>");
-                html.AppendLine($"<td class='item-descricao'>{item.Descricao}</td>");
-                html.AppendLine($"<td class='item-valor'>R$ {item.Valor:N2}</td>");
-                html.AppendLine("</tr>");
-            }
-            html.AppendLine("</table>");
-
-            html.AppendLine("<table>");
+            
             html.AppendLine("<tr>");
-            html.AppendLine("<td class='item-descricao'><strong>Oferta</strong></td>");
-            html.AppendLine("<td class='item-valor'><strong>R$</strong></td>");
+            html.AppendLine("<td class='item-descricao'>Saldo do Mês Anterior</td>");
+            html.AppendLine("<td class='item-label'>R$</td>");
+            html.AppendLine("<td class='item-valor'></td>");
+            html.AppendLine("<td class='item-total'>R$</td>");
             html.AppendLine("</tr>");
+
+            var dizimos = model.ReceitasOperacionais.FirstOrDefault(r => r.Descricao.Contains("Dízimo"));
+            html.AppendLine("<tr>");
+            html.AppendLine("<td class='item-descricao'>Dízimos e ofertas do Tempo Centra</td>");
+            html.AppendLine("<td class='item-label'>R$</td>");
+            html.AppendLine($"<td class='item-valor'>{(dizimos != null && dizimos.Valor > 0 ? dizimos.Valor.ToString("N2") : "")}</td>");
+            html.AppendLine("<td class='item-total'></td>");
+            html.AppendLine("</tr>");
+
+            var circulo = model.ReceitasOperacionais.FirstOrDefault(r => r.Descricao.Contains("Círculo"));
+            html.AppendLine("<tr>");
+            html.AppendLine("<td class='item-descricao'>Ofertas do Círculo de Oração (Adultos e Mocidades</td>");
+            html.AppendLine("<td class='item-label'>R$</td>");
+            html.AppendLine($"<td class='item-valor'>{(circulo != null && circulo.Valor > 0 ? circulo.Valor.ToString("N2") : "")}</td>");
+            html.AppendLine("<td class='item-total'></td>");
+            html.AppendLine("</tr>");
+
+            var ofertas = model.ReceitasOperacionais.FirstOrDefault(r => r.Descricao == "Ofertas");
+            html.AppendLine("<tr>");
+            html.AppendLine("<td class='item-descricao'>Ofertas</td>");
+            html.AppendLine("<td class='item-label'>R$</td>");
+            html.AppendLine($"<td class='item-valor'>{(ofertas != null && ofertas.Valor > 0 ? ofertas.Valor.ToString("N2") : "")}</td>");
+            html.AppendLine("<td class='item-total'></td>");
+            html.AppendLine("</tr>");
+
             html.AppendLine("<tr class='total-row'>");
-            html.AppendLine("<td class='item-descricao'><strong>Total do crédito</strong></td>");
-            html.AppendLine($"<td class='item-valor valor-positivo'><strong>R$ {model.TotalCredito:N2}</strong></td>");
+            html.AppendLine("<td class='item-descricao'>Total do crédito</td>");
+            html.AppendLine("<td class='item-label'></td>");
+            html.AppendLine("<td class='item-valor'></td>");
+            html.AppendLine($"<td class='item-total'>R$ {model.TotalCredito:N2}</td>");
             html.AppendLine("</tr>");
             html.AppendLine("</table>");
 
-            // Imobilizados
-            if (model.Imobilizados.Any())
-            {
-                html.AppendLine("<div class='secao-titulo'>IMOBILIZADOS</div>");
-                html.AppendLine("<table>");
-                foreach (var item in model.Imobilizados)
-                {
-                    html.AppendLine("<tr>");
-                    html.AppendLine($"<td class='item-descricao'>{item.Descricao}</td>");
-                    html.AppendLine($"<td class='item-valor'>R$ {item.Valor:N2}</td>");
-                    html.AppendLine("</tr>");
-                }
-                html.AppendLine("<tr class='total-row'>");
-                html.AppendLine("<td class='item-descricao'><strong>Total do Crédito</strong></td>");
-                html.AppendLine($"<td class='item-valor valor-positivo'><strong>R$ {model.TotalCreditoComImobilizados:N2}</strong></td>");
-                html.AppendLine("</tr>");
-                html.AppendLine("</table>");
-            }
-
-            // Despesas Administrativas
-            html.AppendLine("<div class='secao-titulo'>DESPESAS ADMINISTRATIVAS</div>");
+            // IMOBILIZADOS
+            html.AppendLine("<div class='secao-titulo'>IMOBILIZADOS</div>");
             html.AppendLine("<table>");
+            html.AppendLine("<tr><td class='item-descricao'>Imóveis</td><td class='item-label'>R$</td><td class='item-valor'></td><td class='item-total'></td></tr>");
+            html.AppendLine("<tr><td class='item-descricao'>Veículo</td><td class='item-label'>R$</td><td class='item-valor'></td><td class='item-total'></td></tr>");
+            html.AppendLine("<tr><td class='item-descricao'>Móveis e Utensílio</td><td class='item-label'>R$</td><td class='item-valor'></td><td class='item-total'></td></tr>");
+            html.AppendLine("<tr><td class='item-descricao'>Instalações</td><td class='item-label'>R$</td><td class='item-valor'></td><td class='item-total'></td></tr>");
+            html.AppendLine("<tr><td class='item-descricao'>Máquinas e Equipamentos</td><td class='item-label'>R$</td><td class='item-valor'></td><td class='item-total'></td></tr>");
+            html.AppendLine("<tr class='total-row'>");
+            html.AppendLine("<td class='item-descricao'>Total do Crédito</td>");
+            html.AppendLine("<td class='item-label'></td>");
+            html.AppendLine("<td class='item-valor'></td>");
+            html.AppendLine($"<td class='item-total'>R$ {model.TotalCreditoComImobilizados:N2}</td>");
+            html.AppendLine("</tr>");
+            html.AppendLine("</table>");
+
+            // DESPESAS ADMINISTRATIVAS
+            html.AppendLine("<div class='secao-titulo'>DESPESAS ADIMINISTRATIVAS</div>");
+            html.AppendLine("<table>");
+            var lastAdm = model.DespesasAdministrativas.LastOrDefault();
             foreach (var item in model.DespesasAdministrativas)
             {
+                var descricaoHtml = item.Descricao;
+                if (item.Descricao.Contains("Manutenção Pastoral") || item.Descricao.Contains("Ajuda Pastoral"))
+                {
+                    descricaoHtml = $"<strong>{item.Descricao}</strong>";
+                }
+                
+                html.AppendLine("<tr>");
+                html.AppendLine($"<td class='item-descricao'>{descricaoHtml}</td>");
+                html.AppendLine("<td class='item-label'>R$</td>");
+                html.AppendLine($"<td class='item-valor'>{(item.Valor > 0 ? item.Valor.ToString("N2") : "")}</td>");
+                html.AppendLine($"<td class='item-total'>{(item == lastAdm ? "R$ 0,00" : "")}</td>");
+                html.AppendLine("</tr>");
+            }
+            html.AppendLine("</table>");
+
+            // DESPESAS TRIBUTÁRIAS
+            html.AppendLine("<div class='secao-titulo'>Despesas Tributárias</div>");
+            html.AppendLine("<table>");
+            var lastTrib = model.DespesasTributarias.LastOrDefault();
+            foreach (var item in model.DespesasTributarias)
+            {
                 html.AppendLine("<tr>");
                 html.AppendLine($"<td class='item-descricao'>{item.Descricao}</td>");
-                html.AppendLine($"<td class='item-valor'>R$ {item.Valor:N2}</td>");
+                html.AppendLine("<td class='item-label'>R$</td>");
+                html.AppendLine($"<td class='item-valor'>{(item.Valor > 0 ? item.Valor.ToString("N2") : "")}</td>");
+                html.AppendLine($"<td class='item-total'>{(item == lastTrib ? "R$ 0,00" : "")}</td>");
                 html.AppendLine("</tr>");
             }
             html.AppendLine("</table>");
 
-            // Despesas Tributárias
-            if (model.DespesasTributarias.Any())
-            {
-                html.AppendLine("<div class='secao-titulo'>DESPESAS TRIBUTÁRIAS</div>");
-                html.AppendLine("<table>");
-                foreach (var item in model.DespesasTributarias)
-                {
-                    html.AppendLine("<tr>");
-                    html.AppendLine($"<td class='item-descricao'>{item.Descricao}</td>");
-                    html.AppendLine($"<td class='item-valor'>R$ {item.Valor:N2}</td>");
-                    html.AppendLine("</tr>");
-                }
-                html.AppendLine("<tr class='subtotal-row'>");
-                html.AppendLine("<td class='item-descricao'><strong>Subtotal Tributárias</strong></td>");
-                html.AppendLine($"<td class='item-valor'><strong>R$ {model.SubtotalDespesasTributarias:N2}</strong></td>");
-                html.AppendLine("</tr>");
-                html.AppendLine("</table>");
-            }
-
-            // Despesas Financeiras
-            if (model.DespesasFinanceiras.Any())
-            {
-                html.AppendLine("<div class='secao-titulo'>DESPESAS FINANCEIRAS</div>");
-                html.AppendLine("<table>");
-                foreach (var item in model.DespesasFinanceiras)
-                {
-                    html.AppendLine("<tr>");
-                    html.AppendLine($"<td class='item-descricao'>{item.Descricao}</td>");
-                    html.AppendLine($"<td class='item-valor'>R$ {item.Valor:N2}</td>");
-                    html.AppendLine("</tr>");
-                }
-                html.AppendLine("<tr class='subtotal-row'>");
-                html.AppendLine("<td class='item-descricao'><strong>Subtotal Financeiras</strong></td>");
-                html.AppendLine($"<td class='item-valor'><strong>R$ {model.SubtotalDespesasFinanceiras:N2}</strong></td>");
-                html.AppendLine("</tr>");
-                html.AppendLine("</table>");
-            }
-
-            // Recolhimentos
-            if (model.Recolhimentos.Any())
-            {
-                html.AppendLine("<table>");
-                foreach (var recolhimento in model.Recolhimentos)
-                {
-                    html.AppendLine("<tr>");
-                    html.AppendLine($"<td class='item-descricao'>{recolhimento.Destino} ({recolhimento.Percentual:N2}%)</td>");
-                    html.AppendLine($"<td class='item-valor'>R$ {recolhimento.Valor:N2}</td>");
-                    html.AppendLine("</tr>");
-                }
-                html.AppendLine("</table>");
-            }
-
-            // Totais Finais
+            // DESPESAS FINANCEIRAS
+            html.AppendLine("<div class='secao-titulo'>DESPESAS FINANCEIRAS</div>");
             html.AppendLine("<table>");
-            html.AppendLine("<tr class='total-row'>");
-            html.AppendLine("<td class='item-descricao'><strong>Total do Débito</strong></td>");
-            html.AppendLine($"<td class='item-valor valor-negativo'><strong>R$ {model.TotalDebito:N2}</strong></td>");
+            foreach (var item in model.DespesasFinanceiras)
+            {
+                html.AppendLine("<tr>");
+                html.AppendLine($"<td class='item-descricao'>{item.Descricao}</td>");
+                html.AppendLine("<td class='item-label'>R$</td>");
+                html.AppendLine($"<td class='item-valor'>{(item.Valor > 0 ? item.Valor.ToString("N2") : "")}</td>");
+                html.AppendLine("<td class='item-total'></td>");
+                html.AppendLine("</tr>");
+            }
+            html.AppendLine("<tr class='total-row last-section'>");
+            html.AppendLine("<td class='item-descricao'>Total do Débito</td>");
+            html.AppendLine("<td class='item-label'></td>");
+            html.AppendLine("<td class='item-valor'></td>");
+            html.AppendLine($"<td class='item-total'>R$ {model.TotalDebito:N2}</td>");
             html.AppendLine("</tr>");
             html.AppendLine("</table>");
-
-            // Saldo Final
-            var saldoClass = model.Saldo >= 0 ? "valor-positivo" : "valor-negativo";
-            html.AppendLine("<div class='saldo-final'>");
-            html.AppendLine($"<h4>SALDO: <span class='{saldoClass}'><strong>R$ {model.Saldo:N2}</strong></span></h4>");
-            html.AppendLine("</div>");
 
             // Assinaturas
             html.AppendLine("<div class='assinaturas'>");
+            html.AppendLine("<div class='assinaturas-row'>");
             html.AppendLine("<div class='assinatura'>");
             html.AppendLine("<div class='assinatura-linha'>");
-            html.AppendLine(model.TesoureriroResponsavel ?? "_____________________________");
+            html.AppendLine(!string.IsNullOrEmpty(model.TesoureriroResponsavel) ? model.TesoureriroResponsavel : "");
             html.AppendLine("</div>");
             html.AppendLine("<div class='assinatura-cargo'>Tesoureiro</div>");
             html.AppendLine("</div>");
             html.AppendLine("<div class='assinatura'>");
             html.AppendLine("<div class='assinatura-linha'>");
-            html.AppendLine(model.VistoDoPastor ?? "_____________________________");
+            html.AppendLine(!string.IsNullOrEmpty(model.VistoDoPastor) ? model.VistoDoPastor : "");
             html.AppendLine("</div>");
             html.AppendLine("<div class='assinatura-cargo'>Visto do Pastor</div>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
-
-            // Rodapé
-            html.AppendLine("<div class='rodape'>");
-            html.AppendLine($"<p>Relatório gerado em {model.DataGeracao:dd/MM/yyyy HH:mm}</p>");
-            html.AppendLine("<p>Sistema Integrado de Gestão de Tesouraria Eclesiástica</p>");
             html.AppendLine("</div>");
 
             html.AppendLine("</body>");

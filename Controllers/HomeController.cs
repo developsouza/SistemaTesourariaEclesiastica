@@ -87,8 +87,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // =====================================================
                 int? centroCustoFiltro = null;
 
-                if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
+                if (!User.IsInRole(Roles.Administrador) && 
+                    !User.IsInRole(Roles.TesoureiroGeral) && 
+                    !User.IsInRole(Roles.Pastor))
                 {
+                    // Apenas Tesoureiro Local precisa de filtro por centro de custo
                     if (user.CentroCustoId.HasValue)
                     {
                         centroCustoFiltro = user.CentroCustoId.Value;
@@ -118,6 +122,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         return View();
                     }
                 }
+                // Administrador, TesoureiroGeral e Pastor: centroCustoFiltro = null (vê tudo)
 
                 // =====================================================
                 // 6. BUSCAR IDs DE LANÇAMENTOS APROVADOS (MÊS ATUAL)
@@ -500,7 +505,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.CentroCusto = user.CentroCusto?.Nome ?? "Não definido";
 
                 // Permissões
-                ViewBag.ShowFullData = User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral);
+                ViewBag.ShowFullData = User.IsInRole(Roles.Administrador) || 
+                                      User.IsInRole(Roles.TesoureiroGeral) || 
+                                      User.IsInRole(Roles.Pastor);
                 ViewBag.CanManageOperations = User.IsInRole(Roles.Administrador) ||
                                              User.IsInRole(Roles.TesoureiroGeral) ||
                                              User.IsInRole(Roles.TesoureiroLocal);
@@ -563,7 +570,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewBag.UserRole = primaryRole;
             ViewBag.UserName = user.NomeCompleto;
             ViewBag.CentroCusto = user.CentroCusto?.Nome ?? "Não definido";
-            ViewBag.ShowFullData = User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral);
+            ViewBag.ShowFullData = User.IsInRole(Roles.Administrador) || 
+                                  User.IsInRole(Roles.TesoureiroGeral) || 
+                                  User.IsInRole(Roles.Pastor);
             ViewBag.CanManageOperations = User.IsInRole(Roles.Administrador) ||
                                          User.IsInRole(Roles.TesoureiroGeral) ||
                                          User.IsInRole(Roles.TesoureiroLocal);
@@ -582,7 +591,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
             var user = await _userManager.GetUserAsync(User);
             await _auditService.LogAsync("REPORTS_ACCESS", "Home", "Acesso à página de relatórios");
 
-            var canViewAllData = User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral);
+            var canViewAllData = User.IsInRole(Roles.Administrador) || 
+                                User.IsInRole(Roles.TesoureiroGeral) || 
+                                User.IsInRole(Roles.Pastor);
 
             ViewBag.CanViewAllData = canViewAllData;
             ViewBag.UserCentroCustoId = user?.CentroCustoId;
@@ -677,8 +688,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 IQueryable<Entrada> entradasQuery = _context.Entradas;
                 IQueryable<Saida> saidasQuery = _context.Saidas;
 
-                if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem todos os dados
+                if (!User.IsInRole(Roles.Administrador) && 
+                    !User.IsInRole(Roles.TesoureiroGeral) && 
+                    !User.IsInRole(Roles.Pastor))
                 {
+                    // Apenas Tesoureiro Local tem filtro
                     if (user.CentroCustoId.HasValue)
                     {
                         entradasQuery = entradasQuery.Where(e => e.CentroCustoId == user.CentroCustoId.Value);

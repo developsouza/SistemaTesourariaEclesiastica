@@ -422,7 +422,8 @@ namespace SistemaTesourariaEclesiastica.Data
             var regraRepasse = await context.RegrasRateio
                 .FirstOrDefaultAsync(r =>
                     r.CentroCustoOrigemId == sedeId &&
-                    r.CentroCustoDestinoId == fundoRepasseId);
+                    r.CentroCustoDestinoId == fundoRepasseId &&
+                    r.Ativo);
 
             if (regraRepasse == null)
             {
@@ -460,7 +461,8 @@ namespace SistemaTesourariaEclesiastica.Data
                 var regraDespesas = await context.RegrasRateio
                     .FirstOrDefaultAsync(r =>
                         r.CentroCustoOrigemId == sedeId &&
-                        r.CentroCustoDestinoId == fundoDespesas.Id);
+                        r.CentroCustoDestinoId == fundoDespesas.Id &&
+                        r.Ativo);
 
                 if (regraDespesas == null)
                 {
