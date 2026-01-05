@@ -127,8 +127,14 @@
                         <a asp-action="Index" class="btn btn-secondary">
                             <i class="bi bi-x-circle me-2"></i>Cancelar
                         </a>
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-check-circle me-2"></i>Registrar Saída
+                        <button type="submit" class="btn btn-danger" id="btnSalvar">
+                            <span class="btn-text">
+                                <i class="bi bi-check-circle me-2"></i>Registrar Saída
+                            </span>
+                            <span class="btn-loading d-none">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Salvando...
+                            </span>
                         </button>
                     </div>
                 </form>
@@ -191,6 +197,20 @@
                     $(this).addClass('is-invalid');
                 } else {
                     $(this).removeClass('is-invalid');
+                }
+            });
+
+            // Controlar loading do botão de submit
+            $('form').on('submit', function(e) {
+                var $form = $(this);
+                var $btnSalvar = $('#btnSalvar');
+                
+                // Validar formulário antes de mostrar loading
+                if ($form.valid()) {
+                    // Desabilitar botão e mostrar loading
+                    $btnSalvar.prop('disabled', true);
+                    $btnSalvar.find('.btn-text').addClass('d-none');
+                    $btnSalvar.find('.btn-loading').removeClass('d-none');
                 }
             });
         });

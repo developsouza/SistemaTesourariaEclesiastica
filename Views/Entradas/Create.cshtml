@@ -99,8 +99,14 @@
                         <a asp-action="Index" class="btn btn-secondary">
                             <i class="bi bi-x-circle me-2"></i>Cancelar
                         </a>
-                        <button type="submit" class="btn btn-success">
-                            <i class="bi bi-check-circle me-2"></i>Salvar Entrada
+                        <button type="submit" class="btn btn-success" id="btnSalvar">
+                            <span class="btn-text">
+                                <i class="bi bi-check-circle me-2"></i>Salvar Entrada
+                            </span>
+                            <span class="btn-loading d-none">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Salvando...
+                            </span>
                         </button>
                     </div>
                 </form>
@@ -226,6 +232,20 @@
     function formatMembroSelection(membro) {
                 return membro.text || membro.id;
             }
+
+            // Controlar loading do botão de submit
+            $('form').on('submit', function(e) {
+                var $form = $(this);
+                var $btnSalvar = $('#btnSalvar');
+                
+                // Validar formulário antes de mostrar loading
+                if ($form.valid()) {
+                    // Desabilitar botão e mostrar loading
+                    $btnSalvar.prop('disabled', true);
+                    $btnSalvar.find('.btn-text').addClass('d-none');
+                    $btnSalvar.find('.btn-loading').removeClass('d-none');
+                }
+            });
      });
     </script>
 }
