@@ -892,7 +892,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     TempData["ErrorMessage"] = "Apenas administradores podem excluir fechamentos aprovados. Entre em contato com um administrador do sistema.";
                     return RedirectToAction(nameof(Details), new { id = fechamento.Id });
                 }
-                
+
                 // Admin pode ver a página, mas com aviso especial
                 ViewBag.FechamentoAprovado = true;
                 ViewBag.AvisoAdmin = "ATENÇÃO ADMINISTRADOR: Este fechamento está APROVADO. A exclusão afetará relatórios e pode impactar a integridade financeira. Prossiga apenas se tiver certeza absoluta!";
@@ -935,7 +935,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     TempData["ErrorMessage"] = "Apenas administradores podem excluir fechamentos aprovados.";
                     return RedirectToAction(nameof(Details), new { id = fechamento.Id });
                 }
-                
+
                 _logger.LogWarning($"ATENÇÃO: Administrador {User.Identity.Name} está excluindo fechamento APROVADO ID {id}");
             }
 

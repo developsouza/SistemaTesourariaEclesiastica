@@ -12,17 +12,7 @@
 		<PackageReference Include="itext.pdfhtml" Version="6.2.1" />
 		<PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.9" />
 		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.9" />
-		<PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.9" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-			<PrivateAssets>all</PrivateAssets>
-		</PackageReference>
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.9">
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-			<PrivateAssets>all</PrivateAssets>
-		</PackageReference>
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 	</ItemGroup>
 
 </Project>

@@ -69,11 +69,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 if (bloqueado)
                 {
-                    var tempoRestante = dataDesbloqueio.HasValue 
+                    var tempoRestante = dataDesbloqueio.HasValue
                         ? $"{(dataDesbloqueio.Value - DateTime.Now).TotalMinutes:F0} minutos"
                         : "alguns minutos";
 
-                    ModelState.AddModelError(string.Empty, 
+                    ModelState.AddModelError(string.Empty,
                         $"Acesso temporariamente bloqueado devido a múltiplas tentativas falhadas. " +
                         $"Tente novamente em {tempoRestante}. " +
                         $"Se você é o titular dos dados e está tendo dificuldades, entre em contato com a secretaria.");
@@ -100,7 +100,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .ToListAsync();
 
                 // ✅ SEGURANÇA LGPD: Validação com Nome + CPF + Data de Nascimento
-                var membro = membrosAtivos.FirstOrDefault(m => 
+                var membro = membrosAtivos.FirstOrDefault(m =>
                     m.NomeCompleto.Trim().ToUpperInvariant() == nomeCompleto &&
                     m.CPF.Replace(".", "").Replace("-", "").Replace(" ", "") == cpf &&
                     m.DataNascimento.HasValue &&
@@ -112,7 +112,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     await _rateLimitService.RegistrarTentativaAsync(cpf, false, "Dados não conferem");
 
                     // Verificar tentativas restantes após esta falha
-                    var (novoBloqueio, novaDataDesbloqueio, novasTentativasRestantes) = 
+                    var (novoBloqueio, novaDataDesbloqueio, novasTentativasRestantes) =
                         await _rateLimitService.VerificarBloqueioAsync(cpf);
 
                     var mensagemAviso = novasTentativasRestantes > 0
@@ -121,8 +121,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                     // Log detalhado para debug (sem expor dados sensíveis)
                     _logger.LogWarning($"Acesso negado - Dados não conferem. Tentativas restantes: {novasTentativasRestantes}");
-                    
-                    ModelState.AddModelError(string.Empty, 
+
+                    ModelState.AddModelError(string.Empty,
                         $"Dados não conferem. Verifique se o nome completo, CPF e data de nascimento estão corretos e correspondem ao mesmo cadastro. " +
                         $"Esta verificação é necessária para proteger seus dados conforme a LGPD.{mensagemAviso}");
 

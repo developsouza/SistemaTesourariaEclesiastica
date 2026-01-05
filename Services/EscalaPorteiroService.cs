@@ -114,14 +114,14 @@ namespace SistemaTesourariaEclesiastica.Services
 
             // CALCULAR DESCANSO MÍNIMO VIÁVEL baseado na demanda
             var totalEscalasNecessarias = diasOrdenados.Count;
-            var totalPosicoesNecessarias = diasOrdenados.Sum(d => 
+            var totalPosicoesNecessarias = diasOrdenados.Sum(d =>
                 (d.Horario.HasValue && d.Horario.Value >= new TimeSpan(19, 0, 0)) ? 2 : 1);
-            
+
             var porteirosDisponiveis = porteiros.Count;
             var mediaEscalasPorPorteiro = (double)totalPosicoesNecessarias / porteirosDisponiveis;
             var diasNoMes = (diasOrdenados.Last().Data - diasOrdenados.First().Data).TotalDays + 1;
             var frequenciaMedia = diasNoMes / mediaEscalasPorPorteiro;
-            
+
             // Calcular descanso mínimo viável
             int DIAS_MINIMO_DESCANSO;
             if (frequenciaMedia >= 7)
@@ -130,7 +130,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 DIAS_MINIMO_DESCANSO = 2; // Demanda média: 2 dias
             else
                 DIAS_MINIMO_DESCANSO = 1; // Alta demanda: 1 dia (trabalha dia sim, dia não)
-            
+
             _logger.LogInformation($"📊 Análise de Demanda:");
             _logger.LogInformation($"  - Total de escalas: {totalEscalasNecessarias}");
             _logger.LogInformation($"  - Total de posições: {totalPosicoesNecessarias}");
@@ -185,7 +185,7 @@ namespace SistemaTesourariaEclesiastica.Services
                     if (ultimaDataTrabalho[porteiro.Id].HasValue)
                     {
                         var diasDescanso = (dia.Data - ultimaDataTrabalho[porteiro.Id].Value).TotalDays;
-                        
+
                         // Bloqueio ABSOLUTO se descanso < mínimo calculado
                         if (diasDescanso < DIAS_MINIMO_DESCANSO)
                         {
@@ -233,7 +233,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 if (porteirosElegiveis.Count < quantidadePorteiros)
                 {
                     _logger.LogWarning($"⚠️ SITUAÇÃO CRÍTICA em {dia.Data:dd/MM/yyyy}: necessário {quantidadePorteiros}, disponíveis {porteirosElegiveis.Count}");
-                    
+
                     // Relaxar APENAS bloqueio por descanso (mantém bloqueio de horário do mesmo dia)
                     var complementares = elegiveisBase
                         .Where(p => bloqueadosPorDescanso.Contains(p.Id) && !bloqueadosPorHorarioHoje.Contains(p.Id))
@@ -246,8 +246,8 @@ namespace SistemaTesourariaEclesiastica.Services
                     {
                         if (!porteirosElegiveis.Contains(p))
                         {
-                            var diasDescanso = ultimaDataTrabalho[p.Id].HasValue 
-                                ? (dia.Data - ultimaDataTrabalho[p.Id].Value).TotalDays 
+                            var diasDescanso = ultimaDataTrabalho[p.Id].HasValue
+                                ? (dia.Data - ultimaDataTrabalho[p.Id].Value).TotalDays
                                 : 999;
                             _logger.LogWarning($"    Relaxando bloqueio para {p.Nome} (descanso: {diasDescanso:F1} dias)");
                             porteirosElegiveis.Add(p);
@@ -288,13 +288,13 @@ namespace SistemaTesourariaEclesiastica.Services
                 {
                     pontuacaoPorteiros[id]++;
                     ultimaDataTrabalho[id] = dia.Data;
-                    
+
                     // Registrar horário trabalhado hoje
                     if (dia.Horario.HasValue)
                     {
                         horariosTrabalhados[id].Add(dia.Horario.Value);
                     }
-                    
+
                     var nomePorteiro = porteiros.First(p => p.Id == id).Nome;
                     _logger.LogInformation($"  ✓ {nomePorteiro} escalado para {dia.Data:dd/MM/yyyy} {dia.Horario?.ToString(@"hh\:mm") ?? ""}");
                 }
@@ -389,8 +389,8 @@ namespace SistemaTesourariaEclesiastica.Services
 
                 if (candidatoSolo != null)
                 {
-                    var diasDescanso = ultimaDataTrabalho[candidatoSolo.Id].HasValue 
-                        ? (dataAtual - ultimaDataTrabalho[candidatoSolo.Id].Value).TotalDays 
+                    var diasDescanso = ultimaDataTrabalho[candidatoSolo.Id].HasValue
+                        ? (dataAtual - ultimaDataTrabalho[candidatoSolo.Id].Value).TotalDays
                         : 999;
                     _logger.LogDebug($"Porteiro SOLO selecionado: {candidatoSolo.Nome} (descanso: {diasDescanso:F1} dias)");
                     return new List<int> { candidatoSolo.Id };
@@ -406,7 +406,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
             // LÓGICA PARA DUPLAS - Variedade é PRIORIDADE MÁXIMA
             var candidatos = porteirosElegiveis.Where(p => !porteirosRecentes.Contains(p.Id)).ToList();
-            
+
             // Se não tiver candidatos suficientes sem recentes, relaxa
             if (candidatos.Count < 2)
             {
@@ -461,7 +461,7 @@ namespace SistemaTesourariaEclesiastica.Services
                     if (ultimaDataTrabalho[p1.Id].HasValue)
                     {
                         var diasDescanso = (dataAtual - ultimaDataTrabalho[p1.Id].Value).TotalDays;
-                        
+
                         // PENALIZAÇÃO GRADUADA (ajustada dinamicamente):
                         if (diasDescanso < 1.5)
                             score += 15000; // Bloqueio muito pesado
@@ -484,7 +484,7 @@ namespace SistemaTesourariaEclesiastica.Services
                     if (ultimaDataTrabalho[p2.Id].HasValue)
                     {
                         var diasDescanso = (dataAtual - ultimaDataTrabalho[p2.Id].Value).TotalDays;
-                        
+
                         if (diasDescanso < 1.5)
                             score += 15000;
                         else if (diasDescanso < 2.5)
@@ -533,14 +533,14 @@ namespace SistemaTesourariaEclesiastica.Services
 
             var p1Nome = porteirosElegiveis.First(p => p.Id == melhorDupla.p1).Nome;
             var p2Nome = porteirosElegiveis.First(p => p.Id == melhorDupla.p2).Nome;
-            
-            var p1Descanso = ultimaDataTrabalho[melhorDupla.p1].HasValue 
-                ? (dataAtual - ultimaDataTrabalho[melhorDupla.p1].Value).TotalDays 
+
+            var p1Descanso = ultimaDataTrabalho[melhorDupla.p1].HasValue
+                ? (dataAtual - ultimaDataTrabalho[melhorDupla.p1].Value).TotalDays
                 : 999;
-            var p2Descanso = ultimaDataTrabalho[melhorDupla.p2].HasValue 
-                ? (dataAtual - ultimaDataTrabalho[melhorDupla.p2].Value).TotalDays 
+            var p2Descanso = ultimaDataTrabalho[melhorDupla.p2].HasValue
+                ? (dataAtual - ultimaDataTrabalho[melhorDupla.p2].Value).TotalDays
                 : 999;
-            
+
             _logger.LogDebug($"Dupla selecionada para {dataAtual:dd/MM/yyyy}: {p1Nome} ({p1Descanso:F1}d) + {p2Nome} ({p2Descanso:F1}d) (score: {melhorDupla.score:F2})");
 
             return new List<int> { melhorDupla.p1, melhorDupla.p2 };

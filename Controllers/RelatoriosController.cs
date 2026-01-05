@@ -1058,8 +1058,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int selectedCentroCustoId;
 
                 // ✅ CORRIGIDO: Incluir Pastor para gerar PDF de qualquer centro de custo
-                if (User.IsInRole(Roles.Administrador) || 
-                    User.IsInRole(Roles.TesoureiroGeral) || 
+                if (User.IsInRole(Roles.Administrador) ||
+                    User.IsInRole(Roles.TesoureiroGeral) ||
                     User.IsInRole(Roles.Pastor))
                 {
                     if (centroCustoId.HasValue)
@@ -1146,8 +1146,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int selectedCentroCustoId;
 
                 // ✅ CORRIGIDO: Incluir Pastor para gerar PDF de qualquer centro de custo
-                if (User.IsInRole(Roles.Administrador) || 
-                    User.IsInRole(Roles.TesoureiroGeral) || 
+                if (User.IsInRole(Roles.Administrador) ||
+                    User.IsInRole(Roles.TesoureiroGeral) ||
                     User.IsInRole(Roles.Pastor))
                 {
                     if (centroCustoId.HasValue)

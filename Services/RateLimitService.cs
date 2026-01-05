@@ -40,8 +40,8 @@ namespace SistemaTesourariaEclesiastica.Services
 
             // Buscar tentativas falhadas nas últimas 3 horas
             var tentativasFalhadas = await _context.TentativasAcessoTransparencia
-                .Where(t => t.CPF == cpf && 
-                           !t.Sucesso && 
+                .Where(t => t.CPF == cpf &&
+                           !t.Sucesso &&
                            t.DataHoraTentativa >= limiteDataHora)
                 .OrderByDescending(t => t.DataHoraTentativa)
                 .ToListAsync();

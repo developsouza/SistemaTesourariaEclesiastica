@@ -672,7 +672,7 @@ namespace SistemaTesourariaEclesiastica.Data
             // ========================================
             // 🔒 CONFIGURAÇÕES - MÓDULO DE RATE LIMITING (LGPD)
             // ========================================
-            
+
             // TentativaAcessoTransparencia
             builder.Entity<TentativaAcessoTransparencia>(entity =>
             {

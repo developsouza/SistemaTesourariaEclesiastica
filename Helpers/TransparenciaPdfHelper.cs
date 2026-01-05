@@ -1,11 +1,11 @@
-﻿using iText.Kernel.Colors;
+﻿using iText.IO.Font.Constants;
+using iText.Kernel.Colors;
+using iText.Kernel.Font;
 using iText.Kernel.Pdf;
 using iText.Layout;
 using iText.Layout.Borders;
 using iText.Layout.Element;
 using iText.Layout.Properties;
-using iText.Kernel.Font;
-using iText.IO.Font.Constants;
 using SistemaTesourariaEclesiastica.Models;
 
 namespace SistemaTesourariaEclesiastica.Helpers

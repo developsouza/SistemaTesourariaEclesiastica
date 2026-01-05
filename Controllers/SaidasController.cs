@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SistemaTesourariaEclesiastica.Attributes;
 using SistemaTesourariaEclesiastica.Data;
 using SistemaTesourariaEclesiastica.Enums;
@@ -21,8 +20,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private readonly ILogger<SaidasController> _logger;
 
         public SaidasController(
-            ApplicationDbContext context, 
-            UserManager<ApplicationUser> userManager, 
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
             AuditService auditService,
             ILogger<SaidasController> logger)
         {
@@ -369,7 +368,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             var saida = await _context.Saidas
                 .Include(s => s.MeioDePagamento)
                 .FirstOrDefaultAsync(s => s.Id == id);
-                
+
             if (saida != null)
             {
                 // Verificar permissão de acesso
@@ -432,7 +431,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 .Include(f => f.DetalhesFechamento)
                 .Include(f => f.ItensRateio)
                 .Include(f => f.CentroCusto)
-                .Where(f => f.Id == saida.FechamentoQueIncluiuId.Value && 
+                .Where(f => f.Id == saida.FechamentoQueIncluiuId.Value &&
                            f.Status == StatusFechamentoPeriodo.Pendente)
                 .ToListAsync();
 
@@ -445,7 +444,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .Where(d => d.TipoMovimento == "Saida" &&
                                d.Data.Date == saida.Data.Date &&
                                d.Valor == saida.Valor &&
-                               (d.Descricao == saida.Descricao || 
+                               (d.Descricao == saida.Descricao ||
                                 (string.IsNullOrEmpty(d.Descricao) && string.IsNullOrEmpty(saida.Descricao))))
                     .ToList();
 
@@ -473,7 +472,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             if (isEntrada)
             {
                 fechamento.TotalEntradas -= valorRemovido;
-                
+
                 if (tipoCaixa == TipoCaixa.Fisico)
                 {
                     fechamento.TotalEntradasFisicas -= valorRemovido;
@@ -488,7 +487,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             else // Saída
             {
                 fechamento.TotalSaidas -= valorRemovido;
-                
+
                 if (tipoCaixa == TipoCaixa.Fisico)
                 {
                     fechamento.TotalSaidasFisicas -= valorRemovido;

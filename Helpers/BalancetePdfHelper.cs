@@ -234,7 +234,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
             // RECEITAS OPERACIONAIS
             html.AppendLine("<div class='secao-titulo'>RECEITAS OPERACIONAIS</div>");
             html.AppendLine("<table>");
-            
+
             html.AppendLine("<tr>");
             html.AppendLine("<td class='item-descricao'>Saldo do Mês Anterior</td>");
             html.AppendLine("<td class='item-label'>R$</td>");
@@ -301,7 +301,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
                 {
                     descricaoHtml = $"<strong>{item.Descricao}</strong>";
                 }
-                
+
                 html.AppendLine("<tr>");
                 html.AppendLine($"<td class='item-descricao'>{descricaoHtml}</td>");
                 html.AppendLine("<td class='item-label'>R$</td>");

@@ -361,23 +361,23 @@ namespace SistemaTesourariaEclesiastica.Services
         private void GerarCabecalhoOtimizado(StringBuilder html, FechamentoPeriodo fechamento)
         {
             html.AppendLine("<div class='header'>");
-            
+
             // Logo à esquerda (coluna 1)
             html.AppendLine("<div class='header-logo'>");
             html.AppendLine("<img src='wwwroot/images/logoadjacumabk.png' alt='Logo' />");
             html.AppendLine("</div>");
-            
+
             // Conteúdo do cabeçalho (coluna 2)
             html.AppendLine("<div class='header-content'>");
-            
+
             // Título centralizado
             html.AppendLine("<div class='header-title'>");
             html.AppendLine("<div class='title'>PRESTAÇÃO DE CONTAS - FECHAMENTO DE PERÍODO</div>");
-            
+
             // ✅ OTIMIZADO: Nome do centro de custo e período na mesma linha com separador
             html.AppendLine("<div class='subtitle'>");
             html.AppendLine($"<strong>{fechamento.CentroCusto.Nome}</strong>");
-            
+
             // Período
             string periodoTexto;
             if (fechamento.TipoFechamento == TipoFechamento.Diario)
@@ -466,11 +466,11 @@ namespace SistemaTesourariaEclesiastica.Services
                 html.AppendLine("<div class='info-line'>");
                 html.AppendLine($"<span class='info-label'>Consolidação:</span> ");
                 html.AppendLine($"{fechamento.FechamentosCongregacoesIncluidos.Count} prestação(ões) de congregação(ões): ");
-                
+
                 var nomesConjuntos = string.Join(", ", fechamento.FechamentosCongregacoesIncluidos
                     .OrderBy(f => f.CentroCusto.Nome)
                     .Select(cong => cong.CentroCusto.Nome));
-                
+
                 html.AppendLine(nomesConjuntos);
                 html.AppendLine("</div>");
             }
@@ -481,11 +481,11 @@ namespace SistemaTesourariaEclesiastica.Services
                 html.AppendLine("<div class='info-line'>");
                 html.AppendLine($"<span class='info-label'>Rateios Aplicados:</span> {fechamento.TotalRateios:C} | ");
                 html.AppendLine("<span class='info-label'>Detalhamento:</span> ");
-                
+
                 var rateios = fechamento.ItensRateio
                     .OrderBy(r => r.RegraRateio.Nome)
                     .Select(rateio => $"{rateio.RegraRateio.CentroCustoDestino.Nome}: {rateio.Percentual:F2}% = {rateio.ValorRateio:C}");
-                
+
                 html.AppendLine(string.Join("; ", rateios));
                 html.AppendLine("</div>");
             }
@@ -577,8 +577,8 @@ namespace SistemaTesourariaEclesiastica.Services
                     {
                         html.AppendLine("<tr>");
                         html.AppendLine($"<td>{entrada.Data:dd/MM}</td>");
-                        var descricaoCompleta = !string.IsNullOrEmpty(entrada.PlanoContas) 
-                            ? $"{entrada.PlanoContas}: {entrada.Descricao ?? ""}" 
+                        var descricaoCompleta = !string.IsNullOrEmpty(entrada.PlanoContas)
+                            ? $"{entrada.PlanoContas}: {entrada.Descricao ?? ""}"
                             : entrada.Descricao ?? "N/A";
                         html.AppendLine($"<td>{descricaoCompleta}</td>");
                         html.AppendLine($"<td class='currency text-success'>{entrada.Valor:C}</td>");
@@ -647,8 +647,8 @@ namespace SistemaTesourariaEclesiastica.Services
                     {
                         html.AppendLine("<tr>");
                         html.AppendLine($"<td>{saida.Data:dd/MM}</td>");
-                        var descricaoCompleta = !string.IsNullOrEmpty(saida.PlanoContas) 
-                            ? $"{saida.PlanoContas}: {saida.Descricao ?? ""}" 
+                        var descricaoCompleta = !string.IsNullOrEmpty(saida.PlanoContas)
+                            ? $"{saida.PlanoContas}: {saida.Descricao ?? ""}"
                             : saida.Descricao ?? "N/A";
                         html.AppendLine($"<td>{descricaoCompleta}</td>");
                         html.AppendLine($"<td class='currency text-danger'>{saida.Valor:C}</td>");

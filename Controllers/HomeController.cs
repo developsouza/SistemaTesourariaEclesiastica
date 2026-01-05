@@ -88,8 +88,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int? centroCustoFiltro = null;
 
                 // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
-                if (!User.IsInRole(Roles.Administrador) && 
-                    !User.IsInRole(Roles.TesoureiroGeral) && 
+                if (!User.IsInRole(Roles.Administrador) &&
+                    !User.IsInRole(Roles.TesoureiroGeral) &&
                     !User.IsInRole(Roles.Pastor))
                 {
                     // Apenas Tesoureiro Local precisa de filtro por centro de custo
@@ -505,8 +505,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.CentroCusto = user.CentroCusto?.Nome ?? "Não definido";
 
                 // Permissões
-                ViewBag.ShowFullData = User.IsInRole(Roles.Administrador) || 
-                                      User.IsInRole(Roles.TesoureiroGeral) || 
+                ViewBag.ShowFullData = User.IsInRole(Roles.Administrador) ||
+                                      User.IsInRole(Roles.TesoureiroGeral) ||
                                       User.IsInRole(Roles.Pastor);
                 ViewBag.CanManageOperations = User.IsInRole(Roles.Administrador) ||
                                              User.IsInRole(Roles.TesoureiroGeral) ||
@@ -570,8 +570,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewBag.UserRole = primaryRole;
             ViewBag.UserName = user.NomeCompleto;
             ViewBag.CentroCusto = user.CentroCusto?.Nome ?? "Não definido";
-            ViewBag.ShowFullData = User.IsInRole(Roles.Administrador) || 
-                                  User.IsInRole(Roles.TesoureiroGeral) || 
+            ViewBag.ShowFullData = User.IsInRole(Roles.Administrador) ||
+                                  User.IsInRole(Roles.TesoureiroGeral) ||
                                   User.IsInRole(Roles.Pastor);
             ViewBag.CanManageOperations = User.IsInRole(Roles.Administrador) ||
                                          User.IsInRole(Roles.TesoureiroGeral) ||
@@ -591,8 +591,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
             var user = await _userManager.GetUserAsync(User);
             await _auditService.LogAsync("REPORTS_ACCESS", "Home", "Acesso à página de relatórios");
 
-            var canViewAllData = User.IsInRole(Roles.Administrador) || 
-                                User.IsInRole(Roles.TesoureiroGeral) || 
+            var canViewAllData = User.IsInRole(Roles.Administrador) ||
+                                User.IsInRole(Roles.TesoureiroGeral) ||
                                 User.IsInRole(Roles.Pastor);
 
             ViewBag.CanViewAllData = canViewAllData;
@@ -689,8 +689,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 IQueryable<Saida> saidasQuery = _context.Saidas;
 
                 // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem todos os dados
-                if (!User.IsInRole(Roles.Administrador) && 
-                    !User.IsInRole(Roles.TesoureiroGeral) && 
+                if (!User.IsInRole(Roles.Administrador) &&
+                    !User.IsInRole(Roles.TesoureiroGeral) &&
                     !User.IsInRole(Roles.Pastor))
                 {
                     // Apenas Tesoureiro Local tem filtro

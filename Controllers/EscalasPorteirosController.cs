@@ -85,8 +85,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .Where(m => !string.IsNullOrEmpty(m))
                         .ToList();
 
-                    var errorMessage = errors.Any() 
-                        ? string.Join("; ", errors) 
+                    var errorMessage = errors.Any()
+                        ? string.Join("; ", errors)
                         : "Dados inválidos. Verifique os campos preenchidos.";
 
                     _logger.LogWarning("ModelState inválido: {Errors}", errorMessage);
@@ -160,9 +160,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 // Exceções inesperadas (não expor detalhes ao usuário)
                 _logger.LogError(ex, "Erro inesperado ao gerar escala de porteiros");
-                return Json(new { 
-                    success = false, 
-                    message = "Erro ao processar a solicitação. Tente novamente ou contate o administrador do sistema." 
+                return Json(new
+                {
+                    success = false,
+                    message = "Erro ao processar a solicitação. Tente novamente ou contate o administrador do sistema."
                 });
             }
         }
@@ -390,7 +391,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 dataInicio ??= DateTime.Today;
                 dataFim ??= DateTime.Today.AddMonths(1);
 
-                _logger.LogInformation("Carregando página de escala manual. DataInicio: {DataInicio}, DataFim: {DataFim}", 
+                _logger.LogInformation("Carregando página de escala manual. DataInicio: {DataInicio}, DataFim: {DataFim}",
                     dataInicio, dataFim);
 
                 // Buscar porteiros ativos
@@ -440,8 +441,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     };
 
                     // Verificar se já existe escala para este dia/horário
-                    var escalaExistente = escalasExistentes.FirstOrDefault(e => 
-                        e.DataCulto.Date == diaSugerido.Data.Date && 
+                    var escalaExistente = escalasExistentes.FirstOrDefault(e =>
+                        e.DataCulto.Date == diaSugerido.Data.Date &&
                         e.Horario == diaSugerido.Horario);
 
                     if (escalaExistente != null)
@@ -481,7 +482,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     ResponsavelSelecionadoId = responsaveis.First().Id
                 };
 
-                _logger.LogInformation("Página de escala manual carregada com sucesso. {QtdDias} dias, {QtdPorteiros} porteiros", 
+                _logger.LogInformation("Página de escala manual carregada com sucesso. {QtdDias} dias, {QtdPorteiros} porteiros",
                     diasDisponiveis.Count, porteiros.Count);
 
                 return View(viewModel);
@@ -543,15 +544,15 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     // Validar que pelo menos 1 porteiro foi atribuído
                     if (!escalaRequest.PorteiroId.HasValue)
                     {
-                        _logger.LogWarning("Escala sem porteiro principal ignorada: {Data} {Horario}", 
+                        _logger.LogWarning("Escala sem porteiro principal ignorada: {Data} {Horario}",
                             escalaRequest.Data, escalaRequest.Horario);
                         continue;
                     }
 
                     // Verificar se já existe escala para este dia/horário
                     var escalaExistente = await _context.EscalasPorteiros
-                        .FirstOrDefaultAsync(e => 
-                            e.DataCulto.Date == escalaRequest.Data.Date && 
+                        .FirstOrDefaultAsync(e =>
+                            e.DataCulto.Date == escalaRequest.Data.Date &&
                             e.Horario == escalaRequest.Horario);
 
                     if (escalaExistente != null)

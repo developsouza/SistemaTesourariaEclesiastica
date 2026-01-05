@@ -1,5 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using SistemaTesourariaEclesiastica.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace SistemaTesourariaEclesiastica.ViewModels
 {

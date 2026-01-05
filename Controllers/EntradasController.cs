@@ -394,7 +394,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var entrada = await _context.Entradas
                     .Include(e => e.MeioDePagamento)
                     .FirstOrDefaultAsync(e => e.Id == id);
-                    
+
                 if (entrada == null) return NotFound();
 
                 // Verificar permissão de acesso
@@ -506,7 +506,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 .Include(f => f.DetalhesFechamento)
                 .Include(f => f.ItensRateio)
                 .Include(f => f.CentroCusto)
-                .Where(f => f.Id == entrada.FechamentoQueIncluiuId.Value && 
+                .Where(f => f.Id == entrada.FechamentoQueIncluiuId.Value &&
                            f.Status == StatusFechamentoPeriodo.Pendente)
                 .ToListAsync();
 
@@ -519,7 +519,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .Where(d => d.TipoMovimento == "Entrada" &&
                                d.Data.Date == entrada.Data.Date &&
                                d.Valor == entrada.Valor &&
-                               (d.Descricao == entrada.Descricao || 
+                               (d.Descricao == entrada.Descricao ||
                                 (string.IsNullOrEmpty(d.Descricao) && string.IsNullOrEmpty(entrada.Descricao))))
                     .ToList();
 
@@ -547,7 +547,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             if (isEntrada)
             {
                 fechamento.TotalEntradas -= valorRemovido;
-                
+
                 if (tipoCaixa == TipoCaixa.Fisico)
                 {
                     fechamento.TotalEntradasFisicas -= valorRemovido;
@@ -562,7 +562,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
             else // Saída
             {
                 fechamento.TotalSaidas -= valorRemovido;
-                
+
                 if (tipoCaixa == TipoCaixa.Fisico)
                 {
                     fechamento.TotalSaidasFisicas -= valorRemovido;

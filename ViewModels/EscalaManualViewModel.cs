@@ -28,7 +28,7 @@ namespace SistemaTesourariaEclesiastica.ViewModels
         public string DataFormatada => Data.ToString("dd/MM/yyyy");
         public string HorarioFormatado => Horario?.ToString(@"hh\:mm") ?? "";
         public int QuantidadePorteirosNecessaria => Horario.HasValue && Horario.Value >= new TimeSpan(19, 0, 0) ? 2 : 1;
-        
+
         // Porteiros já atribuídos a este dia
         public List<PorteiroAtribuido> PorteirosAtribuidos { get; set; } = new();
     }
