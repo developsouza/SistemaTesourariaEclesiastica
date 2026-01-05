@@ -116,29 +116,29 @@
 
     <div class="col-lg-4">
         <div class="card">
-    <div class="card-header">
-     <h6 class="card-title mb-0">
-      <i class="bi bi-lightbulb me-2"></i>Informações
-    </h6>
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>Informações
+                </h6>
             </div>
-   <div class="card-body">
- <div class="mb-3 pb-3 border-bottom border-opacity-25">
-  <p class="small mb-0">
-          <strong>Dica:</strong> Para registrar dízimos, selecione o membro correspondente.
-    </p>
-     </div>
+            <div class="card-body">
+                <div class="mb-3 pb-3 border-bottom border-opacity-25">
+                    <p class="small mb-0">
+                        <strong>Dica:</strong> Para registrar dízimos, selecione o membro correspondente.
+                    </p>
+                </div>
 
-           <div class="mb-3 pb-3 border-bottom border-opacity-25">
-   <p class="small mb-0">
-    <strong>Importante:</strong> Todos os campos marcados com <span class="text-danger">*</span> são obrigatórios.
-   </p>
-       </div>
+                <div class="mb-3 pb-3 border-bottom border-opacity-25">
+                    <p class="small mb-0">
+                        <strong>Importante:</strong> Todos os campos marcados com <span class="text-danger">*</span> são obrigatórios.
+                    </p>
+                </div>
 
-    <div>
-    <p class="small mb-0">
-       <strong>Lembrete:</strong> Escolha corretamente o meio de pagamento para facilitar a conciliação bancária.
-           </p>
-     </div>
+                <div>
+                    <p class="small mb-0">
+                        <strong>Lembrete:</strong> Escolha corretamente o meio de pagamento para facilitar a conciliação bancária.
+                    </p>
+                </div>
             </div>
         </div>
     </div>
@@ -149,103 +149,103 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
     <script>
-        $(document).ready(function() {
-    // Formatar data para hoje se estiver vazia
-       if (!$('#Data').val()) {
- var today = new Date();
-                var year = today.getFullYear();
-          var month = String(today.getMonth() + 1).padStart(2, '0');
-    var day = String(today.getDate()).padStart(2, '0');
-  var dateString = year + '-' + month + '-' + day;
-   $('#Data').val(dateString);
-            }
+                $(document).ready(function() {
+            // Formatar data para hoje se estiver vazia
+               if (!$('#Data').val()) {
+         var today = new Date();
+                        var year = today.getFullYear();
+                  var month = String(today.getMonth() + 1).padStart(2, '0');
+            var day = String(today.getDate()).padStart(2, '0');
+          var dateString = year + '-' + month + '-' + day;
+           $('#Data').val(dateString);
+                    }
 
-            // Validação adicional do valor
-       $('#Valor').on('input', function() {
-    var val = $(this).val();
- if (val < 0.01) {
-      $(this).addClass('is-invalid');
-    } else {
-        $(this).removeClass('is-invalid');
-                }
-     });
+                    // Validação adicional do valor
+               $('#Valor').on('input', function() {
+            var val = $(this).val();
+         if (val < 0.01) {
+              $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+                        }
+             });
 
-       // Inicializar Select2 para o campo de Membro com busca AJAX
-        $('#MembroId').select2({
-     theme: 'bootstrap-5',
-  placeholder: 'Digite para buscar o membro...',
-       allowClear: true,
-                language: {
-      noResults: function() {
-         return "Nenhum membro encontrado";
-        },
-                searching: function() {
-       return "Buscando...";
-     },
-       inputTooShort: function() {
-      return "Digite pelo menos 2 caracteres";
-      }
-       },
-   ajax: {
-        url: '@Url.Action("BuscarMembros", "Membros")',
-          dataType: 'json',
-      delay: 300,
-  data: function(params) {
-        return {
-    term: params.term || ''
-        };
-          },
-          processResults: function(data) {
-        return {
-         results: data.map(function(item) {
-            return {
-  id: item.id,
-           text: item.text + (item.apelido ? ' (' + item.apelido + ')' : ''),
-       centroCusto: item.centroCustoNome
-        };
-     })
-       };
-      },
- cache: true
-          },
-        minimumInputLength: 2,
-    templateResult: formatMembro,
-         templateSelection: formatMembroSelection
-            });
+               // Inicializar Select2 para o campo de Membro com busca AJAX
+                $('#MembroId').select2({
+             theme: 'bootstrap-5',
+          placeholder: 'Digite para buscar o membro...',
+               allowClear: true,
+                        language: {
+              noResults: function() {
+                 return "Nenhum membro encontrado";
+                },
+                        searching: function() {
+               return "Buscando...";
+             },
+               inputTooShort: function() {
+              return "Digite pelo menos 2 caracteres";
+              }
+               },
+           ajax: {
+                url: '@Url.Action("BuscarMembros", "Membros")',
+                  dataType: 'json',
+              delay: 300,
+          data: function(params) {
+                return {
+            term: params.term || ''
+                };
+                  },
+                  processResults: function(data) {
+                return {
+                 results: data.map(function(item) {
+                    return {
+          id: item.id,
+                   text: item.text + (item.apelido ? ' (' + item.apelido + ')' : ''),
+               centroCusto: item.centroCustoNome
+                };
+             })
+               };
+              },
+         cache: true
+                  },
+                minimumInputLength: 2,
+            templateResult: formatMembro,
+                 templateSelection: formatMembroSelection
+                    });
 
-          // Formatar resultado no dropdown
-          function formatMembro(membro) {
-       if (!membro.id) {
-         return membro.text;
-       }
-    
-     var $membro = $(
-'<div class="d-flex flex-column">' +
-       '<div class="fw-semibold">' + membro.text + '</div>' +
-          (membro.centroCusto ? '<small class="text-muted">' + membro.centroCusto + '</small>' : '') +
-    '</div>'
-     );
-                return $membro;
-            }
+                  // Formatar resultado no dropdown
+                  function formatMembro(membro) {
+               if (!membro.id) {
+                 return membro.text;
+               }
 
-            // Formatar seleção
-    function formatMembroSelection(membro) {
-                return membro.text || membro.id;
-            }
+             var $membro = $(
+        '<div class="d-flex flex-column">' +
+               '<div class="fw-semibold">' + membro.text + '</div>' +
+                  (membro.centroCusto ? '<small class="text-muted">' + membro.centroCusto + '</small>' : '') +
+            '</div>'
+             );
+                        return $membro;
+                    }
 
-            // Controlar loading do botão de submit
-            $('form').on('submit', function(e) {
-                var $form = $(this);
-                var $btnSalvar = $('#btnSalvar');
-                
-                // Validar formulário antes de mostrar loading
-                if ($form.valid()) {
-                    // Desabilitar botão e mostrar loading
-                    $btnSalvar.prop('disabled', true);
-                    $btnSalvar.find('.btn-text').addClass('d-none');
-                    $btnSalvar.find('.btn-loading').removeClass('d-none');
-                }
-            });
-     });
+                    // Formatar seleção
+            function formatMembroSelection(membro) {
+                        return membro.text || membro.id;
+                    }
+
+                    // Controlar loading do botão de submit
+                    $('form').on('submit', function(e) {
+                        var $form = $(this);
+                        var $btnSalvar = $('#btnSalvar');
+
+                        // Validar formulário antes de mostrar loading
+                        if ($form.valid()) {
+                            // Desabilitar botão e mostrar loading
+                            $btnSalvar.prop('disabled', true);
+                            $btnSalvar.find('.btn-text').addClass('d-none');
+                            $btnSalvar.find('.btn-loading').removeClass('d-none');
+                        }
+                    });
+             });
     </script>
 }
