@@ -448,26 +448,12 @@ class FormManager {
     }
 
     init() {
-        this.setupFormSubmit();
+        // Removido setupFormSubmit() - cada formulário deve gerenciar seu próprio loading
+        // para evitar conflitos com validações server-side
         this.setupCPFMask();
         this.setupPhoneMask();
         this.setupCEPMask();
         this.setupMoneyMask();
-    }
-
-    setupFormSubmit() {
-        document.querySelectorAll('form').forEach(form => {
-            // Não interceptar formulários que já tem seu próprio handler
-            if (form.hasAttribute('data-ajax') || form.id === 'formDevolucaoDetails') {
-                return;
-            }
-
-            form.addEventListener('submit', (e) => {
-                if (form.checkValidity()) {
-                    showLoading('Enviando...');
-                }
-            });
-        });
     }
 
     setupCPFMask() {

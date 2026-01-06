@@ -104,9 +104,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         ViewBag.EntradasMes = "R$ 0,00";
                         ViewBag.SaidasMes = "R$ 0,00";
                         ViewBag.SaldoTotal = "R$ 0,00";
+                        ViewBag.TotalRateiosEnviados = "R$ 0,00";
                         ViewBag.DizimosMes = "R$ 0,00";
                         ViewBag.FluxoCaixaData = new List<object>();
                         ViewBag.DespesasData = new List<object>();
+                        ViewBag.RateiosPorDestino = new List<object>();
                         ViewBag.UserRole = primaryRole;
                         ViewBag.UserName = user.NomeCompleto;
                         ViewBag.CentroCusto = "Não definido";
@@ -237,7 +239,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // =====================================================
                 // 8. CALCULAR SALDO TOTAL (APENAS LANÇAMENTOS INCLUÍDOS EM FECHAMENTOS APROVADOS/PROCESSADOS DE TODOS OS TEMPOS)
                 // =====================================================
-                decimal totalEntradas = 0, totalSaidas = 0;
+                decimal totalEntradas = 0, totalSaidas = 0, totalRateiosEnviados = 0;
 
                 try
                 {
@@ -270,13 +272,27 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     }
 
                     totalSaidas = await queryTodasSaidas.SumAsync(s => (decimal?)s.Valor) ?? 0;
+
+                    // ✅ NOVO: Buscar TODOS os rateios enviados por este centro de custo
+                    var queryRateiosEnviados = _context.ItensRateioFechamento
+                        .Include(i => i.FechamentoPeriodo)
+                        .Where(i => (i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado ||
+                                    i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Processado));
+
+                    if (centroCustoFiltro.HasValue)
+                    {
+                        queryRateiosEnviados = queryRateiosEnviados.Where(i => i.FechamentoPeriodo.CentroCustoId == centroCustoFiltro.Value);
+                    }
+
+                    totalRateiosEnviados = await queryRateiosEnviados.SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Erro ao calcular totais históricos");
                 }
 
-                var saldoTotal = totalEntradas - totalSaidas;
+                // ✅ CORRIGIDO: Saldo Total = Entradas - Saídas - Rateios Enviados
+                var saldoTotal = totalEntradas - totalSaidas - totalRateiosEnviados;
 
                 // =====================================================
                 // 9. DADOS PARA GRÁFICO DE FLUXO DE CAIXA (ÚLTIMOS 6 MESES - APENAS APROVADOS)
@@ -497,12 +513,17 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.EntradasMes = entradasMes.ToString("C");
                 ViewBag.SaidasMes = saidasMes.ToString("C");
                 ViewBag.SaldoTotal = saldoTotal.ToString("C");
+                ViewBag.TotalRateiosEnviados = totalRateiosEnviados.ToString("C");
                 ViewBag.DizimosMes = dizimosMes.ToString("C");
                 ViewBag.FluxoCaixaData = fluxoCaixaData;
                 ViewBag.DespesasData = despesasPorCategoria;
                 ViewBag.UserRole = primaryRole;
                 ViewBag.UserName = user.NomeCompleto;
                 ViewBag.CentroCusto = user.CentroCusto?.Nome ?? "Não definido";
+
+                // ✅ NOVO: Buscar detalhamento dos rateios por destino
+                var rateiosPorDestino = await ObterRateiosPorDestino(centroCustoFiltro);
+                ViewBag.RateiosPorDestino = rateiosPorDestino;
 
                 // Permissões
                 ViewBag.ShowFullData = User.IsInRole(Roles.Administrador) ||
@@ -564,9 +585,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewBag.EntradasMes = "R$ 0,00";
             ViewBag.SaidasMes = "R$ 0,00";
             ViewBag.SaldoTotal = "R$ 0,00";
+            ViewBag.TotalRateiosEnviados = "R$ 0,00";
             ViewBag.DizimosMes = "R$ 0,00";
             ViewBag.FluxoCaixaData = new List<object>();
             ViewBag.DespesasData = new List<object>();
+            ViewBag.RateiosPorDestino = new List<object>();
             ViewBag.UserRole = primaryRole;
             ViewBag.UserName = user.NomeCompleto;
             ViewBag.CentroCusto = user.CentroCusto?.Nome ?? "Não definido";
@@ -734,6 +757,51 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 return "x-circle-fill";
 
             return "activity";
+        }
+
+        /// <summary>
+        /// Obtém o detalhamento dos rateios enviados agrupados por centro de custo destino
+        /// </summary>
+        private async Task<List<object>> ObterRateiosPorDestino(int? centroCustoFiltro)
+        {
+            try
+            {
+                var queryRateios = _context.ItensRateioFechamento
+                    .Include(i => i.FechamentoPeriodo)
+                    .Include(i => i.RegraRateio)
+                        .ThenInclude(r => r.CentroCustoDestino)
+                    .Where(i => (i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado ||
+                                i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Processado));
+
+                // Filtrar por centro de custo se necessário
+                if (centroCustoFiltro.HasValue)
+                {
+                    queryRateios = queryRateios.Where(i => i.FechamentoPeriodo.CentroCustoId == centroCustoFiltro.Value);
+                }
+
+                var rateiosPorDestino = await queryRateios
+                    .GroupBy(i => new
+                    {
+                        CentroCustoDestinoId = i.RegraRateio.CentroCustoDestinoId,
+                        CentroCustoDestinoNome = i.RegraRateio.CentroCustoDestino.Nome
+                    })
+                    .Select(g => new
+                    {
+                        CentroCustoDestino = g.Key.CentroCustoDestinoNome,
+                        TotalAcumulado = g.Sum(i => i.ValorRateio),
+                        QuantidadeFechamentos = g.Select(i => i.FechamentoPeriodoId).Distinct().Count(),
+                        UltimoRateio = g.Max(i => i.FechamentoPeriodo.DataAprovacao)
+                    })
+                    .OrderByDescending(r => r.TotalAcumulado)
+                    .ToListAsync<object>();
+
+                return rateiosPorDestino;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao buscar rateios por destino");
+                return new List<object>();
+            }
         }
     }
 }

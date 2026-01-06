@@ -180,6 +180,14 @@
     }
     <script>
         $(document).ready(function() {
+            var $btnSalvar = $('#btnSalvar');
+            
+            // Resetar estado do botão ao carregar a página
+            // (importante quando há erros de validação server-side)
+            $btnSalvar.prop('disabled', false);
+            $btnSalvar.find('.btn-text').removeClass('d-none');
+            $btnSalvar.find('.btn-loading').addClass('d-none');
+            
             // Formatar data para hoje se estiver vazia
             if (!$('#Data').val()) {
                 var today = new Date();
@@ -203,7 +211,6 @@
             // Controlar loading do botão de submit
             $('form').on('submit', function(e) {
                 var $form = $(this);
-                var $btnSalvar = $('#btnSalvar');
 
                 // Validar formulário antes de mostrar loading
                 if ($form.valid()) {

@@ -149,103 +149,110 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
     <script>
-                $(document).ready(function() {
+        $(document).ready(function() {
+            var $btnSalvar = $('#btnSalvar');
+            
+            // Resetar estado do botão ao carregar a página
+            // (importante quando há erros de validação server-side)
+            $btnSalvar.prop('disabled', false);
+            $btnSalvar.find('.btn-text').removeClass('d-none');
+            $btnSalvar.find('.btn-loading').addClass('d-none');
+            
             // Formatar data para hoje se estiver vazia
-               if (!$('#Data').val()) {
-         var today = new Date();
-                        var year = today.getFullYear();
-                  var month = String(today.getMonth() + 1).padStart(2, '0');
-            var day = String(today.getDate()).padStart(2, '0');
-          var dateString = year + '-' + month + '-' + day;
-           $('#Data').val(dateString);
+            if (!$('#Data').val()) {
+                var today = new Date();
+                var year = today.getFullYear();
+                var month = String(today.getMonth() + 1).padStart(2, '0');
+                var day = String(today.getDate()).padStart(2, '0');
+                var dateString = year + '-' + month + '-' + day;
+                $('#Data').val(dateString);
+            }
+
+            // Validação adicional do valor
+            $('#Valor').on('input', function() {
+                var val = $(this).val();
+                if (val < 0.01) {
+                    $(this).addClass('is-invalid');
+                } else {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+
+            // Inicializar Select2 para o campo de Membro com busca AJAX
+            $('#MembroId').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Digite para buscar o membro...',
+                allowClear: true,
+                language: {
+                    noResults: function() {
+                        return "Nenhum membro encontrado";
+                    },
+                    searching: function() {
+                        return "Buscando...";
+                    },
+                    inputTooShort: function() {
+                        return "Digite pelo menos 2 caracteres";
                     }
-
-                    // Validação adicional do valor
-               $('#Valor').on('input', function() {
-            var val = $(this).val();
-         if (val < 0.01) {
-              $(this).addClass('is-invalid');
-            } else {
-                $(this).removeClass('is-invalid');
-                        }
-             });
-
-               // Inicializar Select2 para o campo de Membro com busca AJAX
-                $('#MembroId').select2({
-             theme: 'bootstrap-5',
-          placeholder: 'Digite para buscar o membro...',
-               allowClear: true,
-                        language: {
-              noResults: function() {
-                 return "Nenhum membro encontrado";
                 },
-                        searching: function() {
-               return "Buscando...";
-             },
-               inputTooShort: function() {
-              return "Digite pelo menos 2 caracteres";
-              }
-               },
-           ajax: {
-                url: '@Url.Action("BuscarMembros", "Membros")',
-                  dataType: 'json',
-              delay: 300,
-          data: function(params) {
-                return {
-            term: params.term || ''
-                };
-                  },
-                  processResults: function(data) {
-                return {
-                 results: data.map(function(item) {
-                    return {
-          id: item.id,
-                   text: item.text + (item.apelido ? ' (' + item.apelido + ')' : ''),
-               centroCusto: item.centroCustoNome
-                };
-             })
-               };
-              },
-         cache: true
-                  },
+                ajax: {
+                    url: '@Url.Action("BuscarMembros", "Membros")',
+                    dataType: 'json',
+                    delay: 300,
+                    data: function(params) {
+                        return {
+                            term: params.term || ''
+                        };
+                    },
+                    processResults: function(data) {
+                        return {
+                            results: data.map(function(item) {
+                                return {
+                                    id: item.id,
+                                    text: item.text + (item.apelido ? ' (' + item.apelido + ')' : ''),
+                                    centroCusto: item.centroCustoNome
+                                };
+                            })
+                        };
+                    },
+                    cache: true
+                },
                 minimumInputLength: 2,
-            templateResult: formatMembro,
-                 templateSelection: formatMembroSelection
-                    });
+                templateResult: formatMembro,
+                templateSelection: formatMembroSelection
+            });
 
-                  // Formatar resultado no dropdown
-                  function formatMembro(membro) {
-               if (!membro.id) {
-                 return membro.text;
-               }
+            // Formatar resultado no dropdown
+            function formatMembro(membro) {
+                if (!membro.id) {
+                    return membro.text;
+                }
 
-             var $membro = $(
-        '<div class="d-flex flex-column">' +
-               '<div class="fw-semibold">' + membro.text + '</div>' +
-                  (membro.centroCusto ? '<small class="text-muted">' + membro.centroCusto + '</small>' : '') +
-            '</div>'
-             );
-                        return $membro;
-                    }
+                var $membro = $(
+                    '<div class="d-flex flex-column">' +
+                    '<div class="fw-semibold">' + membro.text + '</div>' +
+                    (membro.centroCusto ? '<small class="text-muted">' + membro.centroCusto + '</small>' : '') +
+                    '</div>'
+                );
+                return $membro;
+            }
 
-                    // Formatar seleção
+            // Formatar seleção
             function formatMembroSelection(membro) {
-                        return membro.text || membro.id;
-                    }
+                return membro.text || membro.id;
+            }
 
-                    // Controlar loading do botão de submit
-                    $('form').on('submit', function(e) {
-                        var $form = $(this);
-                        var $btnSalvar = $('#btnSalvar');
+            // Controlar loading do botão de submit
+            $('form').on('submit', function(e) {
+                var $form = $(this);
 
-                        // Validar formulário antes de mostrar loading
-                        if ($form.valid()) {
-                            // Desabilitar botão e mostrar loading
-                            $btnSalvar.prop('disabled', true);
-                            $btnSalvar.find('.btn-text').addClass('d-none');
-                            $btnSalvar.find('.btn-loading').removeClass('d-none');
-                        }
-                    });
-             });
+                // Validar formulário antes de mostrar loading
+                if ($form.valid()) {
+                    // Desabilitar botão e mostrar loading
+                    $btnSalvar.prop('disabled', true);
+                    $btnSalvar.find('.btn-text').addClass('d-none');
+                    $btnSalvar.find('.btn-loading').removeClass('d-none');
+                }
+            });
+        });
     </script>
 }
