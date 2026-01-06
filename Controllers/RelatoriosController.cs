@@ -279,7 +279,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 // ✅ CORREÇÃO: Incluir lançamentos de fechamentos Aprovados OU Processados
-                // Processados = fechamentos de congregações incluídos no fechamento da SEDE
                 var idsSaidasAprovadas = await querySaidasAprovadas
                     .Where(s => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == s.CentroCustoId &&
@@ -304,29 +303,63 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .ToListAsync()
                     : new List<Saida>();
 
+                // ✅ NOVO: Buscar rateios enviados no período (também são saídas)
+                var queryRateiosEnviados = _context.ItensRateioFechamento
+                    .Include(i => i.FechamentoPeriodo)
+                    .Where(i => (i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado ||
+                                i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Processado) &&
+                               i.FechamentoPeriodo.DataAprovacao >= dataInicio &&
+                               i.FechamentoPeriodo.DataAprovacao <= dataFim);
+
+                if (centroCustoFiltro.HasValue)
+                {
+                    queryRateiosEnviados = queryRateiosEnviados
+                        .Where(i => i.FechamentoPeriodo.CentroCustoId == centroCustoFiltro.Value);
+                }
+
+                var rateiosEnviados = await queryRateiosEnviados.ToListAsync();
+
                 var fluxoDeCaixa = new List<FluxoDeCaixaItem>();
 
-                // Agrupar por data
+                // Agrupar entradas por data
                 var entradasAgrupadas = entradas.GroupBy(e => e.Data.Date)
                                                 .ToDictionary(g => g.Key, g => g.Sum(e => e.Valor));
+                
+                // Agrupar saídas por data
                 var saidasAgrupadas = saidas.GroupBy(s => s.Data.Date)
                                               .ToDictionary(g => g.Key, g => g.Sum(s => s.Valor));
 
-                var todasAsDatas = entradasAgrupadas.Keys.Union(saidasAgrupadas.Keys).OrderBy(d => d).ToList();
+                // ✅ NOVO: Agrupar rateios por data de aprovação do fechamento
+                var rateiosAgrupados = rateiosEnviados
+                    .Where(r => r.FechamentoPeriodo.DataAprovacao.HasValue)
+                    .GroupBy(r => r.FechamentoPeriodo.DataAprovacao.Value.Date)
+                    .ToDictionary(g => g.Key, g => g.Sum(r => r.ValorRateio));
+
+                // Unir todas as datas (entradas, saídas e rateios)
+                var todasAsDatas = entradasAgrupadas.Keys
+                    .Union(saidasAgrupadas.Keys)
+                    .Union(rateiosAgrupados.Keys)
+                    .OrderBy(d => d)
+                    .ToList();
 
                 decimal saldoAcumulado = 0;
                 foreach (var data in todasAsDatas)
                 {
                     var totalEntradaDia = entradasAgrupadas.GetValueOrDefault(data, 0);
                     var totalSaidaDia = saidasAgrupadas.GetValueOrDefault(data, 0);
-                    saldoAcumulado += totalEntradaDia - totalSaidaDia;
+                    var totalRateiosDia = rateiosAgrupados.GetValueOrDefault(data, 0);
+                    
+                    // ✅ CORREÇÃO: Incluir rateios nas saídas
+                    var totalSaidasComRateios = totalSaidaDia + totalRateiosDia;
+                    
+                    saldoAcumulado += totalEntradaDia - totalSaidasComRateios;
 
                     fluxoDeCaixa.Add(new FluxoDeCaixaItem
                     {
                         Data = data,
                         Entradas = totalEntradaDia,
-                        Saidas = totalSaidaDia,
-                        SaldoDia = totalEntradaDia - totalSaidaDia,
+                        Saidas = totalSaidasComRateios,
+                        SaldoDia = totalEntradaDia - totalSaidasComRateios,
                         SaldoAcumulado = saldoAcumulado
                     });
                 }
@@ -481,14 +514,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
                 ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
 
-                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
-                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
-
                 // Configurar dropdowns de filtros
                 if (User.IsInRole(Roles.Administrador) ||
                     User.IsInRole(Roles.Pastor) ||
-                    isTesoureiroGeralSede)
+                    User.IsInRole(Roles.TesoureiroGeral))
                 {
                     ViewBag.CentrosCusto = new SelectList(
                    await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
@@ -518,7 +547,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
                 if (!User.IsInRole(Roles.Administrador) &&
                     !User.IsInRole(Roles.Pastor) &&
-                    !isTesoureiroGeralSede)
+                    !User.IsInRole(Roles.TesoureiroGeral))
                 {
                     // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro obrigatório
                     centroCustoParaAprovacao = user.CentroCustoId;
@@ -966,14 +995,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
                 ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
 
-                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
-                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
-
                 // Configurar dropdown
                 if (User.IsInRole(Roles.Administrador) ||
                     User.IsInRole(Roles.Pastor) ||
-                    isTesoureiroGeralSede)
+                    User.IsInRole(Roles.TesoureiroGeral))
                 {
                     ViewBag.CentrosCusto = new SelectList(
                 await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
@@ -1007,7 +1032,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
                 if (!User.IsInRole(Roles.Administrador) &&
                     !User.IsInRole(Roles.Pastor) &&
-                    !isTesoureiroGeralSede)
+                    !User.IsInRole(Roles.TesoureiroGeral))
                 {
                     // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro obrigatório
                     centroCustoFiltro = user.CentroCustoId;
@@ -1117,7 +1142,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // =====================================================
         [HttpGet]
         public async Task<IActionResult> BalanceteMensal(
-            int? centroCustoId,
             DateTime? dataInicio,
             DateTime? dataFim)
         {
@@ -1129,12 +1153,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
-                // Carregar CentroCusto com suas propriedades
-                if (user.CentroCustoId.HasValue)
-                {
-                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
-                }
-
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -1144,61 +1162,27 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     dataFim = dataInicio.Value.AddMonths(1).AddDays(-1);
                 }
 
-                int selectedCentroCustoId;
+                // ✅ BALANCETE CONSOLIDADO: Buscar Sede para consolidar todos os dados
+                var sede = await _context.CentrosCusto
+                    .Where(c => c.Tipo == TipoCentroCusto.Sede && c.Ativo)
+                    .FirstOrDefaultAsync();
 
-                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
-                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
-
-                // ✅ Administrador, Pastor e TesoureiroGeral da SEDE podem gerar PDF de qualquer centro de custo
-                if (User.IsInRole(Roles.Administrador) ||
-                    User.IsInRole(Roles.Pastor) ||
-                    isTesoureiroGeralSede)
+                if (sede == null)
                 {
-                    if (centroCustoId.HasValue)
-                    {
-                        selectedCentroCustoId = centroCustoId.Value;
-                    }
-                    else
-                    {
-                        var sede = await _context.CentrosCusto
-                            .Where(c => c.Nome.Contains("Sede") || c.Nome.Contains("SEDE"))
-                            .FirstOrDefaultAsync();
-
-                        if (sede == null)
-                        {
-                            TempData["ErrorMessage"] = "Nenhum centro de custo encontrado.";
-                            return RedirectToAction("Index");
-                        }
-
-                        selectedCentroCustoId = sede.Id;
-                    }
-                }
-                else
-                {
-                    if (!user.CentroCustoId.HasValue)
-                    {
-                        TempData["ErrorMessage"] = "Você não está vinculado a nenhum centro de custo.";
-                        return RedirectToAction("Index");
-                    }
-
-                    selectedCentroCustoId = user.CentroCustoId.Value;
+                    TempData["ErrorMessage"] = "Centro de custo Sede não encontrado.";
+                    return RedirectToAction("Index");
                 }
 
                 var balancete = await _balanceteService.GerarBalanceteMensalAsync(
-                    selectedCentroCustoId,
+                    sede.Id,
                     dataInicio.Value,
                     dataFim.Value);
 
                 ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
                 ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
-                ViewBag.CentroCustoId = selectedCentroCustoId;
-                ViewBag.PodeEscolherCentroCusto = User.IsInRole(Roles.Administrador) ||
-                                                  User.IsInRole(Roles.Pastor) ||
-                                                  isTesoureiroGeralSede;
 
                 await _auditService.LogAsync("Visualização", "Relatório",
-                    $"Balancete mensal: {balancete.CentroCustoNome} - {balancete.Periodo}");
+                    $"Balancete mensal consolidado - {balancete.Periodo}");
 
                 return View(balancete);
             }
@@ -1215,7 +1199,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // =====================================================
         [HttpGet]
         public async Task<IActionResult> BalanceteMensalPdf(
-            int? centroCustoId,
             DateTime? dataInicio,
             DateTime? dataFim)
         {
@@ -1227,12 +1210,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
-                // Carregar CentroCusto com suas propriedades
-                if (user.CentroCustoId.HasValue)
-                {
-                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
-                }
-
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -1242,60 +1219,30 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     dataFim = dataInicio.Value.AddMonths(1).AddDays(-1);
                 }
 
-                int selectedCentroCustoId;
+                // ✅ BALANCETE CONSOLIDADO: Buscar Sede para consolidar todos os dados
+                var sede = await _context.CentrosCusto
+                    .Where(c => c.Tipo == TipoCentroCusto.Sede && c.Ativo)
+                    .FirstOrDefaultAsync();
 
-                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
-                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
-
-                // ✅ Administrador, Pastor e TesoureiroGeral da SEDE podem gerar PDF de qualquer centro de custo
-                if (User.IsInRole(Roles.Administrador) ||
-                    User.IsInRole(Roles.Pastor) ||
-                    isTesoureiroGeralSede)
+                if (sede == null)
                 {
-                    if (centroCustoId.HasValue)
-                    {
-                        selectedCentroCustoId = centroCustoId.Value;
-                    }
-                    else
-                    {
-                        var sede = await _context.CentrosCusto
-                            .Where(c => c.Nome.Contains("Sede") || c.Nome.Contains("SEDE"))
-                            .FirstOrDefaultAsync();
-
-                        if (sede == null)
-                        {
-                            TempData["ErrorMessage"] = "Nenhum centro de custo encontrado.";
-                            return RedirectToAction("Index");
-                        }
-
-                        selectedCentroCustoId = sede.Id;
-                    }
-                }
-                else
-                {
-                    if (!user.CentroCustoId.HasValue)
-                    {
-                        TempData["ErrorMessage"] = "Você não está vinculado a nenhum centro de custo.";
-                        return RedirectToAction("Index");
-                    }
-
-                    selectedCentroCustoId = user.CentroCustoId.Value;
+                    TempData["ErrorMessage"] = "Centro de custo Sede não encontrado.";
+                    return RedirectToAction("Index");
                 }
 
                 // Gerar balancete
                 var balancete = await _balanceteService.GerarBalanceteMensalAsync(
-                    selectedCentroCustoId,
+                    sede.Id,
                     dataInicio.Value,
                     dataFim.Value);
 
                 // Gerar PDF
                 var pdfBytes = Helpers.BalancetePdfHelper.GerarPdfBalanceteMensal(balancete);
 
-                var nomeArquivo = $"Balancete_{balancete.CentroCustoNome.Replace(" ", "_")}_{dataInicio.Value:yyyyMM}.pdf";
+                var nomeArquivo = $"Balancete_Consolidado_{dataInicio.Value:yyyyMM}.pdf";
 
                 await _auditService.LogAsync("Exportação", "Relatório",
-                    $"Balancete mensal PDF: {balancete.CentroCustoNome} - {balancete.Periodo}");
+                    $"Balancete mensal consolidado PDF - {balancete.Periodo}");
 
                 return File(pdfBytes, "application/pdf", nomeArquivo);
             }
@@ -1671,27 +1618,59 @@ namespace SistemaTesourariaEclesiastica.Controllers
                  .ToListAsync()
                  : new List<Saida>();
 
+                // ✅ NOVO: Buscar rateios enviados no período
+                var queryRateiosEnviados = _context.ItensRateioFechamento
+                    .Include(i => i.FechamentoPeriodo)
+                    .Where(i => (i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado ||
+                                i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Processado) &&
+                               i.FechamentoPeriodo.DataAprovacao >= dataInicio &&
+                               i.FechamentoPeriodo.DataAprovacao <= dataFim);
+
+                if (centroCustoFiltro.HasValue)
+                {
+                    queryRateiosEnviados = queryRateiosEnviados
+                        .Where(i => i.FechamentoPeriodo.CentroCustoId == centroCustoFiltro.Value);
+                }
+
+                var rateiosEnviados = await queryRateiosEnviados.ToListAsync();
+
                 var fluxoDeCaixa = new List<FluxoDeCaixaItem>();
                 var entradasAgrupadas = entradas.GroupBy(e => e.Data.Date)
                   .ToDictionary(g => g.Key, g => g.Sum(e => e.Valor));
                 var saidasAgrupadas = saidas.GroupBy(s => s.Data.Date)
                  .ToDictionary(g => g.Key, g => g.Sum(s => s.Valor));
+                
+                // ✅ NOVO: Agrupar rateios por data de aprovação do fechamento
+                var rateiosAgrupados = rateiosEnviados
+                    .Where(r => r.FechamentoPeriodo.DataAprovacao.HasValue)
+                    .GroupBy(r => r.FechamentoPeriodo.DataAprovacao.Value.Date)
+                    .ToDictionary(g => g.Key, g => g.Sum(r => r.ValorRateio));
 
-                var todasAsDatas = entradasAgrupadas.Keys.Union(saidasAgrupadas.Keys).OrderBy(d => d).ToList();
+                // Unir todas as datas (entradas, saídas e rateios)
+                var todasAsDatas = entradasAgrupadas.Keys
+                    .Union(saidasAgrupadas.Keys)
+                    .Union(rateiosAgrupados.Keys)
+                    .OrderBy(d => d)
+                    .ToList();
 
                 decimal saldoAcumulado = 0;
                 foreach (var data in todasAsDatas)
                 {
                     var totalEntradaDia = entradasAgrupadas.GetValueOrDefault(data, 0);
                     var totalSaidaDia = saidasAgrupadas.GetValueOrDefault(data, 0);
-                    saldoAcumulado += totalEntradaDia - totalSaidaDia;
+                    var totalRateiosDia = rateiosAgrupados.GetValueOrDefault(data, 0);
+                    
+                    // ✅ CORREÇÃO: Incluir rateios nas saídas
+                    var totalSaidasComRateios = totalSaidaDia + totalRateiosDia;
+                    
+                    saldoAcumulado += totalEntradaDia - totalSaidasComRateios;
 
                     fluxoDeCaixa.Add(new FluxoDeCaixaItem
                     {
                         Data = data,
                         Entradas = totalEntradaDia,
-                        Saidas = totalSaidaDia,
-                        SaldoDia = totalEntradaDia - totalSaidaDia,
+                        Saidas = totalSaidasComRateios,
+                        SaldoDia = totalEntradaDia - totalSaidasComRateios,
                         SaldoAcumulado = saldoAcumulado
                     });
                 }
@@ -1786,8 +1765,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var entradas = idsEntradasAprovadas.Any()
                      ? await _context.Entradas
                       .Include(e => e.Membro)
-                   .Include(e => e.CentroCusto)
-                     .Include(e => e.PlanoDeContas)
+                   .Include(e => e.PlanoDeContas)
                       .Where(e => idsEntradasAprovadas.Contains(e.Id))
                                    .OrderBy(e => e.Data)
                         .ToListAsync()
@@ -1853,8 +1831,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 if (!User.IsInRole(Roles.Administrador) &&
-                    !User.IsInRole(Roles.TesoureiroGeral) &&
-                      !User.IsInRole(Roles.Pastor))
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
                 {
                     centroCustoFiltro = user.CentroCustoId;
                     if (centroCustoFiltro.HasValue)
@@ -1865,7 +1843,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 var querySaidasAprovadas = _context.Saidas
-.Where(s => s.Data >= dataInicio && s.Data <= dataFim);
+            .Where(s => s.Data >= dataInicio && s.Data <= dataFim);
 
                 if (centroCustoFiltro.HasValue)
                 {

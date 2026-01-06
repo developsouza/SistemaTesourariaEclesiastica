@@ -16,7 +16,6 @@
         <button class="btn btn-success btn-sm" onclick="exportToExcel()">
             <i class="bi bi-file-excel me-1"></i>Excel
         </button>
-        @* ✅ NOVO: Botão PDF - substituir JavaScript por Action *@
         <a asp-action="ExportarFluxoDeCaixaPdf"
            asp-route-dataInicio="@ViewBag.DataInicio"
            asp-route-dataFim="@ViewBag.DataFim"
@@ -63,13 +62,13 @@
 }
 else
 {
-    @* ✅ NOVO: Alert indicando dados consolidados quando Tesoureiro Geral da SEDE *@
+    @* ✅ Alert indicando dados consolidados para Administrador, Pastor e Tesoureiro Geral da SEDE *@
     @if (User.IsInRole("Administrador") || User.IsInRole("Pastor") || User.IsInRole("TesoureiroGeral"))
     {
         <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
             <i class="bi bi-info-circle-fill me-2 fs-5"></i>
             <div>
-                <strong>Dados Consolidados:</strong> Este relatório exibe movimentações de todos os centros de custo (Sede e Congregações).
+                <strong>Dados Consolidados:</strong> Este relatório exibe movimentações de todos os centros de custo com fechamentos aprovados (Sede e Congregações).
             </div>
         </div>
     }
@@ -354,4 +353,4 @@ else
             XLSX.writeFile(wb, "FluxoDeCaixa.xlsx");
         }
     </script>
-}
+}}

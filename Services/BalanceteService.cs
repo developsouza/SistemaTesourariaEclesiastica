@@ -69,6 +69,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
                 viewModel.CentroCustoNome = centroCusto.Nome;
 
+                // ? BALANCETE CONSOLIDADO: Sempre inclui Sede + todas as congregações com fechamentos aprovados
                 // Verificar se existe fechamento da SEDE no período
                 var ehSede = centroCusto.Tipo == TipoCentroCusto.Sede;
                 var fechamentoSede = await _context.FechamentosPeriodo
@@ -80,7 +81,7 @@ namespace SistemaTesourariaEclesiastica.Services
               f.Status == StatusFechamentoPeriodo.Aprovado &&
     f.EhFechamentoSede);
 
-                // Determinar quais centros de custo devem ser incluídos
+                // Determinar quais centros de custo devem ser incluídos (CONSOLIDAÇÃO)
                 var centrosCustoParaIncluir = new List<int> { centroCustoId };
 
                 if (ehSede && fechamentoSede != null && fechamentoSede.FechamentosCongregacoesIncluidos.Any())
@@ -91,8 +92,51 @@ namespace SistemaTesourariaEclesiastica.Services
                   .ToList();
 
                     centrosCustoParaIncluir.AddRange(congregacoesIncluidas);
-                    _logger.LogInformation($"Balancete da SEDE incluirá {congregacoesIncluidas.Count} congregações");
+                    _logger.LogInformation($"? Balancete CONSOLIDADO: Sede + {congregacoesIncluidas.Count} congregações do fechamento");
                 }
+                else if (ehSede)
+                {
+                    // Mesmo sem fechamento aprovado, incluir todas congregações ativas para consolidação
+                    var todasCongregacoes = await _context.CentrosCusto
+                        .AsNoTracking()
+                        .Where(c => c.Ativo && c.Tipo == TipoCentroCusto.Congregacao)
+                        .Select(c => c.Id)
+                        .ToListAsync();
+
+                    centrosCustoParaIncluir.AddRange(todasCongregacoes);
+                    _logger.LogInformation($"? Balancete CONSOLIDADO (sem fechamento): Sede + {todasCongregacoes.Count} congregações ativas");
+                }
+
+                // ? LOG: Exibir IDs dos centros que serão consolidados
+                _logger.LogInformation($"?? Centros de custo consolidados: [{string.Join(", ", centrosCustoParaIncluir)}]");
+
+                // ? DEBUG: Verificar quantos lançamentos existem
+                var totalEntradasPeriodo = await _context.Entradas
+                    .AsNoTracking()
+                    .Where(e => centrosCustoParaIncluir.Contains(e.CentroCustoId) &&
+                                e.Data >= dataInicio &&
+                                e.Data <= dataFim)
+                    .CountAsync();
+
+                var entradasComFechamento = await _context.Entradas
+                    .AsNoTracking()
+                    .Where(e => centrosCustoParaIncluir.Contains(e.CentroCustoId) &&
+                                e.Data >= dataInicio &&
+                                e.Data <= dataFim &&
+                                e.IncluidaEmFechamento)
+                    .CountAsync();
+
+                var entradasAprovadas = await _context.Entradas
+                    .AsNoTracking()
+                    .Where(e => centrosCustoParaIncluir.Contains(e.CentroCustoId) &&
+                                e.Data >= dataInicio &&
+                                e.Data <= dataFim &&
+                                e.IncluidaEmFechamento &&
+                                (e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+                                 e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado))
+                    .CountAsync();
+
+                _logger.LogWarning($"?? DEBUG Entradas: Total={totalEntradasPeriodo}, ComFechamento={entradasComFechamento}, Aprovadas/Processadas={entradasAprovadas}");
 
                 // ? CORREÇÃO CRÍTICA: Executar SEQUENCIALMENTE para evitar concorrência no DbContext
                 viewModel.SaldoMesAnterior = await CalcularSaldoMesAnteriorAsync(centrosCustoParaIncluir, dataInicio);
@@ -124,18 +168,20 @@ namespace SistemaTesourariaEclesiastica.Services
 
         /// <summary>
         /// ? OTIMIZADO: Calcula saldo anterior com query única
+        /// BUSCA APENAS lançamentos de fechamentos APROVADOS ou PROCESSADOS
         /// </summary>
         private async Task<decimal> CalcularSaldoMesAnteriorAsync(List<int> centrosCustoIds, DateTime dataInicio)
         {
             try
             {
-                // ? Query única para calcular totais
+                // ? Query única para calcular totais de lançamentos aprovados/processados anteriores
                 var totais = await _context.Entradas
       .AsNoTracking()
           .Where(e => centrosCustoIds.Contains(e.CentroCustoId) &&
            e.Data < dataInicio &&
                e.IncluidaEmFechamento &&
-          e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado)
+          (e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+           e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado))
        .GroupBy(e => 1)
     .Select(g => new { TotalEntradas = g.Sum(e => e.Valor) })
          .FirstOrDefaultAsync();
@@ -145,9 +191,11 @@ namespace SistemaTesourariaEclesiastica.Services
         .Where(s => centrosCustoIds.Contains(s.CentroCustoId) &&
    s.Data < dataInicio &&
       s.IncluidaEmFechamento &&
-        s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado)
+        (s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+         s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado))
         .SumAsync(s => (decimal?)s.Valor) ?? 0;
 
+                // ? Buscar rateios de fechamentos aprovados anteriores
                 var totalRateios = await _context.ItensRateioFechamento
             .AsNoTracking()
                 .Where(r => centrosCustoIds.Contains(r.FechamentoPeriodo.CentroCustoId) &&
@@ -158,7 +206,7 @@ namespace SistemaTesourariaEclesiastica.Services
                 var totalEntradas = totais?.TotalEntradas ?? 0;
                 var saldo = totalEntradas - totalSaidas - totalRateios;
 
-                _logger.LogDebug($"Saldo anterior: Entradas={totalEntradas:C}, Saídas={totalSaidas:C}, Rateios={totalRateios:C}, Saldo={saldo:C}");
+                _logger.LogInformation($"?? Saldo anterior: Entradas={totalEntradas:C}, Saídas={totalSaidas:C}, Rateios={totalRateios:C}, Saldo={saldo:C}");
                 return saldo;
             }
             catch (Exception ex)
@@ -170,6 +218,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
         /// <summary>
         /// ? OTIMIZADO: Processa receitas com projeção direta
+        /// BUSCA APENAS lançamentos de fechamentos APROVADOS ou PROCESSADOS
         /// </summary>
         private async Task ProcessarReceitasAsync(
   BalanceteMensalViewModel viewModel,
@@ -183,7 +232,8 @@ namespace SistemaTesourariaEclesiastica.Services
    e.Data >= dataInicio &&
         e.Data <= dataFim &&
      e.IncluidaEmFechamento &&
-     e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado)
+     (e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+      e.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado))
     .GroupBy(e => e.PlanoDeContas.Nome)
       .Select(g => new ItemBalanceteViewModel
       {
@@ -196,7 +246,13 @@ namespace SistemaTesourariaEclesiastica.Services
             viewModel.ReceitasOperacionais = receitas;
             viewModel.TotalCredito = receitas.Sum(r => r.Valor);
 
-            _logger.LogDebug($"Receitas processadas: {receitas.Count} itens, Total={viewModel.TotalCredito:C}");
+            _logger.LogInformation($"? Receitas processadas: {receitas.Count} categorias, Total={viewModel.TotalCredito:C}");
+            
+            // ? LOG: Detalhar cada categoria
+            foreach (var receita in receitas)
+            {
+                _logger.LogDebug($"   - {receita.Descricao}: {receita.Valor:C}");
+            }
         }
 
         /// <summary>
@@ -215,6 +271,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
         /// <summary>
         /// ? OTIMIZADO: Processa despesas com categorias pré-definidas
+        /// BUSCA APENAS lançamentos de fechamentos APROVADOS ou PROCESSADOS
         /// </summary>
         private async Task ProcessarDespesasAdministrativasAsync(
      BalanceteMensalViewModel viewModel,
@@ -224,25 +281,23 @@ namespace SistemaTesourariaEclesiastica.Services
         {
             var categoriasAdministrativas = new[]
             {
-                "Material de expediente",
-                "Material de Higiene e Limpesa",
+                "Mat. de Expediente",
+                "Mat. Higiene e Limpeza",
                 "Despesas com Telefone",
                 "Despesas com Veículo",
-                "Auxílio e Ofertas",
+                "Auxílio Oferta",
                 "Mão de Obra Qualificada",
-                "Despesas Com Medicamentos",
-                "Luz",
-                "Água e esgoto",
+                "Despesas com Medicamentos",
+                "Energia Elétrica (Luz)",
+                "Água",
                 "Despesas Diversas",
                 "Despesas com Viagens",
                 "Material de Construção",
-                "Manutenção Pastoral / Ajuda Pastoral",
                 "Material de Conservação (Tintas, etc.)",
-                "Despesas c/ Som (Peças e Acessórios)",
+                "Despesas com Som (Peças e Acessórios)",
                 "Aluguel",
-                "Pagamento de inscrição da CGADB",
-                "I.N.S.S.",
-                "Caixa de Evangelização",
+                "INSS",
+                "Pagamento de Inscrição da CGADB",
                 "Previdência Privada"
             };
 
@@ -252,7 +307,8 @@ namespace SistemaTesourariaEclesiastica.Services
          s.Data >= dataInicio &&
                     s.Data <= dataFim &&
           s.IncluidaEmFechamento &&
-              s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado &&
+              (s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+               s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado) &&
       categoriasAdministrativas.Contains(s.PlanoDeContas.Nome))
                .GroupBy(s => s.PlanoDeContas.Nome)
          .Select(g => new ItemBalanceteViewModel
@@ -272,11 +328,18 @@ namespace SistemaTesourariaEclesiastica.Services
             viewModel.DespesasAdministrativas = despesasCompletas;
             viewModel.SubtotalDespesasAdministrativas = despesasCompletas.Sum(d => d.Valor);
 
-            _logger.LogDebug($"Despesas administrativas: {despesasCompletas.Count} categorias, Subtotal={viewModel.SubtotalDespesasAdministrativas:C}");
+            _logger.LogInformation($"? Despesas administrativas: {despesasCompletas.Count} categorias, Subtotal={viewModel.SubtotalDespesasAdministrativas:C}");
+            
+            // ? LOG: Detalhar categorias com valor
+            foreach (var despesa in despesasCompletas.Where(d => d.Valor > 0))
+            {
+                _logger.LogDebug($"   - {despesa.Descricao}: {despesa.Valor:C}");
+            }
         }
 
         /// <summary>
         /// Processa despesas tributárias (IPTU, impostos, etc.)
+        /// BUSCA APENAS lançamentos de fechamentos APROVADOS ou PROCESSADOS
         /// </summary>
         private async Task ProcessarDespesasTributariasAsync(
             BalanceteMensalViewModel viewModel,
@@ -284,7 +347,11 @@ namespace SistemaTesourariaEclesiastica.Services
             DateTime dataInicio,
   DateTime dataFim)
         {
-            var categoriasTributarias = new[] { "Imposto Predial (IPTU)" };
+            var categoriasTributarias = new[] 
+            { 
+                "IPTU",
+                "Imposto Predial IPTR"
+            };
 
             var despesas = await _context.Saidas
      .AsNoTracking()
@@ -292,7 +359,8 @@ namespace SistemaTesourariaEclesiastica.Services
        s.Data >= dataInicio &&
          s.Data <= dataFim &&
   s.IncluidaEmFechamento &&
-           s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado &&
+           (s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+            s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado) &&
      categoriasTributarias.Contains(s.PlanoDeContas.Nome))
    .GroupBy(s => s.PlanoDeContas.Nome)
 .Select(g => new ItemBalanceteViewModel
@@ -319,7 +387,11 @@ namespace SistemaTesourariaEclesiastica.Services
                     DateTime dataInicio,
            DateTime dataFim)
         {
-            var categoriasFinanceiras = new[] { "Imposto Taxas Diversas", "Saldo para o mês de" };
+            var categoriasFinanceiras = new[] 
+            { 
+                "Imposto Taxas Diversas",
+                "Saldo para o mês"
+            };
 
             var despesas = await _context.Saidas
                     .AsNoTracking()
@@ -327,7 +399,8 @@ namespace SistemaTesourariaEclesiastica.Services
               s.Data >= dataInicio &&
       s.Data <= dataFim &&
                s.IncluidaEmFechamento &&
-              s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado &&
+              (s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Aprovado ||
+               s.FechamentoQueIncluiu.Status == StatusFechamentoPeriodo.Processado) &&
           categoriasFinanceiras.Contains(s.PlanoDeContas.Nome))
      .GroupBy(s => s.PlanoDeContas.Nome)
               .Select(g => new ItemBalanceteViewModel

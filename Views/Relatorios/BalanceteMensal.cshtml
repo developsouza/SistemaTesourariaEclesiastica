@@ -2,8 +2,32 @@
 
 @{
     ViewData["Title"] = "Balancete de Verificação";
-    var mes = Model.DataInicio.ToString("MMMM", new System.Globalization.CultureInfo("pt-BR")).ToUpper();
-    var ano = Model.DataInicio.Year;
+    var mesInicio = Model.DataInicio.ToString("MMMM", new System.Globalization.CultureInfo("pt-BR")).ToUpper();
+    var mesFim = Model.DataFim.ToString("MMMM", new System.Globalization.CultureInfo("pt-BR")).ToUpper();
+    var anoInicio = Model.DataInicio.Year;
+    var anoFim = Model.DataFim.Year;
+    
+    // Formatar período de forma inteligente
+    string periodoFormatado;
+    if (Model.DataInicio.Month == Model.DataFim.Month && Model.DataInicio.Year == Model.DataFim.Year)
+    {
+        // Mesmo mês e ano: "01 a 31 / JANEIRO / 2026"
+        periodoFormatado = $"{Model.DataInicio.Day} a {Model.DataFim.Day} / {mesInicio} / {anoInicio}";
+    }
+    else if (Model.DataInicio.Year == Model.DataFim.Year)
+    {
+        // Mesmo ano, meses diferentes: "01/JAN a 31/DEZ / 2026"
+        var mesInicioAbrev = Model.DataInicio.ToString("MMM", new System.Globalization.CultureInfo("pt-BR")).ToUpper();
+        var mesFimAbrev = Model.DataFim.ToString("MMM", new System.Globalization.CultureInfo("pt-BR")).ToUpper();
+        periodoFormatado = $"{Model.DataInicio.Day}/{mesInicioAbrev} a {Model.DataFim.Day}/{mesFimAbrev} / {anoInicio}";
+    }
+    else
+    {
+        // Anos diferentes: "01/JAN/2025 a 31/DEZ/2026"
+        var mesInicioAbrev = Model.DataInicio.ToString("MMM", new System.Globalization.CultureInfo("pt-BR")).ToUpper();
+        var mesFimAbrev = Model.DataFim.ToString("MMM", new System.Globalization.CultureInfo("pt-BR")).ToUpper();
+        periodoFormatado = $"{Model.DataInicio.Day}/{mesInicioAbrev}/{anoInicio} a {Model.DataFim.Day}/{mesFimAbrev}/{anoFim}";
+    }
 }
 
 <!-- Estilos customizados para o balancete -->
@@ -230,14 +254,14 @@
 <div class="no-print mb-4">
     <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h3><i class="bi bi-file-earmark-spreadsheet me-2"></i>Balancete de Verificação</h3>
-            <p class="text-muted mb-0">Relatório de verificação das igrejas representadas e congregações</p>
+            <h3><i class="bi bi-file-earmark-spreadsheet me-2"></i>Balancete de Verificação Consolidado</h3>
+            <p class="text-muted mb-0">Relatório consolidado de todas as igrejas representadas e congregações</p>
         </div>
         <div>
             <button onclick="window.print()" class="btn btn-primary">
                 <i class="bi bi-printer me-1"></i>Imprimir
             </button>
-            <a href="@Url.Action("BalanceteMensalPdf", new { centroCustoId = ViewBag.CentroCustoId, dataInicio = ViewBag.DataInicio, dataFim = ViewBag.DataFim })"
+            <a href="@Url.Action("BalanceteMensalPdf", new { dataInicio = ViewBag.DataInicio, dataFim = ViewBag.DataFim })"
                class="btn btn-danger">
                 <i class="bi bi-file-pdf me-1"></i>Exportar PDF
             </a>
@@ -247,51 +271,62 @@
         </div>
     </div>
 
-    <!-- Filtros -->
-    @if (ViewBag.PodeEscolherCentroCusto)
-    {
-        <div class="card mt-3">
-            <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Centro de Custo</label>
-                        <select name="centroCustoId" class="form-select">
-                            @if (ViewBag.CentrosCusto != null)
-                            {
-                                foreach (var item in ViewBag.CentrosCusto)
-                                {
-                                    <option value="@item.Value" selected="@(item.Selected)">@item.Text</option>
-                                }
-                            }
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Data Início</label>
-                        <input type="date" name="dataInicio" class="form-control" value="@ViewBag.DataInicio" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Data Fim</label>
-                        <input type="date" name="dataFim" class="form-control" value="@ViewBag.DataFim" />
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search me-1"></i>Filtrar
-                        </button>
-                    </div>
-                </form>
-            </div>
+    <!-- Filtros de Data -->
+    <div class="card mt-3">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label small fw-semibold">Data Início</label>
+                    <input type="date" name="dataInicio" class="form-control" value="@ViewBag.DataInicio" />
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small fw-semibold">Data Fim</label>
+                    <input type="date" name="dataFim" class="form-control" value="@ViewBag.DataFim" />
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i>Filtrar
+                    </button>
+                </div>
+            </form>
         </div>
-    }
+    </div>
 </div>
 
 <!-- Relatório Balancete -->
 <div class="balancete-container">
+    <!-- Alerta se não houver dados -->
+    @if (Model.TotalCredito == 0 && Model.TotalDebito == 0)
+    {
+        <div class="alert alert-warning no-print" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Atenção!</strong> Não foram encontrados lançamentos aprovados no período selecionado.
+            <hr />
+            <p class="mb-1"><strong>Período:</strong> @Model.DataInicio.ToString("dd/MM/yyyy") a @Model.DataFim.ToString("dd/MM/yyyy")</p>
+            <p class="mb-1"><strong>O que pode estar acontecendo:</strong></p>
+            <ul class="mb-0">
+                <li>Não existem fechamentos <strong>APROVADOS</strong> ou <strong>PROCESSADOS</strong> neste período</li>
+                <li>Os lançamentos existem, mas ainda não foram incluídos em um fechamento aprovado</li>
+                <li>Os fechamentos das congregações ainda estão com status <strong>PENDENTE</strong></li>
+            </ul>
+            <hr />
+            <p class="mb-0">
+                <strong>💡 Dica:</strong> Para que os dados apareçam no balancete consolidado:
+            </p>
+            <ol class="mb-0">
+                <li>As congregações devem criar fechamentos mensais</li>
+                <li>O Tesoureiro Geral deve <strong>aprovar</strong> os fechamentos das congregações</li>
+                <li>A Sede deve criar um fechamento consolidado incluindo as congregações aprovadas</li>
+            </ol>
+        </div>
+    }
+
     <!-- Cabeçalho Oficial -->
     <div class="balancete-header">
         <div class="balancete-header-content">
             <img src="/images/logoadpb.png" alt="Logo ADPB" onerror="this.style.display='none'" />
             <div class="balancete-header-text">
-                <h1>CONVENÇÃO DE MINISTROS DAS ASSEMBLÉIAS DE DEUS</h1>
+                <h1>CONVENÇÃO DE MINISTROS DAS ASSEMBLEIAS DE DEUS</h1>
                 <h1>NO ESTADO DA PARAÍBA - COMADEP</h1>
                 <p>CNPJ 04.362.336/0001-55 - Rua 1° de Maio, 239,Jaguaribe - João Pessoa-PB</p>
                 <p class="subtitle">Balancete de Verificação das Igrejas Representadas e Congregações</p>
@@ -304,7 +339,7 @@
     <div class="periodo-info-container">
         <div class="periodo-box left">@Model.CentroCustoNome</div>
         <div class="periodo-box center">PB</div>
-        <div class="periodo-box right">@Model.DataInicio.Day / @mes / @ano</div>
+        <div class="periodo-box right">@periodoFormatado</div>
     </div>
 
     <!-- ========================================
@@ -315,27 +350,29 @@
         <tr>
             <td class="item-descricao">Saldo do Mês Anterior</td>
             <td class="item-label">R$</td>
-            <td class="item-valor"></td>
-            <td class="item-total">R$</td>
-        </tr>
-        <tr>
-            <td class="item-descricao">Dízimos e ofertas do Tempo Centra</td>
-            <td class="item-label">R$</td>
-            <td class="item-valor">@(Model.ReceitasOperacionais.FirstOrDefault(r => r.Descricao.Contains("Dízimo"))?.Valor.ToString("N2") ?? "")</td>
+            <td class="item-valor">@(Model.SaldoMesAnterior > 0 ? Model.SaldoMesAnterior.ToString("N2") : "")</td>
             <td class="item-total"></td>
         </tr>
-        <tr>
-            <td class="item-descricao">Ofertas do Círculo de Oração (Adultos e Mocidades</td>
-            <td class="item-label">R$</td>
-            <td class="item-valor">@(Model.ReceitasOperacionais.FirstOrDefault(r => r.Descricao.Contains("Círculo"))?.Valor.ToString("N2") ?? "")</td>
-            <td class="item-total"></td>
-        </tr>
-        <tr>
-            <td class="item-descricao">Ofertas</td>
-            <td class="item-label">R$</td>
-            <td class="item-valor">@(Model.ReceitasOperacionais.FirstOrDefault(r => r.Descricao == "Ofertas")?.Valor.ToString("N2") ?? "")</td>
-            <td class="item-total"></td>
-        </tr>
+        @if (Model.ReceitasOperacionais.Any())
+        {
+            @foreach (var receita in Model.ReceitasOperacionais)
+            {
+                <tr>
+                    <td class="item-descricao">@receita.Descricao</td>
+                    <td class="item-label">R$</td>
+                    <td class="item-valor">@(receita.Valor > 0 ? receita.Valor.ToString("N2") : "")</td>
+                    <td class="item-total"></td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td class="item-descricao" colspan="4" style="text-align: center; font-style: italic; color: #666;">
+                    Nenhuma receita encontrada no período
+                </td>
+            </tr>
+        }
         <tr class="total-row">
             <td class="item-descricao">Total do crédito</td>
             <td class="item-label"></td>
@@ -349,36 +386,51 @@
          ======================================== -->
     <div class="secao-titulo">IMOBILIZADOS</div>
     <table class="balancete-table">
-        <tr>
-            <td class="item-descricao">Imóveis</td>
-            <td class="item-label">R$</td>
-            <td class="item-valor"></td>
-            <td class="item-total"></td>
-        </tr>
-        <tr>
-            <td class="item-descricao">Veículo</td>
-            <td class="item-label">R$</td>
-            <td class="item-valor"></td>
-            <td class="item-total"></td>
-        </tr>
-        <tr>
-            <td class="item-descricao">Móveis e Utensílio</td>
-            <td class="item-label">R$</td>
-            <td class="item-valor"></td>
-            <td class="item-total"></td>
-        </tr>
-        <tr>
-            <td class="item-descricao">Instalações</td>
-            <td class="item-label">R$</td>
-            <td class="item-valor"></td>
-            <td class="item-total"></td>
-        </tr>
-        <tr>
-            <td class="item-descricao">Máquinas e Equipamentos</td>
-            <td class="item-label">R$</td>
-            <td class="item-valor"></td>
-            <td class="item-total"></td>
-        </tr>
+        @if (Model.Imobilizados.Any())
+        {
+            @foreach (var imobilizado in Model.Imobilizados)
+            {
+                <tr>
+                    <td class="item-descricao">@imobilizado.Descricao</td>
+                    <td class="item-label">R$</td>
+                    <td class="item-valor">@(imobilizado.Valor > 0 ? imobilizado.Valor.ToString("N2") : "")</td>
+                    <td class="item-total"></td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td class="item-descricao">Imóveis</td>
+                <td class="item-label">R$</td>
+                <td class="item-valor"></td>
+                <td class="item-total"></td>
+            </tr>
+            <tr>
+                <td class="item-descricao">Veículo</td>
+                <td class="item-label">R$</td>
+                <td class="item-valor"></td>
+                <td class="item-total"></td>
+            </tr>
+            <tr>
+                <td class="item-descricao">Móveis e Utensílio</td>
+                <td class="item-label">R$</td>
+                <td class="item-valor"></td>
+                <td class="item-total"></td>
+            </tr>
+            <tr>
+                <td class="item-descricao">Instalações</td>
+                <td class="item-label">R$</td>
+                <td class="item-valor"></td>
+                <td class="item-total"></td>
+            </tr>
+            <tr>
+                <td class="item-descricao">Máquinas e Equipamentos</td>
+                <td class="item-label">R$</td>
+                <td class="item-valor"></td>
+                <td class="item-total"></td>
+            </tr>
+        }
         <tr class="total-row">
             <td class="item-descricao">Total do Crédito</td>
             <td class="item-label"></td>
@@ -392,18 +444,21 @@
          ======================================== -->
     <div class="secao-titulo">DESPESAS ADIMINISTRATIVAS</div>
     <table class="balancete-table">
-        @{
-            var lastAdm = Model.DespesasAdministrativas.LastOrDefault();
-        }
         @foreach (var item in Model.DespesasAdministrativas)
         {
             <tr>
                 <td class="item-descricao">@item.Descricao</td>
                 <td class="item-label">R$</td>
                 <td class="item-valor">@(item.Valor > 0 ? item.Valor.ToString("N2") : "")</td>
-                <td class="item-total">@(item == lastAdm ? "R$ 0,00" : "")</td>
+                <td class="item-total"></td>
             </tr>
         }
+        <tr class="total-row">
+            <td class="item-descricao">Subtotal Despesas Administrativas</td>
+            <td class="item-label"></td>
+            <td class="item-valor"></td>
+            <td class="item-total">R$ @Model.SubtotalDespesasAdministrativas.ToString("N2")</td>
+        </tr>
     </table>
 
     <!-- ========================================
@@ -411,18 +466,21 @@
          ======================================== -->
     <div class="secao-titulo">Despesas Tributárias</div>
     <table class="balancete-table">
-        @{
-            var lastTrib = Model.DespesasTributarias.LastOrDefault();
-        }
         @foreach (var item in Model.DespesasTributarias)
         {
             <tr>
                 <td class="item-descricao">@item.Descricao</td>
                 <td class="item-label">R$</td>
                 <td class="item-valor">@(item.Valor > 0 ? item.Valor.ToString("N2") : "")</td>
-                <td class="item-total">@(item == lastTrib ? "R$ 0,00" : "")</td>
+                <td class="item-total"></td>
             </tr>
         }
+        <tr class="total-row">
+            <td class="item-descricao">Subtotal Despesas Tributárias</td>
+            <td class="item-label"></td>
+            <td class="item-valor"></td>
+            <td class="item-total">R$ @Model.SubtotalDespesasTributarias.ToString("N2")</td>
+        </tr>
     </table>
 
     <!-- ========================================
