@@ -50,15 +50,25 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 // Determinar centro de custo para filtro
                 int? centroCustoFiltro = null;
 
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor podem ver TODOS os dados
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
+                // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
                 if (!User.IsInRole(Roles.Administrador) &&
-                    !User.IsInRole(Roles.TesoureiroGeral) &&
-                    !User.IsInRole(Roles.Pastor))
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
                 {
-                    // Apenas Tesoureiro Local precisa de filtro por centro de custo
+                    // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro por centro de custo
                     if (user.CentroCustoId.HasValue)
                     {
                         centroCustoFiltro = user.CentroCustoId.Value;
@@ -75,7 +85,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         return View();
                     }
                 }
-                // Administrador, TesoureiroGeral e Pastor: centroCustoFiltro = null (vê tudo)
+                // Administrador, Pastor e TesoureiroGeral da SEDE: centroCustoFiltro = null (vê tudo)
 
                 // Buscar IDs de entradas aprovadas
                 var queryEntradasAprovadas = _context.Entradas.AsQueryable();
@@ -86,10 +96,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir lançamentos de fechamentos Aprovados OU Processados
+                // Processados = fechamentos de congregações incluídos no fechamento da SEDE
                 var idsEntradasAprovadas = await queryEntradasAprovadas
                     .Where(e => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == e.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                         e.Data >= f.DataInicio &&
                         e.Data <= f.DataFim))
                     .Select(e => e.Id)
@@ -104,10 +116,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir lançamentos de fechamentos Aprovados OU Processados
+                // Processados = fechamentos de congregações incluídos no fechamento da SEDE
                 var idsSaidasAprovadas = await querySaidasAprovadas
                     .Where(s => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == s.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                         s.Data >= f.DataInicio &&
                         s.Data <= f.DataFim))
                     .Select(s => s.Id)
@@ -195,6 +209,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -210,12 +230,16 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Determinar centro de custo
                 int? centroCustoFiltro = null;
 
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TUDO
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
+                // Administrador, Pastor e TesoureiroGeral da SEDE veem TUDO
                 if (!User.IsInRole(Roles.Administrador) &&
-                    !User.IsInRole(Roles.TesoureiroGeral) &&
-                    !User.IsInRole(Roles.Pastor))
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
                 {
-                    // Apenas Tesoureiro Local tem filtro
+                    // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro obrigatório
                     centroCustoFiltro = user.CentroCustoId;
 
                     if (!centroCustoFiltro.HasValue)
@@ -238,7 +262,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var idsEntradasAprovadas = await queryEntradasAprovadas
                     .Where(e => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == e.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                         e.Data >= f.DataInicio &&
                         e.Data <= f.DataFim))
                     .Select(e => e.Id)
@@ -254,10 +278,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir lançamentos de fechamentos Aprovados OU Processados
+                // Processados = fechamentos de congregações incluídos no fechamento da SEDE
                 var idsSaidasAprovadas = await querySaidasAprovadas
                     .Where(s => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == s.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                         s.Data >= f.DataInicio &&
                         s.Data <= f.DataFim))
                     .Select(s => s.Id)
@@ -328,6 +354,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -343,12 +375,16 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Determinar centro de custo
                 int? centroCustoFiltro = null;
 
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
+                // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
                 if (!User.IsInRole(Roles.Administrador) &&
-                    !User.IsInRole(Roles.TesoureiroGeral) &&
-                    !User.IsInRole(Roles.Pastor))
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
                 {
-                    // Apenas Tesoureiro Local tem filtro
+                    // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro obrigatório
                     centroCustoFiltro = user.CentroCustoId;
 
                     if (!centroCustoFiltro.HasValue)
@@ -357,7 +393,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         return View(new List<Entrada>());
                     }
                 }
-                // Administrador, TesoureiroGeral e Pastor: sem filtro
+                // Administrador, TesoureiroGeral e Pastor: sem filtro (vê todos os centros de custo)
 
                 // Buscar IDs de entradas aprovadas
                 var queryEntradasAprovadas = _context.Entradas
@@ -369,10 +405,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir fechamentos Aprovados OU Processados
                 var idsEntradasAprovadas = await queryEntradasAprovadas
                     .Where(e => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == e.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                         e.Data >= f.DataInicio &&
                         e.Data <= f.DataFim))
                     .Select(e => e.Id)
@@ -426,6 +463,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -438,10 +481,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
                 ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
 
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
                 // Configurar dropdowns de filtros
                 if (User.IsInRole(Roles.Administrador) ||
-        User.IsInRole(Roles.TesoureiroGeral) ||
-               User.IsInRole(Roles.Pastor))
+                    User.IsInRole(Roles.Pastor) ||
+                    isTesoureiroGeralSede)
                 {
                     ViewBag.CentrosCusto = new SelectList(
                    await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
@@ -468,12 +515,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Determinar centro de custo para filtro de aprovação
                 int? centroCustoParaAprovacao = null;
 
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
+                // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
                 if (!User.IsInRole(Roles.Administrador) &&
-              !User.IsInRole(Roles.TesoureiroGeral) &&
-                !User.IsInRole(Roles.Pastor))
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
                 {
-                    // Tesoureiro Local: filtro obrigatório
+                    // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro obrigatório
                     centroCustoParaAprovacao = user.CentroCustoId;
 
                     if (!centroCustoParaAprovacao.HasValue)
@@ -484,7 +531,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
                 else
                 {
-                    // Administrador, TesoureiroGeral e Pastor: podem filtrar opcionalmente
+                    // Administrador, Pastor e TesoureiroGeral da SEDE: podem filtrar opcionalmente
                     centroCustoParaAprovacao = centroCustoId;
                 }
 
@@ -498,10 +545,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .Where(s => s.CentroCustoId == centroCustoParaAprovacao.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir fechamentos Aprovados OU Processados
                 var idsSaidasAprovadas = await querySaidasAprovadas
                     .Where(s => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == s.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                         s.Data >= f.DataInicio &&
                         s.Data <= f.DataFim))
                     .Select(s => s.Id)
@@ -575,6 +623,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, 1, 1);
@@ -590,7 +644,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Determinar centro de custo
                 int? centroCustoFiltro = null;
 
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
+                // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
                 if (!User.IsInRole(Roles.Administrador) &&
                     !User.IsInRole(Roles.TesoureiroGeral) &&
                     !User.IsInRole(Roles.Pastor))
@@ -654,6 +712,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir fechamentos Aprovados OU Processados
                 var idsSaidasAprovadas = await querySaidasAprovadas
                     .Where(s => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == s.CentroCustoId &&
@@ -720,6 +779,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -736,8 +801,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     await _context.Membros.Where(m => m.Ativo).OrderBy(m => m.NomeCompleto).ToListAsync(),
                        "Id", "NomeCompleto", membroId);
 
-                // ✅ NOVO: Dropdown de Centros de Custo para filtro adicional
-                if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.Pastor))
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
+                // ✅ Dropdown de Centros de Custo para filtro adicional
+                if (User.IsInRole(Roles.Administrador) || 
+                    User.IsInRole(Roles.Pastor) || 
+                    isTesoureiroGeralSede)
                 {
                     ViewBag.CentrosCusto = new SelectList(
                         await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
@@ -760,12 +831,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Determinar centro de custo
                 int? centroCustoFiltro = null;
 
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
+                // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
                 if (!User.IsInRole(Roles.Administrador) &&
-                     !User.IsInRole(Roles.TesoureiroGeral) &&
-               !User.IsInRole(Roles.Pastor))
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
                 {
-                    // Tesoureiro Local: filtro obrigatório
+                    // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro obrigatório
                     centroCustoFiltro = user.CentroCustoId;
 
                     if (!centroCustoFiltro.HasValue)
@@ -777,7 +848,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
                 else
                 {
-                    // ✅ NOVO: Administrador, TesoureiroGeral e Pastor podem filtrar opcionalmente
+                    // Administrador, Pastor e TesoureiroGeral da SEDE podem filtrar opcionalmente
                     centroCustoFiltro = centroCustoId;
                 }
 
@@ -797,10 +868,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                        .Where(e => e.MembroId == membroId.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir fechamentos Aprovados OU Processados
                 var idsEntradasAprovadas = await queryEntradasAprovadas
           .Where(e => _context.FechamentosPeriodo.Any(f =>
                  f.CentroCustoId == e.CentroCustoId &&
-            f.Status == StatusFechamentoPeriodo.Aprovado &&
+            (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
       e.Data >= f.DataInicio &&
              e.Data <= f.DataFim))
             .Select(e => e.Id)
@@ -876,6 +948,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -888,10 +966,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
                 ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
 
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
                 // Configurar dropdown
                 if (User.IsInRole(Roles.Administrador) ||
-              User.IsInRole(Roles.TesoureiroGeral) ||
-               User.IsInRole(Roles.Pastor))
+                    User.IsInRole(Roles.Pastor) ||
+                    isTesoureiroGeralSede)
                 {
                     ViewBag.CentrosCusto = new SelectList(
                 await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
@@ -911,7 +993,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     }
                 }
 
-                // ✅ NOVO: Dropdown de Planos de Contas (Despesas)
+                // Dropdown de Planos de Contas (Despesas)
                 ViewBag.PlanosContas = new SelectList(
                     await _context.PlanosDeContas
                     .Where(p => p.Tipo == TipoPlanoContas.Despesa && p.Ativo)
@@ -922,12 +1004,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Determinar centro de custo
                 int? centroCustoFiltro = null;
 
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
+                // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
                 if (!User.IsInRole(Roles.Administrador) &&
-                      !User.IsInRole(Roles.TesoureiroGeral) &&
-                  !User.IsInRole(Roles.Pastor))
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
                 {
-                    // Tesoureiro Local: filtro obrigatório
+                    // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro obrigatório
                     centroCustoFiltro = user.CentroCustoId;
 
                     if (!centroCustoFiltro.HasValue)
@@ -939,7 +1021,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
                 else
                 {
-                    // Administrador, TesoureiroGeral e Pastor: podem filtrar opcionalmente
+                    // Administrador, Pastor e TesoureiroGeral da SEDE podem filtrar opcionalmente
                     centroCustoFiltro = centroCustoId;
                 }
 
@@ -960,14 +1042,15 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .Where(s => s.PlanoDeContasId == planoContasId.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir fechamentos Aprovados OU Processados
                 var idsSaidasAprovadas = await querySaidasAprovadas
                 .Where(s => _context.FechamentosPeriodo.Any(f =>
                    f.CentroCustoId == s.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
-                 s.Data >= f.DataInicio &&
-                    s.Data <= f.DataFim))
-                         .Select(s => s.Id)
-                        .ToListAsync();
+                (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+         s.Data >= f.DataInicio &&
+            s.Data <= f.DataFim))
+                 .Select(s => s.Id)
+                .ToListAsync();
 
                 var despesas = idsSaidasAprovadas.Any()
                ? await _context.Saidas
@@ -1046,6 +1129,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -1057,10 +1146,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 int selectedCentroCustoId;
 
-                // ✅ CORRIGIDO: Incluir Pastor para gerar PDF de qualquer centro de custo
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
+                // ✅ Administrador, Pastor e TesoureiroGeral da SEDE podem gerar PDF de qualquer centro de custo
                 if (User.IsInRole(Roles.Administrador) ||
-                    User.IsInRole(Roles.TesoureiroGeral) ||
-                    User.IsInRole(Roles.Pastor))
+                    User.IsInRole(Roles.Pastor) ||
+                    isTesoureiroGeralSede)
                 {
                     if (centroCustoId.HasValue)
                     {
@@ -1101,8 +1194,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
                 ViewBag.CentroCustoId = selectedCentroCustoId;
                 ViewBag.PodeEscolherCentroCusto = User.IsInRole(Roles.Administrador) ||
-                                                  User.IsInRole(Roles.TesoureiroGeral) ||
-                                                  User.IsInRole(Roles.Pastor);
+                                                  User.IsInRole(Roles.Pastor) ||
+                                                  isTesoureiroGeralSede;
 
                 await _auditService.LogAsync("Visualização", "Relatório",
                     $"Balancete mensal: {balancete.CentroCustoNome} - {balancete.Periodo}");
@@ -1134,6 +1227,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -1145,10 +1244,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 int selectedCentroCustoId;
 
-                // ✅ CORRIGIDO: Incluir Pastor para gerar PDF de qualquer centro de custo
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
+                // ✅ Administrador, Pastor e TesoureiroGeral da SEDE podem gerar PDF de qualquer centro de custo
                 if (User.IsInRole(Roles.Administrador) ||
-                    User.IsInRole(Roles.TesoureiroGeral) ||
-                    User.IsInRole(Roles.Pastor))
+                    User.IsInRole(Roles.Pastor) ||
+                    isTesoureiroGeralSede)
                 {
                     if (centroCustoId.HasValue)
                     {
@@ -1229,15 +1332,21 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Determinar centro de custo
                 int? centroCustoFiltro = null;
 
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
-                if (!User.IsInRole(Roles.Administrador) &&
-              !User.IsInRole(Roles.TesoureiroGeral) &&
-             !User.IsInRole(Roles.Pastor))
-                {
-                    // Tesoureiro Local: filtro obrigatório
-                    centroCustoFiltro = user.CentroCustoId;
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
-                    if (!centroCustoFiltro.HasValue)
+                // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
+                if (!User.IsInRole(Roles.Administrador) &&
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
+                {
+                    // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro por centro de custo
+                    if (user.CentroCustoId.HasValue)
+                    {
+                        centroCustoFiltro = user.CentroCustoId.Value;
+                    }
+                    else
                     {
                         TempData["Erro"] = "Usuário sem centro de custo definido.";
                         return RedirectToAction("EntradasPorPeriodo");
@@ -1255,10 +1364,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir fechamentos Aprovados OU Processados
                 var idsEntradasAprovadas = await queryEntradasAprovadas
                     .Where(e => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == e.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                         e.Data >= f.DataInicio &&
                         e.Data <= f.DataFim))
                     .Select(e => e.Id)
@@ -1341,6 +1451,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -1353,12 +1469,16 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Determinar centro de custo
                 int? centroCustoFiltro = null;
 
-                // ✅ CORRIGIDO: Administrador, TesoureiroGeral e Pastor veem TODOS os dados
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
+                // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
                 if (!User.IsInRole(Roles.Administrador) &&
-           !User.IsInRole(Roles.TesoureiroGeral) &&
-              !User.IsInRole(Roles.Pastor))
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
                 {
-                    // Tesoureiro Local: filtro obrigatório
+                    // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro obrigatório
                     centroCustoFiltro = user.CentroCustoId;
 
                     if (!centroCustoFiltro.HasValue)
@@ -1379,10 +1499,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir fechamentos Aprovados OU Processados
                 var idsSaidasAprovadas = await querySaidasAprovadas
                     .Where(s => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == s.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                         s.Data >= f.DataInicio &&
                         s.Data <= f.DataFim))
                     .Select(s => s.Id)
@@ -1465,6 +1586,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue || !dataFim.HasValue)
                 {
                     TempData["Erro"] = "Período inválido.";
@@ -1475,9 +1602,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int? centroCustoFiltro = null;
                 string? centroCustoNome = null;
 
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
                 if (!User.IsInRole(Roles.Administrador) &&
-                 !User.IsInRole(Roles.TesoureiroGeral) &&
-                     !User.IsInRole(Roles.Pastor))
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
                 {
                     centroCustoFiltro = user.CentroCustoId;
                     if (centroCustoFiltro.HasValue)
@@ -1497,14 +1628,15 @@ namespace SistemaTesourariaEclesiastica.Controllers
                    .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir fechamentos Aprovados OU Processados
                 var idsEntradasAprovadas = await queryEntradasAprovadas
-                         .Where(e => _context.FechamentosPeriodo.Any(f =>
+                 .Where(e => _context.FechamentosPeriodo.Any(f =>
                     f.CentroCustoId == e.CentroCustoId &&
-                     f.Status == StatusFechamentoPeriodo.Aprovado &&
+                     (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                             e.Data >= f.DataInicio &&
                               e.Data <= f.DataFim))
-                         .Select(e => e.Id)
-                 .ToListAsync();
+            .Select(e => e.Id)
+               .ToListAsync();
 
                 var querySaidasAprovadas = _context.Saidas
      .Where(s => s.Data >= dataInicio && s.Data <= dataFim);
@@ -1515,14 +1647,15 @@ namespace SistemaTesourariaEclesiastica.Controllers
                      .Where(s => s.CentroCustoId == centroCustoFiltro.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir fechamentos Aprovados OU Processados
                 var idsSaidasAprovadas = await querySaidasAprovadas
-                         .Where(s => _context.FechamentosPeriodo.Any(f =>
+                 .Where(s => _context.FechamentosPeriodo.Any(f =>
                   f.CentroCustoId == s.CentroCustoId &&
-                  f.Status == StatusFechamentoPeriodo.Aprovado &&
-                 s.Data >= f.DataInicio &&
-                s.Data <= f.DataFim))
-                     .Select(s => s.Id)
-                    .ToListAsync();
+                  (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+         s.Data >= f.DataInicio &&
+            s.Data <= f.DataFim))
+                 .Select(s => s.Id)
+                .ToListAsync();
 
                 var entradas = idsEntradasAprovadas.Any()
                  ? await _context.Entradas
@@ -1540,9 +1673,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 var fluxoDeCaixa = new List<FluxoDeCaixaItem>();
                 var entradasAgrupadas = entradas.GroupBy(e => e.Data.Date)
-                          .ToDictionary(g => g.Key, g => g.Sum(e => e.Valor));
+                  .ToDictionary(g => g.Key, g => g.Sum(e => e.Valor));
                 var saidasAgrupadas = saidas.GroupBy(s => s.Data.Date)
-                         .ToDictionary(g => g.Key, g => g.Sum(s => s.Valor));
+                 .ToDictionary(g => g.Key, g => g.Sum(s => s.Valor));
 
                 var todasAsDatas = entradasAgrupadas.Keys.Union(saidasAgrupadas.Keys).OrderBy(d => d).ToList();
 
@@ -1564,10 +1697,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 var pdfBytes = Helpers.RelatorioPdfHelper.GerarPdfFluxoCaixa(
-            fluxoDeCaixa,
-             dataInicio.Value,
-       dataFim.Value,
-     centroCustoNome);
+                    fluxoDeCaixa,
+                    dataInicio.Value,
+                    dataFim.Value,
+                    centroCustoNome);
 
                 var nomeArquivo = $"FluxoDeCaixa_{dataInicio:yyyyMMdd}_{dataFim:yyyyMMdd}.pdf";
 
@@ -1597,6 +1730,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -1609,9 +1748,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int? centroCustoFiltro = null;
                 string? centroCustoNome = null;
 
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
                 if (!User.IsInRole(Roles.Administrador) &&
-        !User.IsInRole(Roles.TesoureiroGeral) &&
-                  !User.IsInRole(Roles.Pastor))
+                    !User.IsInRole(Roles.Pastor) &&
+                    !isTesoureiroGeralSede)
                 {
                     centroCustoFiltro = user.CentroCustoId;
                     if (centroCustoFiltro.HasValue)
@@ -1621,23 +1764,24 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     }
                 }
 
+                // Buscar IDs de entradas aprovadas
                 var queryEntradasAprovadas = _context.Entradas
           .Where(e => e.Data >= dataInicio && e.Data <= dataFim);
 
                 if (centroCustoFiltro.HasValue)
                 {
                     queryEntradasAprovadas = queryEntradasAprovadas
-                      .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
+          .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                 }
 
                 var idsEntradasAprovadas = await queryEntradasAprovadas
                .Where(e => _context.FechamentosPeriodo.Any(f =>
                f.CentroCustoId == e.CentroCustoId &&
-         f.Status == StatusFechamentoPeriodo.Aprovado &&
+         (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
        e.Data >= f.DataInicio &&
                  e.Data <= f.DataFim))
              .Select(e => e.Id)
-             .ToListAsync();
+               .ToListAsync();
 
                 var entradas = idsEntradasAprovadas.Any()
                      ? await _context.Entradas
@@ -1686,6 +1830,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     return RedirectToAction("Login", "Account");
                 }
 
+                // Carregar CentroCusto com suas propriedades
+                if (user.CentroCustoId.HasValue)
+                {
+                    user.CentroCusto = await _context.CentrosCusto.FindAsync(user.CentroCustoId.Value);
+                }
+
                 if (!dataInicio.HasValue)
                 {
                     dataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -1697,6 +1847,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
                 int? centroCustoFiltro = null;
                 string? centroCustoNome = null;
+
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 if (!User.IsInRole(Roles.Administrador) &&
                     !User.IsInRole(Roles.TesoureiroGeral) &&
@@ -1722,7 +1876,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var idsSaidasAprovadas = await querySaidasAprovadas
           .Where(s => _context.FechamentosPeriodo.Any(f =>
               f.CentroCustoId == s.CentroCustoId &&
-          f.Status == StatusFechamentoPeriodo.Aprovado &&
+          (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
           s.Data >= f.DataInicio &&
            s.Data <= f.DataFim))
              .Select(s => s.Id)

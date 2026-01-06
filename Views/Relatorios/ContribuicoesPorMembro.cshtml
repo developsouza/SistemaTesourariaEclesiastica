@@ -63,6 +63,18 @@
     </div>
 </div>
 
+@* ✅ NOVO: Alert indicando dados consolidados quando Tesoureiro Geral da SEDE *@
+@if ((User.IsInRole("Administrador") || User.IsInRole("Pastor") || User.IsInRole("TesoureiroGeral")) && 
+     ViewBag.ResumoPorCentroCusto != null && ((IEnumerable<dynamic>)ViewBag.ResumoPorCentroCusto).Count() > 1)
+{
+    <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+        <div>
+            <strong>Dados Consolidados:</strong> Este relatório exibe contribuições de múltiplos centros de custo (Sede e Congregações).
+        </div>
+    </div>
+}
+
 @* ✅ NOVO: Resumo por Centro de Custo *@
 @if (ViewBag.ResumoPorCentroCusto != null && ((IEnumerable<dynamic>)ViewBag.ResumoPorCentroCusto).Any())
 {

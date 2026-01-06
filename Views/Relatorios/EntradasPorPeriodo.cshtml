@@ -118,9 +118,18 @@ else
                 <i class="bi bi-table me-2 text-success"></i>
                 Detalhamento das Entradas
             </h5>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
-                <i class="bi bi-printer me-1"></i>Imprimir
-            </button>
+            <div class="d-flex gap-2 align-items-center">
+                <label class="small mb-0 me-2">Registros por página:</label>
+                <select class="form-select form-select-sm" id="pageSize" style="width: 80px;">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i>Imprimir
+                </button>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -128,14 +137,14 @@ else
                     <thead class="table-light">
                         <tr>
                             <th class="ps-3">Data</th>
+                            <th>Centro de Custo</th>
                             <th>Descrição</th>
                             <th class="text-end">Valor</th>
-                            <th class="d-none d-md-table-cell">Fonte de Renda</th>
-                            <th class="d-none d-lg-table-cell">Membro</th>
-                            <th class="d-none d-xl-table-cell">Centro de Custo</th>
+                            <th class="d-none d-lg-table-cell">Fonte de Renda</th>
+                            <th class="d-none d-xl-table-cell">Membro</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="tableBody">
                         @foreach (var item in Model)
                         {
                             <tr>
@@ -144,18 +153,23 @@ else
                                     <small class="text-muted">@item.Data.ToString("HH:mm")</small>
                                 </td>
                                 <td>
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                                        <i class="bi bi-building me-1"></i>@item.CentroCusto?.Nome
+                                    </span>
+                                </td>
+                                <td>
                                     <div>@item.Descricao</div>
-                                    <small class="text-muted d-md-none">@item.PlanoDeContas?.Nome</small>
+                                    <small class="text-muted d-lg-none">@item.PlanoDeContas?.Nome</small>
                                 </td>
                                 <td class="text-end">
                                     <span class="fw-bold text-success">@item.Valor.ToString("C2")</span>
                                 </td>
-                                <td class="d-none d-md-table-cell">
+                                <td class="d-none d-lg-table-cell">
                                     <span class="badge bg-success bg-opacity-10 text-success border border-success">
                                         @item.PlanoDeContas?.Nome
                                     </span>
                                 </td>
-                                <td class="d-none d-lg-table-cell">
+                                <td class="d-none d-xl-table-cell">
                                     @if (item.Membro != null)
                                     {
                                         <span>@item.Membro.NomeCompleto</span>
@@ -165,22 +179,29 @@ else
                                         <span class="text-muted fst-italic">-</span>
                                     }
                                 </td>
-                                <td class="d-none d-xl-table-cell">
-                                    <small class="text-muted">@item.CentroCusto?.Nome</small>
-                                </td>
                             </tr>
                         }
                     </tbody>
                     <tfoot class="table-light">
                         <tr>
-                            <th class="ps-3" colspan="2">TOTAL</th>
+                            <th class="ps-3" colspan="3">TOTAL</th>
                             <th class="text-end">
                                 <span class="fw-bold text-success">@Model.Sum(x => x.Valor).ToString("C2")</span>
                             </th>
-                            <th colspan="3"></th>
+                            <th colspan="2"></th>
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    Mostrando <span id="showingStart">0</span> até <span id="showingEnd">0</span> de <span id="totalRecords">@Model.Count()</span> registros
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+                </nav>
             </div>
         </div>
     </div>
@@ -189,6 +210,115 @@ else
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script>
+        let currentPage = 1;
+        let pageSize = 25;
+        let allRows = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const tbody = document.getElementById('tableBody');
+            allRows = Array.from(tbody.getElementsByTagName('tr'));
+            
+            document.getElementById('pageSize').addEventListener('change', function() {
+                pageSize = parseInt(this.value);
+                currentPage = 1;
+                renderTable();
+            });
+            
+            renderTable();
+        });
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const totalRecords = allRows.length;
+            const totalPages = Math.ceil(totalRecords / pageSize);
+            
+            // Esconder todas as linhas
+            allRows.forEach(row => row.style.display = 'none');
+            
+            // Mostrar apenas as linhas da página atual
+            const start = (currentPage - 1) * pageSize;
+            const end = Math.min(start + pageSize, totalRecords);
+            
+            for (let i = start; i < end; i++) {
+                allRows[i].style.display = '';
+            }
+            
+            // Atualizar informações de paginação
+            document.getElementById('showingStart').textContent = totalRecords > 0 ? start + 1 : 0;
+            document.getElementById('showingEnd').textContent = end;
+            document.getElementById('totalRecords').textContent = totalRecords;
+            
+            // Renderizar botões de paginação
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            
+            if (totalPages <= 1) return;
+            
+            // Botão Anterior
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Anterior</a>`;
+            pagination.appendChild(prevLi);
+            
+            // Páginas
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                const firstLi = document.createElement('li');
+                firstLi.className = 'page-item';
+                firstLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(1); return false;">1</a>`;
+                pagination.appendChild(firstLi);
+                
+                if (startPage > 2) {
+                    const dotsLi = document.createElement('li');
+                    dotsLi.className = 'page-item disabled';
+                    dotsLi.innerHTML = `<span class="page-link">...</span>`;
+                    pagination.appendChild(dotsLi);
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>`;
+                pagination.appendChild(li);
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const dotsLi = document.createElement('li');
+                    dotsLi.className = 'page-item disabled';
+                    dotsLi.innerHTML = `<span class="page-link">...</span>`;
+                    pagination.appendChild(dotsLi);
+                }
+                
+                const lastLi = document.createElement('li');
+                lastLi.className = 'page-item';
+                lastLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${totalPages}); return false;">${totalPages}</a>`;
+                pagination.appendChild(lastLi);
+            }
+            
+            // Botão Próximo
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Próximo</a>`;
+            pagination.appendChild(nextLi);
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(allRows.length / pageSize);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderTable();
+            // Scroll suave para o topo da tabela
+            document.getElementById('entradasTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function exportToExcel() {
             const table = document.getElementById("entradasTable");
             const ws = XLSX.utils.table_to_sheet(table);
