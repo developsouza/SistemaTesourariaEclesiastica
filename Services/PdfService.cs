@@ -412,7 +412,7 @@ namespace SistemaTesourariaEclesiastica.Services
         private void GerarResumoExecutivo(StringBuilder html, FechamentoPeriodo fechamento)
         {
             html.AppendLine("<div class='summary-box'>");
-            html.AppendLine("<div style='font-size: 10px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; text-align: center;'>💰 RESUMO EXECUTIVO</div>");
+            html.AppendLine("<div style='font-size: 10px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; text-align: center;'>RESUMO EXECUTIVO</div>");
             html.AppendLine("<div class='summary-grid'>");
 
             html.AppendLine("<div class='summary-item'>");
@@ -544,7 +544,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
             // COLUNA ESQUERDA: ENTRADAS
             html.AppendLine("<div class='column'>");
-            html.AppendLine("<div class='column-header column-header-success'>📥 ENTRADAS (RECEITAS)</div>");
+            html.AppendLine("<div class='column-header column-header-success'>ENTRADAS (RECEITAS)</div>");
 
             if (!entradasPorOrigem.Any())
             {
@@ -557,9 +557,8 @@ namespace SistemaTesourariaEclesiastica.Services
                 foreach (var origem in entradasPorOrigem)
                 {
                     var separatorClass = origem.Value.ehSede ? "sede-separator" : "congregacao-separator";
-                    var icone = origem.Value.ehSede ? "🏛️" : "📍";
 
-                    html.AppendLine($"<div class='{separatorClass}'>{icone} {origem.Key}</div>");
+                    html.AppendLine($"<div class='{separatorClass}'>{origem.Key}</div>");
 
                     html.AppendLine("<table class='table-striped'>");
                     html.AppendLine("<thead>");
@@ -613,7 +612,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
             // COLUNA DIREITA: SAÍDAS
             html.AppendLine("<div class='column'>");
-            html.AppendLine("<div class='column-header column-header-danger'>📤 SAÍDAS (DESPESAS)</div>");
+            html.AppendLine("<div class='column-header column-header-danger'>SAÍDAS (DESPESAS)</div>");
 
             if (!saidasPorOrigem.Any())
             {
@@ -627,9 +626,8 @@ namespace SistemaTesourariaEclesiastica.Services
                 {
                     var separatorClass = origem.Value.ehSede ? "sede-separator" : "congregacao-separator";
                     var corSeparator = origem.Value.ehSede ? "background-color: #ffebee; border-left-color: #1976d2;" : "background-color: #ffebee; border-left-color: #f44336;";
-                    var icone = origem.Value.ehSede ? "🏛️" : "📍";
 
-                    html.AppendLine($"<div class='congregacao-separator' style='{corSeparator}'>{icone} {origem.Key}</div>");
+                    html.AppendLine($"<div class='congregacao-separator' style='{corSeparator}'>{origem.Key}</div>");
 
                     html.AppendLine("<table class='table-striped'>");
                     html.AppendLine("<thead>");

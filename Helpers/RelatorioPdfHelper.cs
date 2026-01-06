@@ -41,11 +41,11 @@ namespace SistemaTesourariaEclesiastica.Helpers
         /// Gera PDF do relatório de Contribuições por Membro com detalhamento por Centro de Custo
         /// </summary>
         public static byte[] GerarPdfContribuicoes(
-    List<Entrada> contribuicoes,
-        dynamic resumoPorCentroCusto,
-    dynamic resumoPorMembro,
+            List<Entrada> contribuicoes,
+            dynamic resumoPorCentroCusto,
+            dynamic resumoPorMembro,
             DateTime dataInicio,
-        DateTime dataFim)
+            DateTime dataFim)
         {
             var html = GerarHtmlContribuicoes(contribuicoes, resumoPorCentroCusto, resumoPorMembro, dataInicio, dataFim);
             return ConverterHtmlParaPdf(html);
@@ -58,8 +58,8 @@ namespace SistemaTesourariaEclesiastica.Helpers
             List<Saida> despesas,
             dynamic resumoPorCentroCusto,
             dynamic resumoPorCategoria,
-                    DateTime dataInicio,
-                    DateTime dataFim)
+            DateTime dataInicio,
+            DateTime dataFim)
         {
             var html = GerarHtmlDespesasPorCentroCusto(despesas, resumoPorCentroCusto, resumoPorCategoria, dataInicio, dataFim);
             return ConverterHtmlParaPdf(html);
@@ -70,45 +70,77 @@ namespace SistemaTesourariaEclesiastica.Helpers
         private static string GerarHtmlFluxoCaixa(List<FluxoDeCaixaItem> dados, DateTime dataInicio, DateTime dataFim, string? centroCustoNome)
         {
             var html = new StringBuilder();
-            html.AppendLine(GerarCabecalhoHtml("Relatório de Fluxo de Caixa", centroCustoNome));
+            
+            html.AppendLine("<!DOCTYPE html>");
+            html.AppendLine("<html>");
+            html.AppendLine("<head>");
+            html.AppendLine("<meta charset='utf-8'>");
+            html.AppendLine("<title>Relatório de Fluxo de Caixa</title>");
+            html.AppendLine("<style>");
+            html.AppendLine(ObterEstilosCssPadronizado());
+            html.AppendLine("</style>");
+            html.AppendLine("</head>");
+            html.AppendLine("<body>");
 
-            html.AppendLine("<div class='periodo'>");
-            html.AppendLine($"<p><strong>Período:</strong> {dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}</p>");
-            html.AppendLine($"<p><strong>Data de Geração:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>");
-            html.AppendLine("</div>");
+            // Cabeçalho padrão com logo
+            GerarCabecalhoPadronizado(html, "RELATÓRIO DE FLUXO DE CAIXA", centroCustoNome, dataInicio, dataFim);
 
-            // Totais
+            // Totais resumo executivo
             var totalEntradas = dados.Sum(d => d.Entradas);
             var totalSaidas = dados.Sum(d => d.Saidas);
             var saldoFinal = dados.LastOrDefault()?.SaldoAcumulado ?? 0;
 
-            html.AppendLine("<div class='resumo'>");
-            html.AppendLine("<table class='resumo-table'>");
-            html.AppendLine("<tr>");
-            html.AppendLine($"<th>Total Entradas</th><td class='valor-positivo'>{totalEntradas:C2}</td>");
-            html.AppendLine($"<th>Total Saídas</th><td class='valor-negativo'>{totalSaidas:C2}</td>");
-            html.AppendLine($"<th>Saldo Final</th><td class='valor-destaque'>{saldoFinal:C2}</td>");
-            html.AppendLine("</tr></table></div>");
+            html.AppendLine("<div class='summary-box'>");
+            html.AppendLine("<div style='font-size: 10px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; text-align: center;'>RESUMO EXECUTIVO</div>");
+            html.AppendLine("<div class='summary-grid'>");
+            
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Total de Entradas</span>");
+            html.AppendLine($"<span class='summary-value text-success'>{totalEntradas:C}</span>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Total de Saídas</span>");
+            html.AppendLine($"<span class='summary-value text-danger'>{totalSaidas:C}</span>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Saldo Final</span>");
+            html.AppendLine($"<span class='summary-value text-info'>{saldoFinal:C}</span>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
 
             // Detalhamento
+            html.AppendLine("<h3 style='background-color: #34495e; color: white; padding: 8px; margin: 8px 0 5px 0; font-size: 11px;'>DETALHAMENTO DIÁRIO</h3>");
             html.AppendLine("<table>");
-            html.AppendLine("<thead><tr>");
+            html.AppendLine("<thead>");
+            html.AppendLine("<tr>");
             html.AppendLine("<th>Data</th><th>Entradas</th><th>Saídas</th><th>Saldo Dia</th><th>Saldo Acumulado</th>");
-            html.AppendLine("</tr></thead><tbody>");
+            html.AppendLine("</tr>");
+            html.AppendLine("</thead>");
+            html.AppendLine("<tbody>");
 
             foreach (var item in dados)
             {
                 html.AppendLine("<tr>");
-                html.AppendLine($"<td>{item.Data:dd/MM/yyyy}</td>");
-                html.AppendLine($"<td class='valor-positivo'>{item.Entradas:C2}</td>");
-                html.AppendLine($"<td class='valor-negativo'>{item.Saidas:C2}</td>");
-                html.AppendLine($"<td>{item.SaldoDia:C2}</td>");
-                html.AppendLine($"<td class='valor-destaque'>{item.SaldoAcumulado:C2}</td>");
+                html.AppendLine($"<td class='center'>{item.Data:dd/MM/yyyy}</td>");
+                html.AppendLine($"<td class='currency text-success'>{item.Entradas:C}</td>");
+                html.AppendLine($"<td class='currency text-danger'>{item.Saidas:C}</td>");
+                html.AppendLine($"<td class='currency'>{item.SaldoDia:C}</td>");
+                html.AppendLine($"<td class='currency text-info'>{item.SaldoAcumulado:C}</td>");
                 html.AppendLine("</tr>");
             }
 
-            html.AppendLine("</tbody></table>");
-            html.AppendLine(GerarRodapeHtml());
+            html.AppendLine("</tbody>");
+            html.AppendLine("</table>");
+
+            // Rodapé padrão
+            GerarRodapePadronizado(html);
+
+            html.AppendLine("</body>");
+            html.AppendLine("</html>");
 
             return html.ToString();
         }
@@ -116,12 +148,37 @@ namespace SistemaTesourariaEclesiastica.Helpers
         private static string GerarHtmlEntradas(List<Entrada> entradas, DateTime dataInicio, DateTime dataFim, decimal total, string? centroCustoNome)
         {
             var html = new StringBuilder();
-            html.AppendLine(GerarCabecalhoHtml("Relatório de Entradas por Período", centroCustoNome));
+            
+            html.AppendLine("<!DOCTYPE html>");
+            html.AppendLine("<html>");
+            html.AppendLine("<head>");
+            html.AppendLine("<meta charset='utf-8'>");
+            html.AppendLine("<title>Relatório de Entradas</title>");
+            html.AppendLine("<style>");
+            html.AppendLine(ObterEstilosCssPadronizado());
+            html.AppendLine("</style>");
+            html.AppendLine("</head>");
+            html.AppendLine("<body>");
 
-            html.AppendLine("<div class='periodo'>");
-            html.AppendLine($"<p><strong>Período:</strong> {dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}</p>");
-            html.AppendLine($"<p><strong>Total de Registros:</strong> {entradas.Count}</p>");
-            html.AppendLine($"<p><strong>Total Geral:</strong> <span class='valor-destaque'>{total:C2}</span></p>");
+            // Cabeçalho padrão
+            GerarCabecalhoPadronizado(html, "RELATÓRIO DE ENTRADAS (RECEITAS)", centroCustoNome, dataInicio, dataFim);
+
+            // Resumo executivo
+            html.AppendLine("<div class='summary-box'>");
+            html.AppendLine("<div style='font-size: 10px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; text-align: center;'>RESUMO EXECUTIVO</div>");
+            html.AppendLine("<div class='summary-grid'>");
+            
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Total de Registros</span>");
+            html.AppendLine($"<span class='summary-value'>{entradas.Count}</span>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Total Geral</span>");
+            html.AppendLine($"<span class='summary-value text-success'>{total:C}</span>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("</div>");
             html.AppendLine("</div>");
 
             // Agrupamento por Centro de Custo
@@ -129,11 +186,18 @@ namespace SistemaTesourariaEclesiastica.Helpers
 
             foreach (var grupo in porCentroCusto)
             {
-                html.AppendLine($"<h3 class='secao-titulo'>{grupo.Key}</h3>");
-                html.AppendLine("<table>");
-                html.AppendLine("<thead><tr>");
-                html.AppendLine("<th>Data</th><th>Descrição</th><th>Membro</th><th>Plano Contas</th><th>Valor</th>");
-                html.AppendLine("</tr></thead><tbody>");
+                html.AppendLine($"<div class='sede-separator'>{grupo.Key}</div>");
+                html.AppendLine("<table class='table-striped'>");
+                html.AppendLine("<thead>");
+                html.AppendLine("<tr>");
+                html.AppendLine("<th style='width: 80px;'>Data</th>");
+                html.AppendLine("<th>Descrição</th>");
+                html.AppendLine("<th>Membro</th>");
+                html.AppendLine("<th>Categoria</th>");
+                html.AppendLine("<th class='currency' style='width: 80px;'>Valor</th>");
+                html.AppendLine("</tr>");
+                html.AppendLine("</thead>");
+                html.AppendLine("<tbody>");
 
                 foreach (var entrada in grupo.OrderBy(e => e.Data))
                 {
@@ -142,30 +206,62 @@ namespace SistemaTesourariaEclesiastica.Helpers
                     html.AppendLine($"<td>{entrada.Descricao}</td>");
                     html.AppendLine($"<td>{entrada.Membro?.NomeCompleto ?? "-"}</td>");
                     html.AppendLine($"<td>{entrada.PlanoDeContas?.Nome ?? "-"}</td>");
-                    html.AppendLine($"<td class='valor-positivo'>{entrada.Valor:C2}</td>");
+                    html.AppendLine($"<td class='currency text-success'>{entrada.Valor:C}</td>");
                     html.AppendLine("</tr>");
                 }
 
-                html.AppendLine("<tr class='subtotal'>");
-                html.AppendLine($"<td colspan='4'><strong>Subtotal {grupo.Key}</strong></td>");
-                html.AppendLine($"<td class='valor-destaque'><strong>{grupo.Sum(e => e.Valor):C2}</strong></td>");
+                html.AppendLine("<tr class='totals-row'>");
+                html.AppendLine($"<td colspan='4'>Subtotal:</td>");
+                html.AppendLine($"<td class='currency text-success'>{grupo.Sum(e => e.Valor):C}</td>");
                 html.AppendLine("</tr>");
-                html.AppendLine("</tbody></table>");
+
+                html.AppendLine("</tbody>");
+                html.AppendLine("</table>");
             }
 
-            html.AppendLine(GerarRodapeHtml());
+            // Rodapé padrão
+            GerarRodapePadronizado(html);
+
+            html.AppendLine("</body>");
+            html.AppendLine("</html>");
+
             return html.ToString();
         }
 
         private static string GerarHtmlSaidas(List<Saida> saidas, DateTime dataInicio, DateTime dataFim, decimal total, string? centroCustoNome)
         {
             var html = new StringBuilder();
-            html.AppendLine(GerarCabecalhoHtml("Relatório de Saídas por Período", centroCustoNome));
+            
+            html.AppendLine("<!DOCTYPE html>");
+            html.AppendLine("<html>");
+            html.AppendLine("<head>");
+            html.AppendLine("<meta charset='utf-8'>");
+            html.AppendLine("<title>Relatório de Saídas</title>");
+            html.AppendLine("<style>");
+            html.AppendLine(ObterEstilosCssPadronizado());
+            html.AppendLine("</style>");
+            html.AppendLine("</head>");
+            html.AppendLine("<body>");
 
-            html.AppendLine("<div class='periodo'>");
-            html.AppendLine($"<p><strong>Período:</strong> {dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}</p>");
-            html.AppendLine($"<p><strong>Total de Registros:</strong> {saidas.Count}</p>");
-            html.AppendLine($"<p><strong>Total Geral:</strong> <span class='valor-destaque'>{total:C2}</span></p>");
+            // Cabeçalho padrão
+            GerarCabecalhoPadronizado(html, "RELATÓRIO DE SAÍDAS (DESPESAS)", centroCustoNome, dataInicio, dataFim);
+
+            // Resumo executivo
+            html.AppendLine("<div class='summary-box'>");
+            html.AppendLine("<div style='font-size: 10px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; text-align: center;'>RESUMO EXECUTIVO</div>");
+            html.AppendLine("<div class='summary-grid'>");
+            
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Total de Registros</span>");
+            html.AppendLine($"<span class='summary-value'>{saidas.Count}</span>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("<div class='summary-item'>");
+            html.AppendLine("<span class='summary-label'>Total Geral</span>");
+            html.AppendLine($"<span class='summary-value text-danger'>{total:C}</span>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("</div>");
             html.AppendLine("</div>");
 
             // Agrupamento por Centro de Custo
@@ -173,11 +269,18 @@ namespace SistemaTesourariaEclesiastica.Helpers
 
             foreach (var grupo in porCentroCusto)
             {
-                html.AppendLine($"<h3 class='secao-titulo'>{grupo.Key}</h3>");
-                html.AppendLine("<table>");
-                html.AppendLine("<thead><tr>");
-                html.AppendLine("<th>Data</th><th>Descrição</th><th>Fornecedor</th><th>Categoria</th><th>Valor</th>");
-                html.AppendLine("</tr></thead><tbody>");
+                html.AppendLine($"<div class='sede-separator'>{grupo.Key}</div>");
+                html.AppendLine("<table class='table-striped'>");
+                html.AppendLine("<thead>");
+                html.AppendLine("<tr>");
+                html.AppendLine("<th style='width: 80px;'>Data</th>");
+                html.AppendLine("<th>Descrição</th>");
+                html.AppendLine("<th>Fornecedor</th>");
+                html.AppendLine("<th>Categoria</th>");
+                html.AppendLine("<th class='currency' style='width: 80px;'>Valor</th>");
+                html.AppendLine("</tr>");
+                html.AppendLine("</thead>");
+                html.AppendLine("<tbody>");
 
                 foreach (var saida in grupo.OrderBy(s => s.Data))
                 {
@@ -186,161 +289,351 @@ namespace SistemaTesourariaEclesiastica.Helpers
                     html.AppendLine($"<td>{saida.Descricao}</td>");
                     html.AppendLine($"<td>{saida.Fornecedor?.Nome ?? "-"}</td>");
                     html.AppendLine($"<td>{saida.PlanoDeContas?.Nome ?? "-"}</td>");
-                    html.AppendLine($"<td class='valor-negativo'>{saida.Valor:C2}</td>");
+                    html.AppendLine($"<td class='currency text-danger'>{saida.Valor:C}</td>");
                     html.AppendLine("</tr>");
                 }
 
-                html.AppendLine("<tr class='subtotal'>");
-                html.AppendLine($"<td colspan='4'><strong>Subtotal {grupo.Key}</strong></td>");
-                html.AppendLine($"<td class='valor-destaque'><strong>{grupo.Sum(s => s.Valor):C2}</strong></td>");
+                html.AppendLine("<tr class='totals-row'>");
+                html.AppendLine($"<td colspan='4'>Subtotal:</td>");
+                html.AppendLine($"<td class='currency text-danger'>{grupo.Sum(s => s.Valor):C}</td>");
                 html.AppendLine("</tr>");
-                html.AppendLine("</tbody></table>");
+
+                html.AppendLine("</tbody>");
+                html.AppendLine("</table>");
             }
 
-            html.AppendLine(GerarRodapeHtml());
+            // Rodapé padrão
+            GerarRodapePadronizado(html);
+
+            html.AppendLine("</body>");
+            html.AppendLine("</html>");
+
             return html.ToString();
         }
 
         private static string GerarHtmlContribuicoes(
-              List<Entrada> contribuicoes,
-                dynamic resumoPorCentroCusto,
-                dynamic resumoPorMembro,
-                    DateTime dataInicio,
-                    DateTime dataFim)
+            List<Entrada> contribuicoes,
+            dynamic resumoPorCentroCusto,
+            dynamic resumoPorMembro,
+            DateTime dataInicio,
+            DateTime dataFim)
         {
             var html = new StringBuilder();
-            html.AppendLine(GerarCabecalhoHtml("Relatório de Contribuições por Membro", null));
+            
+            html.AppendLine("<!DOCTYPE html>");
+            html.AppendLine("<html>");
+            html.AppendLine("<head>");
+            html.AppendLine("<meta charset='utf-8'>");
+            html.AppendLine("<title>Relatório de Contribuições por Membro</title>");
+            html.AppendLine("<style>");
+            html.AppendLine(ObterEstilosCssPadronizado());
+            html.AppendLine("</style>");
+            html.AppendLine("</head>");
+            html.AppendLine("<body>");
 
-            html.AppendLine("<div class='periodo'>");
-            html.AppendLine($"<p><strong>Período:</strong> {dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}</p>");
-            html.AppendLine("</div>");
+            // Cabeçalho padrão
+            GerarCabecalhoPadronizado(html, "RELATÓRIO DE CONTRIBUIÇÕES POR MEMBRO", null, dataInicio, dataFim);
 
             // Resumo por Centro de Custo
             if (resumoPorCentroCusto != null)
             {
-                html.AppendLine("<h3 class='secao-titulo'>Resumo por Centro de Custo</h3>");
-                html.AppendLine("<table class='resumo-table'>");
-                html.AppendLine("<thead><tr>");
+                html.AppendLine("<h3 style='background-color: #34495e; color: white; padding: 8px; margin: 8px 0 5px 0; font-size: 11px;'>RESUMO POR CENTRO DE CUSTO</h3>");
+                html.AppendLine("<table>");
+                html.AppendLine("<thead>");
+                html.AppendLine("<tr>");
                 html.AppendLine("<th>Centro de Custo</th><th>Total</th><th>Membros</th><th>Lançamentos</th>");
-                html.AppendLine("</tr></thead><tbody>");
+                html.AppendLine("</tr>");
+                html.AppendLine("</thead>");
+                html.AppendLine("<tbody>");
 
                 foreach (var item in resumoPorCentroCusto)
                 {
                     html.AppendLine("<tr>");
                     html.AppendLine($"<td><strong>{item.CentroCustoNome}</strong></td>");
-                    html.AppendLine($"<td class='valor-positivo'><strong>{item.TotalContribuicoes:C2}</strong></td>");
-                    html.AppendLine($"<td class='text-center'>{item.QuantidadeMembros}</td>");
-                    html.AppendLine($"<td class='text-center'>{item.QuantidadeContribuicoes}</td>");
+                    html.AppendLine($"<td class='currency text-success'><strong>{item.TotalContribuicoes:C}</strong></td>");
+                    html.AppendLine($"<td class='center'>{item.QuantidadeMembros}</td>");
+                    html.AppendLine($"<td class='center'>{item.QuantidadeContribuicoes}</td>");
                     html.AppendLine("</tr>");
                 }
 
-                html.AppendLine("</tbody></table>");
+                html.AppendLine("</tbody>");
+                html.AppendLine("</table>");
             }
 
-            html.AppendLine(GerarRodapeHtml());
+            // Rodapé padrão
+            GerarRodapePadronizado(html);
+
+            html.AppendLine("</body>");
+            html.AppendLine("</html>");
+
             return html.ToString();
         }
 
         private static string GerarHtmlDespesasPorCentroCusto(
-        List<Saida> despesas,
-                    dynamic resumoPorCentroCusto,
-                    dynamic resumoPorCategoria,
-                    DateTime dataInicio,
-                    DateTime dataFim)
+            List<Saida> despesas,
+            dynamic resumoPorCentroCusto,
+            dynamic resumoPorCategoria,
+            DateTime dataInicio,
+            DateTime dataFim)
         {
             var html = new StringBuilder();
-            html.AppendLine(GerarCabecalhoHtml("Relatório de Despesas por Centro de Custo", null));
+            
+            html.AppendLine("<!DOCTYPE html>");
+            html.AppendLine("<html>");
+            html.AppendLine("<head>");
+            html.AppendLine("<meta charset='utf-8'>");
+            html.AppendLine("<title>Relatório de Despesas por Centro de Custo</title>");
+            html.AppendLine("<style>");
+            html.AppendLine(ObterEstilosCssPadronizado());
+            html.AppendLine("</style>");
+            html.AppendLine("</head>");
+            html.AppendLine("<body>");
 
-            html.AppendLine("<div class='periodo'>");
-            html.AppendLine($"<p><strong>Período:</strong> {dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}</p>");
-            html.AppendLine("</div>");
+            // Cabeçalho padrão
+            GerarCabecalhoPadronizado(html, "RELATÓRIO DE DESPESAS POR CENTRO DE CUSTO", null, dataInicio, dataFim);
 
             // Resumo por Categoria
             if (resumoPorCategoria != null)
             {
-                html.AppendLine("<h3 class='secao-titulo'>Despesas por Centro de Custo e Categoria</h3>");
+                html.AppendLine("<h3 style='background-color: #34495e; color: white; padding: 8px; margin: 8px 0 5px 0; font-size: 11px;'>DESPESAS POR CENTRO DE CUSTO E CATEGORIA</h3>");
                 html.AppendLine("<table>");
-                html.AppendLine("<thead><tr>");
+                html.AppendLine("<thead>");
+                html.AppendLine("<tr>");
                 html.AppendLine("<th>Centro de Custo</th><th>Categoria</th><th>Total</th><th>Quantidade</th>");
-                html.AppendLine("</tr></thead><tbody>");
+                html.AppendLine("</tr>");
+                html.AppendLine("</thead>");
+                html.AppendLine("<tbody>");
 
                 foreach (var item in resumoPorCategoria)
                 {
                     html.AppendLine("<tr>");
                     html.AppendLine($"<td>{item.CentroCustoNome}</td>");
                     html.AppendLine($"<td>{item.CategoriaNome}</td>");
-                    html.AppendLine($"<td class='valor-negativo'>{item.TotalDespesas:C2}</td>");
-                    html.AppendLine($"<td class='text-center'>{item.QuantidadeDespesas}</td>");
+                    html.AppendLine($"<td class='currency text-danger'>{item.TotalDespesas:C}</td>");
+                    html.AppendLine($"<td class='center'>{item.QuantidadeDespesas}</td>");
                     html.AppendLine("</tr>");
                 }
 
-                html.AppendLine("</tbody></table>");
+                html.AppendLine("</tbody>");
+                html.AppendLine("</table>");
             }
 
-            html.AppendLine(GerarRodapeHtml());
+            // Rodapé padrão
+            GerarRodapePadronizado(html);
+
+            html.AppendLine("</body>");
+            html.AppendLine("</html>");
+
             return html.ToString();
         }
 
-        private static string GerarCabecalhoHtml(string titulo, string? centroCustoNome)
+        private static void GerarCabecalhoPadronizado(StringBuilder html, string titulo, string? centroCustoNome, DateTime dataInicio, DateTime dataFim)
         {
-            var html = new StringBuilder();
-            html.AppendLine("<!DOCTYPE html>");
-            html.AppendLine("<html><head>");
-            html.AppendLine("<meta charset='utf-8'/>");
-            html.AppendLine("<style>");
-            html.AppendLine(ObterEstilosCss());
-            html.AppendLine("</style>");
-            html.AppendLine("</head><body>");
             html.AppendLine("<div class='header'>");
-            html.AppendLine("<h1>CONVENÇÃO DE MINISTROS DAS ASSEMBLEIAS DE DEUS NO ESTADO DA PARAÍBA - COMADEP</h1>");
-            html.AppendLine("<p>CNPJ: 04.362.336/0001-58 | Rua 1º de Maio, 239, Jaguaribe - João Pessoa/PB</p>");
-            html.AppendLine("</div>");
-            html.AppendLine($"<h2 class='titulo-relatorio'>{titulo}</h2>");
 
+            // Logo à esquerda (coluna 1)
+            html.AppendLine("<div class='header-logo'>");
+            html.AppendLine("<img src='wwwroot/images/logoadjacumabk.png' alt='Logo' />");
+            html.AppendLine("</div>");
+
+            // Conteúdo do cabeçalho (coluna 2)
+            html.AppendLine("<div class='header-content'>");
+
+            // Título centralizado
+            html.AppendLine("<div class='header-title'>");
+            html.AppendLine($"<div class='title'>{titulo}</div>");
+
+            html.AppendLine("<div class='subtitle'>");
             if (!string.IsNullOrEmpty(centroCustoNome))
             {
-                html.AppendLine($"<p class='centro-custo'><strong>Centro de Custo:</strong> {centroCustoNome}</p>");
+                html.AppendLine($"<strong>{centroCustoNome}</strong> <strong>|</strong> ");
             }
+            html.AppendLine($"Período: {dataInicio:dd/MM/yyyy} a {dataFim:dd/MM/yyyy}");
+            html.AppendLine("</div>");
+            html.AppendLine("</div>");
 
-            return html.ToString();
+            html.AppendLine("</div>"); // Fim header-content
+            html.AppendLine("</div>"); // Fim header
         }
 
-        private static string GerarRodapeHtml()
+        private static void GerarRodapePadronizado(StringBuilder html)
         {
-            return @"
-                <div class='rodape'>
-            <p>Relatório gerado em " + DateTime.Now.ToString("dd/MM/yyyy HH:mm") + @"</p>
-            <p>Sistema Integrado de Gestão de Tesouraria Eclesiástica</p>
-            </div>
-             </body></html>";
+            html.AppendLine("<div class='footer'>");
+            html.AppendLine($"Documento gerado em {DateTime.Now:dd/MM/yyyy HH:mm} - Sistema de Gestão de Tesouraria Eclesiástica");
+            html.AppendLine("</div>");
         }
 
-        private static string ObterEstilosCss()
+        private static string ObterEstilosCssPadronizado()
         {
             return @"
-              body { font-family: Arial, sans-serif; font-size: 10pt; margin: 20px; }
-             .header { text-align: center; border: 2px solid #000; padding: 10px; margin-bottom: 20px; }
-               .header h1 { font-size: 12pt; margin: 5px 0; }
-               .header p { font-size: 9pt; margin: 3px 0; }
-                         .titulo-relatorio { text-align: center; color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
-                      .centro-custo { text-align: center; font-size: 11pt; margin: 10px 0; }
-                      .periodo { background: #f3f4f6; padding: 10px; margin: 15px 0; border-left: 4px solid #2563eb; }
-                   .resumo { margin: 15px 0; }
-              .resumo-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-            .resumo-table th, .resumo-table td { padding: 8px; border: 1px solid #ddd; }
-                   .resumo-table th { background: #2563eb; color: white; font-weight: bold; }
-                    table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 9pt; }
-                   th { background: #e5e7eb; padding: 8px; text-align: left; border: 1px solid #9ca3af; font-weight: bold; }
-                   td { padding: 6px; border: 1px solid #d1d5db; }
-                        tr:nth-child(even) { background: #f9fafb; }
-                   .valor-positivo { color: #059669; font-weight: bold; text-align: right; }
-                 .valor-negativo { color: #dc2626; font-weight: bold; text-align: right; }
-                          .valor-destaque { color: #2563eb; font-weight: bold; text-align: right; }
-                        .text-center { text-align: center; }
-               .subtotal { background: #e5e7eb; font-weight: bold; }
-             .secao-titulo { background: #374151; color: white; padding: 8px; margin-top: 20px; }
-                  .rodape { margin-top: 30px; text-align: center; font-size: 8pt; color: #6b7280; border-top: 1px solid #d1d5db; padding-top: 10px; }
-                   ";
+        @page { 
+            size: A4; 
+            margin: 3mm 10mm 10mm 10mm; 
+        }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 0;
+            font-size: 10px;
+            line-height: 1.3;
+            color: #333;
+        }
+        
+        /* CABEÇALHO OTIMIZADO */
+        .header { 
+            margin-bottom: 4px; 
+            border-bottom: 1px solid #2c3e50;
+            padding-bottom: 0px;
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 8px;
+            align-items: center;
+        }
+        .header-logo {
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .header-title {
+            text-align: center;
+            margin-bottom: 0px;
+            width: 100%;
+        }
+        .title { 
+            font-size: 16px; 
+            font-weight: bold; 
+            color: #2c3e50;
+            margin: 0;
+        }
+        .subtitle { 
+            font-size: 11px; 
+            color: #555;
+            margin: 0;
+        }
+        
+        .summary-box {
+            background-color: #ecf0f1;
+            border: 2px solid #3498db;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 8px 0;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-top: 5px;
+        }
+        .summary-item {
+            text-align: center;
+            padding: 5px;
+            background-color: white;
+            border-radius: 2px;
+        }
+        .summary-label {
+            font-size: 8.5px;
+            color: #666;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .summary-value {
+            font-size: 12px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .text-success { color: #27ae60; }
+        .text-danger { color: #e74c3c; }
+        .text-warning { color: #f39c12; }
+        .text-info { color: #16a085; }
+        
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 5px 0;
+            font-size: 9px;
+        }
+        table thead {
+            background-color: #34495e;
+            color: white;
+        }
+        table th { 
+            padding: 4px 3px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 9px;
+        }
+        table td { 
+            padding: 3px 3px;
+            border-bottom: 1px solid #ecf0f1;
+            white-space: nowrap;
+        }
+        table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        .table-striped tbody tr:nth-child(odd) {
+            background-color: #f8f9fa;
+        }
+        .currency {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .center {
+            text-align: center;
+        }
+        
+        .totals-row {
+            font-weight: bold;
+            background-color: #ecf0f1 !important;
+            border-top: 2px solid #2c3e50;
+            font-size: 10px;
+        }
+        .totals-row td {
+            white-space: nowrap;
+        }
+        
+        .footer { 
+            position: fixed;
+            bottom: 5mm;
+            width: 100%;
+            text-align: center; 
+            font-size: 7.5px; 
+            color: #999;
+            border-top: 1px solid #ddd;
+            padding-top: 3px;
+        }
+        
+        .sede-separator {
+            background-color: #e3f2fd;
+            padding: 4px 6px;
+            margin: 6px 0 4px 0;
+            border-left: 3px solid #2196f3;
+            font-weight: bold;
+            font-size: 9.5px;
+        }
+        .congregacao-separator {
+            background-color: #e8f5e9;
+            padding: 4px 6px;
+            margin: 6px 0 4px 0;
+            border-left: 3px solid #4caf50;
+            font-weight: bold;
+            font-size: 9.5px;
+        }
+            ";
         }
 
         private static byte[] ConverterHtmlParaPdf(string html)

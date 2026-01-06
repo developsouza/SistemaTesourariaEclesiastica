@@ -30,10 +30,11 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine("<meta charset='utf-8'>");
             html.AppendLine("<title>Balancete Mensal</title>");
             html.AppendLine("<style>");
+            // Usando os mesmos estilos base do PdfService
             html.AppendLine(@"
                 @page { 
                     size: A4 portrait; 
-                    margin: 10mm 10mm 10mm 10mm; 
+                    margin: 3mm 10mm 10mm 10mm; 
                 }
                 body {
                     font-family: Arial, sans-serif;
@@ -44,50 +45,56 @@ namespace SistemaTesourariaEclesiastica.Helpers
                     color: #000;
                     background: white;
                 }
-                .balancete-header {
-                    text-align: center;
+                
+                /* CABEÇALHO COM GRID IGUAL AO PDFSERVICE */
+                .header { 
+                    margin-bottom: 4px; 
                     border: 2px solid #000;
                     padding: 6px;
-                    margin-bottom: 0;
-                    background: white;
-                    position: relative;
+                    display: grid;
+                    grid-template-columns: 120px 1fr;
+                    gap: 8px;
+                    align-items: center;
                 }
-                .balancete-header-content {
-                    display: table;
+                .header-logo {
+                    width: 120px;
+                    height: 120px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .header-logo img {
                     width: 100%;
-                }
-                .balancete-header-logo {
-                    display: table-cell;
-                    width: 80px;
-                    vertical-align: middle;
-                    padding-right: 10px;
-                }
-                .balancete-header-logo img {
-                    width: 100px;
-                    height: 100px;
+                    height: 100%;
                     object-fit: contain;
                 }
-                .balancete-header-text {
-                    display: table-cell;
-                    vertical-align: middle;
-                    text-align: center;
+                .header-content {
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
                 }
-                .balancete-header h1 {
+                .header-title {
+                    text-align: center;
+                    width: 100%;
+                }
+                .header-title h1 {
                     font-size: 13px;
                     font-weight: bold;
                     margin: 1px 0;
                     text-transform: uppercase;
                     line-height: 1.2;
                 }
-                .balancete-header p {
+                .header-title p {
                     font-size: 9px;
                     margin: 2px 0;
                 }
-                .balancete-header .subtitle {
+                .header-title .subtitle {
                     font-size: 10px;
                     font-weight: bold;
                     margin: 4px 0 2px 0;
                 }
+                
                 .periodo-info-container {
                     display: table;
                     width: 100%;
@@ -174,6 +181,8 @@ namespace SistemaTesourariaEclesiastica.Helpers
                 .last-section {
                     border-bottom: 2px solid #000;
                 }
+                
+                /* ASSINATURAS E RODAPÉ */
                 .assinaturas {
                     display: table;
                     width: 100%;
@@ -200,27 +209,42 @@ namespace SistemaTesourariaEclesiastica.Helpers
                     font-size: 9px;
                     margin-top: 2px;
                 }
+                
+                .footer { 
+                    position: fixed;
+                    bottom: 5mm;
+                    width: 100%;
+                    text-align: center; 
+                    font-size: 7.5px; 
+                    color: #999;
+                    border-top: 1px solid #ddd;
+                    padding-top: 3px;
+                }
             ");
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
 
-            // Cabeçalho
-            html.AppendLine("<div class='balancete-header'>");
-            html.AppendLine("<div class='balancete-header-content'>");
-            html.AppendLine("<div class='balancete-header-logo'>");
-            // Adicionando a imagem do logo aqui
-            html.AppendLine("<img src='cid:logo'/>");
+            // CABEÇALHO PADRONIZADO COM GRID
+            html.AppendLine("<div class='header'>");
+            
+            // Logo à esquerda
+            html.AppendLine("<div class='header-logo'>");
+            html.AppendLine("<img src='wwwroot/images/logoadpb.png' alt='Logo ADPB' />");
             html.AppendLine("</div>");
-            html.AppendLine("<div class='balancete-header-text'>");
+            
+            // Conteúdo do cabeçalho
+            html.AppendLine("<div class='header-content'>");
+            html.AppendLine("<div class='header-title'>");
             html.AppendLine("<h1>CONVENÇÃO DE MINISTROS DAS ASSEMBLÉIAS DE DEUS</h1>");
             html.AppendLine("<h1>NO ESTADO DA PARAÍBA - COMADEP</h1>");
-            html.AppendLine("<p>CNPJ 04.362.336/0001-55 - Rua 1° de Maio, 239,Jaguaribe - João Pessoa-PB</p>");
+            html.AppendLine("<p>CNPJ 04.362.336/0001-55 - Rua 1º de Maio, 239,Jaguaribe - João Pessoa-PB</p>");
             html.AppendLine("<p class='subtitle'>Balancete de Verificação das Igrejas Representadas e Congregações</p>");
             html.AppendLine("<p style='margin-bottom: 0;'>Realizado em</p>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
-            html.AppendLine("</div>");
+            
+            html.AppendLine("</div>"); // Fim header
 
             // Informações do Período
             html.AppendLine("<div class='periodo-info-container'>");
@@ -362,6 +386,11 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine("<div class='assinatura-cargo'>Visto do Pastor</div>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
+            html.AppendLine("</div>");
+
+            // Rodapé padronizado
+            html.AppendLine("<div class='footer'>");
+            html.AppendLine($"Documento gerado em {DateTime.Now:dd/MM/yyyy HH:mm} - Sistema de Gestão de Tesouraria Eclesiástica");
             html.AppendLine("</div>");
 
             html.AppendLine("</body>");
