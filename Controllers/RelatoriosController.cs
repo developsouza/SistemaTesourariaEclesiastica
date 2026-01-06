@@ -692,7 +692,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
                 // Administrador, TesoureiroGeral e Pastor: sem filtro (vê todos os centros)
 
-                // Buscar IDs de entradas aprovadas
+                // Buscar IDs de entradas aprovadas/processadas
                 var queryEntradasAprovadas = _context.Entradas
                     .Where(e => e.Data >= dataInicio && e.Data <= dataFim);
 
@@ -702,10 +702,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .Where(e => e.CentroCustoId == centroCustoFiltro.Value);
                 }
 
+                // ✅ CORREÇÃO: Incluir fechamentos Aprovados OU Processados
                 var idsEntradasAprovadas = await queryEntradasAprovadas
                     .Where(e => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == e.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                         e.Data >= f.DataInicio &&
                         e.Data <= f.DataFim))
                     .Select(e => e.Id)
@@ -731,7 +732,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .ContinueWith(task => task.Result.Select(x => (x.PlanoContasId, x.PlanoContasNome, x.Tipo, x.TotalEntradas, x.TotalSaidas)).ToList());
                 }
 
-                // Buscar IDs de saídas aprovadas
+                // Buscar IDs de saídas aprovadas/processadas
                 var querySaidasAprovadas = _context.Saidas
                     .Where(s => s.Data >= dataInicio && s.Data <= dataFim);
 
@@ -745,7 +746,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var idsSaidasAprovadas = await querySaidasAprovadas
                     .Where(s => _context.FechamentosPeriodo.Any(f =>
                         f.CentroCustoId == s.CentroCustoId &&
-                        f.Status == StatusFechamentoPeriodo.Aprovado &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
                         s.Data >= f.DataInicio &&
                         s.Data <= f.DataFim))
                     .Select(s => s.Id)
@@ -771,8 +772,40 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .ContinueWith(task => task.Result.Select(x => (x.PlanoContasId, x.PlanoContasNome, x.Tipo, x.TotalEntradas, x.TotalSaidas)).ToList());
                 }
 
-                // Combinar entradas e saídas
-                var balanceteCompleto = entradas.Concat(saidas)
+                // ✅ NOVO: Buscar rateios enviados no período
+                var queryRateiosEnviados = _context.ItensRateioFechamento
+                    .Include(i => i.FechamentoPeriodo)
+                    .Include(i => i.RegraRateio)
+                        .ThenInclude(r => r.CentroCustoDestino)
+                    .Where(i => (i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado ||
+                                i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Processado) &&
+                               i.FechamentoPeriodo.DataAprovacao.HasValue &&
+                               i.FechamentoPeriodo.DataAprovacao >= dataInicio &&
+                               i.FechamentoPeriodo.DataAprovacao <= dataFim);
+
+                if (centroCustoFiltro.HasValue)
+                {
+                    queryRateiosEnviados = queryRateiosEnviados
+                        .Where(i => i.FechamentoPeriodo.CentroCustoId == centroCustoFiltro.Value);
+                }
+
+                var rateios = await queryRateiosEnviados
+                    .GroupBy(i => i.RegraRateio.CentroCustoDestino.Nome)
+                    .Select(g => new
+                    {
+                        PlanoContasId = 0, // ID fictício para rateios
+                        PlanoContasNome = "Rateio para " + g.Key,
+                        Tipo = TipoPlanoContas.Despesa,
+                        TotalEntradas = 0m,
+                        TotalSaidas = g.Sum(i => i.ValorRateio)
+                    })
+                    .ToListAsync()
+                    .ContinueWith(task => task.Result.Select(x => (x.PlanoContasId, x.PlanoContasNome, x.Tipo, x.TotalEntradas, x.TotalSaidas)).ToList());
+
+                // ✅ CORREÇÃO: Combinar entradas, saídas E rateios
+                var balanceteCompleto = entradas
+                    .Concat(saidas)
+                    .Concat(rateios) // ✅ NOVO: Incluir rateios
                     .GroupBy(x => new { x.PlanoContasId, x.PlanoContasNome, x.Tipo })
                     .Select(g => new
                     {
