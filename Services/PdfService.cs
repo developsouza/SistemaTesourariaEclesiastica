@@ -7,12 +7,25 @@ namespace SistemaTesourariaEclesiastica.Services
 {
     public class PdfService
     {
+        private readonly IWebHostEnvironment _environment;
+        private readonly ILogger<PdfService> _logger;
+
+        public PdfService(IWebHostEnvironment environment, ILogger<PdfService> logger)
+        {
+            _environment = environment;
+            _logger = logger;
+        }
+
         public byte[] GerarReciboFechamento(FechamentoPeriodo fechamento)
         {
             var html = GerarHtmlFechamento(fechamento);
 
             using var memoryStream = new MemoryStream();
             var properties = new ConverterProperties();
+
+            // ✅ Configurar base URI para resolver caminhos relativos
+            var baseUri = _environment.WebRootPath;
+            properties.SetBaseUri(baseUri);
 
             HtmlConverter.ConvertToPdf(html, memoryStream, properties);
 
@@ -364,7 +377,21 @@ namespace SistemaTesourariaEclesiastica.Services
 
             // Logo à esquerda (coluna 1)
             html.AppendLine("<div class='header-logo'>");
-            html.AppendLine("<img src='wwwroot/images/logoadjacumabk.png' alt='Logo' />");
+
+            // ✅ CORREÇÃO: Usar caminho absoluto para a imagem
+            var logoPath = Path.Combine(_environment.WebRootPath, "images", "logoadjacumabk.png");
+
+            if (File.Exists(logoPath))
+            {
+                html.AppendLine($"<img src='file:///{logoPath.Replace("\\", "/")}' alt='Logo' />");
+            }
+            else
+            {
+                _logger.LogWarning($"Logo não encontrada em: {logoPath}");
+                // Placeholder se a imagem não existir
+                html.AppendLine("<div style='width: 120px; height: 120px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999;'>Logo não encontrada</div>");
+            }
+
             html.AppendLine("</div>");
 
             // Conteúdo do cabeçalho (coluna 2)

@@ -98,9 +98,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
                 "Id", "Nome");
 
+            var roles = await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync();
             ViewData["Roles"] = new SelectList(
-                await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
-                "Name", "Name");
+                roles.Select(r => new { Value = r.Name, Text = FormatRoleName(r.Name) }),
+                "Value", "Text");
 
             return View();
         }
@@ -120,9 +121,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     ViewData["CentroCustoId"] = new SelectList(
                         await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
                         "Id", "Nome", model.CentroCustoId);
+
+                    var rolesError = await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync();
                     ViewData["Roles"] = new SelectList(
-                        await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
-                        "Name", "Name", model.Role);
+                        rolesError.Select(r => new { Value = r.Name, Text = FormatRoleName(r.Name) }),
+                        "Value", "Text", model.Role);
                     return View(model);
                 }
 
@@ -161,9 +164,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
                 "Id", "Nome", model.CentroCustoId);
 
+            var rolesReturn = await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync();
             ViewData["Roles"] = new SelectList(
-                await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
-                "Name", "Name", model.Role);
+                rolesReturn.Select(r => new { Value = r.Name, Text = FormatRoleName(r.Name) }),
+                "Value", "Text", model.Role);
 
             return View(model);
         }
@@ -197,9 +201,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
                 "Id", "Nome", model.CentroCustoId);
 
+            var allRoles = await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync();
             ViewData["Roles"] = new SelectList(
-                await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
-                "Name", "Name", model.Role);
+                allRoles.Select(r => new { Value = r.Name, Text = FormatRoleName(r.Name) }),
+                "Value", "Text", model.Role);
 
             return View(model);
         }
@@ -256,9 +261,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                             ViewData["CentroCustoId"] = new SelectList(
                                 await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
                                 "Id", "Nome", model.CentroCustoId);
+
+                            var rolesError = await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync();
                             ViewData["Roles"] = new SelectList(
-                                await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
-                                "Name", "Name", model.Role);
+                                rolesError.Select(r => new { Value = r.Name, Text = FormatRoleName(r.Name) }),
+                                "Value", "Text", model.Role);
                             return View(model);
                         }
                     }
@@ -278,9 +285,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
                 "Id", "Nome", model.CentroCustoId);
 
+            var rolesReturn = await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync();
             ViewData["Roles"] = new SelectList(
-                await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync(),
-                "Name", "Name", model.Role);
+                rolesReturn.Select(r => new { Value = r.Name, Text = FormatRoleName(r.Name) }),
+                "Value", "Text", model.Role);
 
             return View(model);
         }
@@ -374,6 +382,21 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        /// <summary>
+        /// Formata o nome da role para exibição com espaçamento adequado
+        /// </summary>
+        private string FormatRoleName(string roleName)
+        {
+            return roleName switch
+            {
+                "Administrador" => "Administrador",
+                "TesoureiroGeral" => "Tesoureiro Geral",
+                "TesoureiroLocal" => "Tesoureiro Local",
+                "Pastor" => "Pastor",
+                _ => roleName
+            };
         }
     }
 }

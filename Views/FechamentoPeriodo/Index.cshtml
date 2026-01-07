@@ -2,8 +2,9 @@
 
 @{
     ViewData["Title"] = "Fechamento de Período";
-    var abaAtiva = ViewBag.AbaAtiva ?? "aprovados";
+    var abaAtiva = ViewBag.AbaAtiva ?? "pendentes";
     
+    var fechamentosPendentes = Model?.Where(f => f.Status.ToString() == "Pendente") ?? Enumerable.Empty<SistemaTesourariaEclesiastica.Models.FechamentoPeriodo>();
     var fechamentosAprovados = Model?.Where(f => f.Status.ToString() == "Aprovado") ?? Enumerable.Empty<SistemaTesourariaEclesiastica.Models.FechamentoPeriodo>();
     var fechamentosConsolidados = Model?.Where(f => f.Status.ToString() == "Processado") ?? Enumerable.Empty<SistemaTesourariaEclesiastica.Models.FechamentoPeriodo>();
     var fechamentosRejeitados = Model?.Where(f => f.Status.ToString() == "Rejeitado") ?? Enumerable.Empty<SistemaTesourariaEclesiastica.Models.FechamentoPeriodo>();
@@ -56,8 +57,15 @@
 <!-- Abas de Navegação -->
 <ul class="nav nav-tabs mb-3" id="fechamentoTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="aprovados-tab" data-bs-toggle="tab" data-bs-target="#aprovados" 
-                type="button" role="tab" aria-controls="aprovados" aria-selected="true">
+        <button class="nav-link active" id="pendentes-tab" data-bs-toggle="tab" data-bs-target="#pendentes" 
+                type="button" role="tab" aria-controls="pendentes" aria-selected="true">
+            <i class="bi bi-clock me-2"></i>Pendentes
+            <span class="badge bg-warning text-dark ms-2">@fechamentosPendentes.Count()</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="aprovados-tab" data-bs-toggle="tab" data-bs-target="#aprovados" 
+                type="button" role="tab" aria-controls="aprovados" aria-selected="false">
             <i class="bi bi-check-circle me-2"></i>Aprovados
             <span class="badge bg-success ms-2">@fechamentosAprovados.Count()</span>
         </button>
@@ -81,8 +89,13 @@
 <!-- Conteúdo das Abas -->
 <div class="tab-content" id="fechamentoTabsContent">
     
+    <!-- Aba Pendentes -->
+    <div class="tab-pane fade show active" id="pendentes" role="tabpanel" aria-labelledby="pendentes-tab">
+        @await Html.PartialAsync("_TabelaFechamentos", fechamentosPendentes)
+    </div>
+    
     <!-- Aba Aprovados -->
-    <div class="tab-pane fade show active" id="aprovados" role="tabpanel" aria-labelledby="aprovados-tab">
+    <div class="tab-pane fade" id="aprovados" role="tabpanel" aria-labelledby="aprovados-tab">
         @await Html.PartialAsync("_TabelaFechamentos", fechamentosAprovados)
     </div>
     

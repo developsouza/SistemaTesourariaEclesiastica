@@ -1,0 +1,363 @@
+@model SistemaTesourariaEclesiastica.ViewModels.RelatorioConsistenciaViewModel
+
+@{
+    ViewData["Title"] = "Resultado do Diagnóstico";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-clipboard-data me-2"></i>
+                Resultado do Diagnóstico de Consistência
+            </h1>
+            <p class="text-muted mb-0">Executado em @Model.DataExecucao.ToString("dd/MM/yyyy HH:mm:ss")</p>
+        </div>
+        <div class="btn-group">
+            <a asp-action="ExportarJson" class="btn btn-outline-primary" target="_blank">
+                <i class="bi bi-download me-2"></i>
+                Exportar JSON
+            </a>
+            <a asp-action="Index" class="btn btn-primary">
+                <i class="bi bi-arrow-repeat me-2"></i>
+                Novo Diagnóstico
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumo Geral -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-@Model.CorSaude">
+                <div class="card-body text-center">
+                    <i class="bi bi-heart-pulse display-4 text-@Model.CorSaude"></i>
+                    <h6 class="text-muted mt-2">Saúde do Sistema</h6>
+                    <h2 class="text-@Model.CorSaude mb-0">@Model.PercentualSaude.ToString("F1")%</h2>
+                    <span class="badge bg-@Model.CorSaude mt-2">@Model.ClassificacaoSaude</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-secondary">
+                <div class="card-body text-center">
+                    <i class="bi bi-list-check display-4 text-secondary"></i>
+                    <h6 class="text-muted mt-2">Total de Inconsistências</h6>
+                    <h2 class="text-secondary mb-0">@Model.TotalInconsistencias</h2>
+                    <small class="text-muted">encontradas</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <i class="bi bi-exclamation-octagon display-4 text-danger"></i>
+                    <h6 class="text-muted mt-2">Críticas</h6>
+                    <h2 class="text-danger mb-0">@Model.InconsistenciasCriticas</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="bi bi-exclamation-triangle display-4 text-warning"></i>
+                    <h6 class="text-muted mt-2">Avisos</h6>
+                    <h2 class="text-warning mb-0">@Model.InconsistenciasAvisos</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="bi bi-info-circle display-4 text-info"></i>
+                    <h6 class="text-muted mt-2">Informações</h6>
+                    <h2 class="text-info mb-0">@Model.InconsistenciasInformacoes</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.TotalInconsistencias == 0)
+    {
+        <!-- Sistema sem inconsistências -->
+        <div class="card border-success">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-check-circle display-1 text-success mb-3"></i>
+                <h3 class="text-success">Parabéns! Sistema em Perfeito Estado!</h3>
+                <p class="text-muted mb-4">
+                    Nenhuma inconsistência foi encontrada. O sistema está operando de forma íntegra e consistente.
+                </p>
+                <div class="alert alert-success mx-auto" style="max-width: 600px;">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        Recomendações para Manter a Saúde do Sistema
+                    </h6>
+                    <ul class="mb-0 text-start">
+                        <li>Execute este diagnóstico mensalmente</li>
+                        <li>Realize backups regulares do banco de dados</li>
+                        <li>Monitore os logs de auditoria periodicamente</li>
+                        <li>Mantenha as regras de validação sempre ativas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Resumo por Tipo -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-pie-chart me-2"></i>
+                            Inconsistências por Tipo
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Tipo</th>
+                                        <th class="text-end">Quantidade</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.ResumoPorTipo.OrderByDescending(x => x.Value))
+                                    {
+                                        <tr>
+                                            <td>@item.Key</td>
+                                            <td class="text-end">
+                                                <span class="badge bg-secondary">@item.Value</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-folder me-2"></i>
+                            Inconsistências por Categoria
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Categoria</th>
+                                        <th class="text-end">Quantidade</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.ResumoPorCategoria.OrderByDescending(x => x.Value))
+                                    {
+                                        <tr>
+                                            <td>@item.Key</td>
+                                            <td class="text-end">
+                                                <span class="badge bg-secondary">@item.Value</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label small">Filtrar por Severidade</label>
+                        <select class="form-select" id="filtroSeveridade">
+                            <option value="">Todas</option>
+                            <option value="Critica">Críticas</option>
+                            <option value="Aviso">Avisos</option>
+                            <option value="Informacao">Informações</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Filtrar por Categoria</label>
+                        <select class="form-select" id="filtroCategoria">
+                            <option value="">Todas</option>
+                            @foreach (var categoria in Model.ResumoPorCategoria.Keys.OrderBy(k => k))
+                            {
+                                <option value="@categoria">@categoria</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Buscar</label>
+                        <input type="text" class="form-control" id="buscar" placeholder="Buscar na descrição...">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="limparFiltros()">
+                            <i class="bi bi-x-circle me-1"></i>Limpar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Inconsistências -->
+        <div class="card">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list-ul me-2"></i>
+                    Detalhamento das Inconsistências
+                </h5>
+                <span class="badge bg-secondary" id="contadorFiltrado">@Model.TotalInconsistencias inconsistências</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="accordion" id="accordionInconsistencias">
+                    @foreach (var (inconsistencia, index) in Model.Inconsistencias.Select((i, idx) => (i, idx)))
+                    {
+                        <div class="accordion-item inconsistencia-item"
+                             data-severidade="@inconsistencia.Severidade"
+                             data-categoria="@inconsistencia.Categoria"
+                             data-descricao="@inconsistencia.Descricao.ToLower()">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed d-flex align-items-center" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#collapse@index">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi @inconsistencia.Icone text-@inconsistencia.CorSeveridade"></i>
+                                            <span class="badge bg-@inconsistencia.CorSeveridade">@inconsistencia.TextoSeveridade</span>
+                                            <span class="badge bg-secondary">@inconsistencia.Categoria</span>
+                                            <strong>@inconsistencia.Tipo</strong>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">
+                                            @inconsistencia.Descricao.Substring(0, Math.Min(100, inconsistencia.Descricao.Length))@(inconsistencia.Descricao.Length > 100 ? "..." : "")
+                                        </small>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div id="collapse@index" class="accordion-collapse collapse" data-bs-parent="#accordionInconsistencias">
+                                <div class="accordion-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6 class="fw-bold mb-2">Descrição Completa:</h6>
+                                            <p class="mb-3">@inconsistencia.Descricao</p>
+
+                                            @if (!string.IsNullOrEmpty(inconsistencia.AcaoCorretivaSugerida))
+                                            {
+                                                <div class="alert alert-info mb-0">
+                                                    <h6 class="alert-heading">
+                                                        <i class="bi bi-lightbulb me-2"></i>
+                                                        Ação Corretiva Sugerida
+                                                    </h6>
+                                                    <p class="mb-0">@inconsistencia.AcaoCorretivaSugerida</p>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h6 class="fw-bold mb-2">Detalhes:</h6>
+                                            <dl class="row small">
+                                                <dt class="col-sm-5">Severidade:</dt>
+                                                <dd class="col-sm-7">
+                                                    <span class="badge bg-@inconsistencia.CorSeveridade">@inconsistencia.TextoSeveridade</span>
+                                                </dd>
+
+                                                <dt class="col-sm-5">Categoria:</dt>
+                                                <dd class="col-sm-7">@inconsistencia.Categoria</dd>
+
+                                                <dt class="col-sm-5">Tipo:</dt>
+                                                <dd class="col-sm-7">@inconsistencia.Tipo</dd>
+
+                                                @if (!string.IsNullOrEmpty(inconsistencia.EntidadeId))
+                                                {
+                                                    <dt class="col-sm-5">Entidade ID:</dt>
+                                                    <dd class="col-sm-7"><code>@inconsistencia.EntidadeId</code></dd>
+                                                }
+
+                                                @if (!string.IsNullOrEmpty(inconsistencia.EntidadeTipo))
+                                                {
+                                                    <dt class="col-sm-5">Tipo de Entidade:</dt>
+                                                    <dd class="col-sm-7">@inconsistencia.EntidadeTipo</dd>
+                                                }
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            function aplicarFiltros() {
+                const severidade = $('#filtroSeveridade').val();
+                const categoria = $('#filtroCategoria').val();
+                const busca = $('#buscar').val().toLowerCase();
+
+                let contador = 0;
+
+                $('.inconsistencia-item').each(function() {
+                    const item = $(this);
+                    const itemSeveridade = item.data('severidade');
+                    const itemCategoria = item.data('categoria');
+                    const itemDescricao = item.data('descricao');
+
+                    let mostrar = true;
+
+                    if (severidade && itemSeveridade != severidade) {
+                        mostrar = false;
+                    }
+
+                    if (categoria && itemCategoria != categoria) {
+                        mostrar = false;
+                    }
+
+                    if (busca && !itemDescricao.includes(busca)) {
+                        mostrar = false;
+                    }
+
+                    if (mostrar) {
+                        item.show();
+                        contador++;
+                    } else {
+                        item.hide();
+                    }
+                });
+
+                $('#contadorFiltrado').text(contador + ' inconsistências');
+            }
+
+            $('#filtroSeveridade, #filtroCategoria').change(aplicarFiltros);
+
+            $('#buscar').on('input', function() {
+                clearTimeout($.data(this, 'timer'));
+                var wait = setTimeout(aplicarFiltros, 500);
+                $(this).data('timer', wait);
+            });
+
+            window.limparFiltros = function() {
+                $('#filtroSeveridade').val('');
+                $('#filtroCategoria').val('');
+                $('#buscar').val('');
+                aplicarFiltros();
+            };
+        });
+    </script>
+}

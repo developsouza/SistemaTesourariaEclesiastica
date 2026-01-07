@@ -144,8 +144,8 @@
                             </li>
                         }
 
-                        @* ==================== ESCALA DE PORTEIROS - APENAS TESOUREIROS ==================== *@
-                        @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral) || User.IsInRole(Roles.TesoureiroLocal))
+                        @* ==================== ESCALA DE PORTEIROS - APENAS TESOUREIROS GERAIS E ADMIN ==================== *@
+                        @if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
                         {
                             <li class="nav-item has-submenu">
                                 <a class="nav-link" href="#escalasSubmenu">
@@ -253,6 +253,13 @@
                                 <a class="nav-link" asp-controller="Auditoria" asp-action="Index">
                                     <i class="bi bi-shield-check"></i>
                                     <span class="nav-text">Auditoria</span>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Consistencia" asp-action="Index">
+                                    <i class="bi bi-clipboard-check"></i>
+                                    <span class="nav-text">Consistências</span>
                                 </a>
                             </li>
                         }

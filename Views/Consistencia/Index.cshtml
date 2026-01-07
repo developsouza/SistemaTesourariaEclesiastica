@@ -1,0 +1,161 @@
+@{
+    ViewData["Title"] = "Diagnóstico de Consistência";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="bi bi-shield-check me-2 text-primary"></i>
+                Diagnóstico de Consistência do Sistema
+            </h1>
+            <p class="text-muted mb-0">Análise completa da integridade dos dados financeiros</p>
+        </div>
+        <div class="btn-group">
+            <a asp-controller="Admin" asp-action="SystemInfo" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>
+                Voltar
+            </a>
+        </div>
+    </div>
+
+    <!-- Card de Informações -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Sobre o Diagnóstico de Consistência
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">
+                        Este diagnóstico realiza uma análise abrangente do sistema para identificar possíveis problemas de consistência que podem afetar relatórios e operações financeiras.
+                    </p>
+
+                    <h6 class="fw-bold mb-2">O diagnóstico verifica:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>Lançamentos Duplicados:</strong> Entradas e saídas idênticas
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>Totais de Fechamentos:</strong> Validação de cálculos e somas
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>Integridade Referencial:</strong> Referências inválidas entre tabelas
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>Lançamentos Órfãos:</strong> Registros vinculados a fechamentos excluídos
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>Transferências Internas:</strong> Validação de origem/destino
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>Rateios Aplicados:</strong> Conferência de cálculos e percentuais
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>Saldos de Centros de Custo:</strong> Detecção de saldos negativos
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>Meios de Pagamento:</strong> Coerência entre nome e tipo (Físico/Digital)
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>Datas Futuras:</strong> Lançamentos com datas muito distantes
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    <strong>Valores Inválidos:</strong> Lançamentos com valores negativos ou zero
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning mt-3 mb-0 d-flex align-items-start">
+                        <i class="bi bi-exclamation-triangle me-2 fs-5"></i>
+                        <div>
+                            <strong>Importante:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>O diagnóstico pode levar alguns minutos dependendo da quantidade de dados</li>
+                                <li>Recomenda-se executar fora do horário de pico</li>
+                                <li>As inconsistências encontradas são classificadas por severidade: <span class="badge bg-danger">CRÍTICO</span>, <span class="badge bg-warning">AVISO</span>, <span class="badge bg-info">INFO</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botão para Executar Diagnóstico -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-play-circle display-1 text-primary mb-3"></i>
+                    <h4 class="mb-3">Pronto para Iniciar o Diagnóstico?</h4>
+                    <p class="text-muted mb-4">
+                        O sistema irá analisar todos os registros financeiros em busca de inconsistências.
+                    </p>
+
+                    <form asp-action="ExecutarDiagnostico" method="post" id="formDiagnostico">
+                        @Html.AntiForgeryToken()
+
+                        <div class="form-check d-inline-block me-3 mb-3">
+                            <input class="form-check-input" type="checkbox" id="confirmar" required>
+                            <label class="form-check-label" for="confirmar">
+                                Confirmo que desejo executar o diagnóstico completo
+                            </label>
+                        </div>
+
+                        <br>
+
+                        <button type="submit" class="btn btn-primary btn-lg" id="btnExecutar" disabled>
+                            <i class="bi bi-play-fill me-2"></i>
+                            Executar Diagnóstico Completo
+                        </button>
+                    </form>
+
+                    <div id="loadingDiagnostico" class="mt-4" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Executando diagnóstico... Por favor, aguarde.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Habilitar botão apenas quando checkbox marcado
+            $('#confirmar').change(function() {
+                $('#btnExecutar').prop('disabled', !this.checked);
+            });
+
+            // Mostrar loading ao submeter
+            $('#formDiagnostico').submit(function() {
+                $('#btnExecutar').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Executando...');
+                $('#loadingDiagnostico').show();
+            });
+        });
+    </script>
+}

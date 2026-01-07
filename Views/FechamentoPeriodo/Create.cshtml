@@ -95,11 +95,11 @@
                     <div class="card-body">
                         <!-- Tipo de Fechamento -->
                         <div class="mb-3">
-                            <label asp-for="TipoFechamento" class="form-label fw-semibold"></label>
+                            <label asp-for="TipoFechamento" class="form-label fw-semibold">Tipo de Fechamento</label>
                             <select asp-for="TipoFechamento" class="form-select" id="tipoFechamento">
-                                <option value="@((int)SistemaTesourariaEclesiastica.Enums.TipoFechamento.Diario)">Diário</option>
+                                <option value="@((int)SistemaTesourariaEclesiastica.Enums.TipoFechamento.Diario)" selected>Diário</option>
                                 <option value="@((int)SistemaTesourariaEclesiastica.Enums.TipoFechamento.Semanal)">Semanal</option>
-                                <option value="@((int)SistemaTesourariaEclesiastica.Enums.TipoFechamento.Mensal)" selected>Mensal</option>
+                                <option value="@((int)SistemaTesourariaEclesiastica.Enums.TipoFechamento.Mensal)">Mensal</option>
                             </select>
                             <span asp-validation-for="TipoFechamento" class="text-danger"></span>
                         </div>
@@ -188,11 +188,15 @@
             {
                 <div class="col-lg-7">
                     <div class="card shadow-sm">
-                        <div class="card-header bg-success text-white">
+                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <i class="bi bi-list-check me-2"></i>
                                 Prestações de Congregações Disponíveis
                             </h5>
+                            <button type="button" class="btn btn-sm btn-light" id="toggleSelectAll">
+                                <i class="bi bi-check-square me-1"></i>
+                                <span id="toggleSelectAllText">Selecionar Todos</span>
+                            </button>
                         </div>
                         <div class="card-body">
                             <div class="alert alert-success small mb-3">
@@ -484,8 +488,14 @@
                 atualizarDatasMensal();
             });
 
-            // Inicializar datas para o mês atual
-            atualizarDatasMensal();
+            // Inicializar com o tipo Diário selecionado
+            $('#camposDiario').show();
+            $('#camposSemanal, #camposMensal').hide();
+            
+            // Inicializar DataInicio e DataFim com a data de hoje para fechamento diário
+            var dataDiario = $('#dataFechamentoDiario').val();
+            $('#DataInicio').val(dataDiario);
+            $('#DataFim').val(dataDiario);
 
             // Alternar entre Diário, Semanal e Mensal
             $('#tipoFechamento').change(function() {
@@ -515,15 +525,44 @@
                 $('#DataFim').val(dataDiario);
             });
 
-            // Select All para congregações
-            $('#selectAll').change(function() {
-                $('.fechamento-checkbox').prop('checked', $(this).prop('checked'));
+            // ✅ NOVO: Botão Selecionar Todos / Desmarcar Todos
+            var todosCheckboxes = $('.fechamento-checkbox');
+            var allSelected = todosCheckboxes.length > 0 && todosCheckboxes.filter(':checked').length === todosCheckboxes.length;
+
+            // Atualizar texto inicial do botão
+            if (allSelected) {
+                $('#toggleSelectAllText').text('Desmarcar Todos');
+                $('#toggleSelectAll i').removeClass('bi-check-square').addClass('bi-square');
+            }
+
+            $('#toggleSelectAll').click(function() {
+                var checkboxes = $('.fechamento-checkbox');
+                var allChecked = checkboxes.filter(':checked').length === checkboxes.length;
+                
+                if (allChecked) {
+                    // Desmarcar todos
+                    checkboxes.prop('checked', false);
+                    $('#toggleSelectAllText').text('Selecionar Todos');
+                    $(this).find('i').removeClass('bi-square').addClass('bi-check-square');
+                } else {
+                    // Selecionar todos
+                    checkboxes.prop('checked', true);
+                    $('#toggleSelectAllText').text('Desmarcar Todos');
+                    $(this).find('i').removeClass('bi-check-square').addClass('bi-square');
+                }
             });
 
-            // Desmarcar "Select All" se algum item for desmarcado
+            // Atualizar o botão quando checkboxes individuais mudarem
             $('.fechamento-checkbox').change(function() {
-                if (!$(this).prop('checked')) {
-                    $('#selectAll').prop('checked', false);
+                var checkboxes = $('.fechamento-checkbox');
+                var allChecked = checkboxes.filter(':checked').length === checkboxes.length;
+                
+                if (allChecked) {
+                    $('#toggleSelectAllText').text('Desmarcar Todos');
+                    $('#toggleSelectAll i').removeClass('bi-check-square').addClass('bi-square');
+                } else {
+                    $('#toggleSelectAllText').text('Selecionar Todos');
+                    $('#toggleSelectAll i').removeClass('bi-square').addClass('bi-check-square');
                 }
             });
 

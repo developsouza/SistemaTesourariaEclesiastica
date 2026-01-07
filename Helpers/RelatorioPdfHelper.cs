@@ -70,7 +70,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
         private static string GerarHtmlFluxoCaixa(List<FluxoDeCaixaItem> dados, DateTime dataInicio, DateTime dataFim, string? centroCustoNome)
         {
             var html = new StringBuilder();
-            
+
             html.AppendLine("<!DOCTYPE html>");
             html.AppendLine("<html>");
             html.AppendLine("<head>");
@@ -93,7 +93,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine("<div class='summary-box'>");
             html.AppendLine("<div style='font-size: 10px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; text-align: center;'>RESUMO EXECUTIVO</div>");
             html.AppendLine("<div class='summary-grid'>");
-            
+
             html.AppendLine("<div class='summary-item'>");
             html.AppendLine("<span class='summary-label'>Total de Entradas</span>");
             html.AppendLine($"<span class='summary-value text-success'>{totalEntradas:C}</span>");
@@ -148,7 +148,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
         private static string GerarHtmlEntradas(List<Entrada> entradas, DateTime dataInicio, DateTime dataFim, decimal total, string? centroCustoNome)
         {
             var html = new StringBuilder();
-            
+
             html.AppendLine("<!DOCTYPE html>");
             html.AppendLine("<html>");
             html.AppendLine("<head>");
@@ -167,7 +167,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine("<div class='summary-box'>");
             html.AppendLine("<div style='font-size: 10px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; text-align: center;'>RESUMO EXECUTIVO</div>");
             html.AppendLine("<div class='summary-grid'>");
-            
+
             html.AppendLine("<div class='summary-item'>");
             html.AppendLine("<span class='summary-label'>Total de Registros</span>");
             html.AppendLine($"<span class='summary-value'>{entradas.Count}</span>");
@@ -231,7 +231,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
         private static string GerarHtmlSaidas(List<Saida> saidas, DateTime dataInicio, DateTime dataFim, decimal total, string? centroCustoNome)
         {
             var html = new StringBuilder();
-            
+
             html.AppendLine("<!DOCTYPE html>");
             html.AppendLine("<html>");
             html.AppendLine("<head>");
@@ -250,7 +250,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine("<div class='summary-box'>");
             html.AppendLine("<div style='font-size: 10px; font-weight: bold; margin-bottom: 6px; color: #2c3e50; text-align: center;'>RESUMO EXECUTIVO</div>");
             html.AppendLine("<div class='summary-grid'>");
-            
+
             html.AppendLine("<div class='summary-item'>");
             html.AppendLine("<span class='summary-label'>Total de Registros</span>");
             html.AppendLine($"<span class='summary-value'>{saidas.Count}</span>");
@@ -319,7 +319,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
             DateTime dataFim)
         {
             var html = new StringBuilder();
-            
+
             html.AppendLine("<!DOCTYPE html>");
             html.AppendLine("<html>");
             html.AppendLine("<head>");
@@ -377,7 +377,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
             DateTime dataFim)
         {
             var html = new StringBuilder();
-            
+
             html.AppendLine("<!DOCTYPE html>");
             html.AppendLine("<html>");
             html.AppendLine("<head>");

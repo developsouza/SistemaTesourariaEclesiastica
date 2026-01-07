@@ -247,7 +247,7 @@ namespace SistemaTesourariaEclesiastica.Services
             viewModel.TotalCredito = receitas.Sum(r => r.Valor);
 
             _logger.LogInformation($"? Receitas processadas: {receitas.Count} categorias, Total={viewModel.TotalCredito:C}");
-            
+
             // ? LOG: Detalhar cada categoria
             foreach (var receita in receitas)
             {
@@ -329,7 +329,7 @@ namespace SistemaTesourariaEclesiastica.Services
             viewModel.SubtotalDespesasAdministrativas = despesasCompletas.Sum(d => d.Valor);
 
             _logger.LogInformation($"? Despesas administrativas: {despesasCompletas.Count} categorias, Subtotal={viewModel.SubtotalDespesasAdministrativas:C}");
-            
+
             // ? LOG: Detalhar categorias com valor
             foreach (var despesa in despesasCompletas.Where(d => d.Valor > 0))
             {
@@ -347,8 +347,8 @@ namespace SistemaTesourariaEclesiastica.Services
             DateTime dataInicio,
   DateTime dataFim)
         {
-            var categoriasTributarias = new[] 
-            { 
+            var categoriasTributarias = new[]
+            {
                 "IPTU",
                 "Imposto Predial IPTR"
             };
@@ -387,8 +387,8 @@ namespace SistemaTesourariaEclesiastica.Services
                     DateTime dataInicio,
            DateTime dataFim)
         {
-            var categoriasFinanceiras = new[] 
-            { 
+            var categoriasFinanceiras = new[]
+            {
                 "Imposto Taxas Diversas",
                 "Saldo para o mês"
             };

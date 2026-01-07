@@ -31,6 +31,7 @@ namespace SistemaTesourariaEclesiastica.ViewModels
         public decimal BalancoFisico { get; set; }
         public decimal BalancoDigital { get; set; }
         public DateTime DataAprovacao { get; set; }
+        public StatusFechamentoPeriodo Status { get; set; } // ✅ NOVO: Status do fechamento
         public bool Selecionado { get; set; }
 
         // ✅ NOVOS: Detalhes para análise antes do fechamento

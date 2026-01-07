@@ -60,7 +60,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int? centroCustoFiltro = null;
 
                 // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
@@ -231,7 +231,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int? centroCustoFiltro = null;
 
                 // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 // Administrador, Pastor e TesoureiroGeral da SEDE veem TUDO
@@ -324,7 +324,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Agrupar entradas por data
                 var entradasAgrupadas = entradas.GroupBy(e => e.Data.Date)
                                                 .ToDictionary(g => g.Key, g => g.Sum(e => e.Valor));
-                
+
                 // Agrupar saídas por data
                 var saidasAgrupadas = saidas.GroupBy(s => s.Data.Date)
                                               .ToDictionary(g => g.Key, g => g.Sum(s => s.Valor));
@@ -348,10 +348,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     var totalEntradaDia = entradasAgrupadas.GetValueOrDefault(data, 0);
                     var totalSaidaDia = saidasAgrupadas.GetValueOrDefault(data, 0);
                     var totalRateiosDia = rateiosAgrupados.GetValueOrDefault(data, 0);
-                    
+
                     // ✅ CORREÇÃO: Incluir rateios nas saídas
                     var totalSaidasComRateios = totalSaidaDia + totalRateiosDia;
-                    
+
                     saldoAcumulado += totalEntradaDia - totalSaidasComRateios;
 
                     fluxoDeCaixa.Add(new FluxoDeCaixaItem
@@ -409,7 +409,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int? centroCustoFiltro = null;
 
                 // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
@@ -674,7 +674,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int? centroCustoFiltro = null;
 
                 // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
@@ -864,12 +864,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                        "Id", "NomeCompleto", membroId);
 
                 // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 // ✅ Dropdown de Centros de Custo para filtro adicional
-                if (User.IsInRole(Roles.Administrador) || 
-                    User.IsInRole(Roles.Pastor) || 
+                if (User.IsInRole(Roles.Administrador) ||
+                    User.IsInRole(Roles.Pastor) ||
                     isTesoureiroGeralSede)
                 {
                     ViewBag.CentrosCusto = new SelectList(
@@ -1313,7 +1313,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int? centroCustoFiltro = null;
 
                 // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
@@ -1450,7 +1450,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 int? centroCustoFiltro = null;
 
                 // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
@@ -1583,7 +1583,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 string? centroCustoNome = null;
 
                 // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 if (!User.IsInRole(Roles.Administrador) &&
@@ -1672,7 +1672,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                   .ToDictionary(g => g.Key, g => g.Sum(e => e.Valor));
                 var saidasAgrupadas = saidas.GroupBy(s => s.Data.Date)
                  .ToDictionary(g => g.Key, g => g.Sum(s => s.Valor));
-                
+
                 // ✅ NOVO: Agrupar rateios por data de aprovação do fechamento
                 var rateiosAgrupados = rateiosEnviados
                     .Where(r => r.FechamentoPeriodo.DataAprovacao.HasValue)
@@ -1692,10 +1692,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     var totalEntradaDia = entradasAgrupadas.GetValueOrDefault(data, 0);
                     var totalSaidaDia = saidasAgrupadas.GetValueOrDefault(data, 0);
                     var totalRateiosDia = rateiosAgrupados.GetValueOrDefault(data, 0);
-                    
+
                     // ✅ CORREÇÃO: Incluir rateios nas saídas
                     var totalSaidasComRateios = totalSaidaDia + totalRateiosDia;
-                    
+
                     saldoAcumulado += totalEntradaDia - totalSaidasComRateios;
 
                     fluxoDeCaixa.Add(new FluxoDeCaixaItem
@@ -1761,7 +1761,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 string? centroCustoNome = null;
 
                 // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 if (!User.IsInRole(Roles.Administrador) &&
@@ -1860,7 +1860,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 string? centroCustoNome = null;
 
                 // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
-                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) && 
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
                                              user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
 
                 if (!User.IsInRole(Roles.Administrador) &&

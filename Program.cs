@@ -134,6 +134,7 @@ builder.Services.AddScoped<PdfService>();
 builder.Services.AddScoped<BalanceteService>();
 builder.Services.AddScoped<EscalaPorteiroService>();
 builder.Services.AddScoped<RateLimitService>();
+builder.Services.AddScoped<ConsistenciaService>();
 
 // SERVICO DE AUDITORIA EM BACKGROUND
 // Registrado como Singleton para que seja compartilhado e como HostedService para rodar em background
@@ -142,6 +143,9 @@ builder.Services.AddHostedService(provider => provider.GetRequiredService<AuditQ
 
 // SERVICO DE LIMPEZA DE RATE LIMITING EM BACKGROUND
 builder.Services.AddHostedService<SistemaTesourariaEclesiastica.BackgroundServices.RateLimitCleanupService>();
+
+// SERVICO DE VERIFICACAO DE CONSISTENCIA EM BACKGROUND
+builder.Services.AddHostedService<SistemaTesourariaEclesiastica.BackgroundServices.ConsistenciaBackgroundService>();
 
 
 builder.Services.AddControllersWithViews(options =>

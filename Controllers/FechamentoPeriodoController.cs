@@ -192,12 +192,15 @@ namespace SistemaTesourariaEclesiastica.Controllers
             // Se for SEDE, buscar fechamentos de congregações disponíveis
             if (viewModel.EhSede)
             {
-                // ✅ OTIMIZADO: Projeção direta no banco sem carregar coleções aninhadas
+                // ✅ MODIFICADO: Buscar fechamentos PENDENTES e APROVADOS (não processados)
                 viewModel.FechamentosDisponiveis = await _context.FechamentosPeriodo
                     .Where(f => f.CentroCusto.Tipo == TipoCentroCusto.Congregacao &&
-                                f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                (f.Status == StatusFechamentoPeriodo.Pendente ||
+                                 f.Status == StatusFechamentoPeriodo.Aprovado) &&
                                 f.FoiProcessadoPelaSede == false)
-                    .OrderByDescending(f => f.DataAprovacao)
+                    .OrderBy(f => f.Status) // Pendentes primeiro
+                    .ThenByDescending(f => f.DataAprovacao)
+                    .ThenByDescending(f => f.DataSubmissao)
                     .Select(f => new FechamentoCongregacaoDisponivel
                     {
                         Id = f.Id,
@@ -208,10 +211,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         TotalSaidas = f.TotalSaidas,
                         BalancoFisico = f.BalancoFisico,
                         BalancoDigital = f.BalancoDigital,
-                        DataAprovacao = f.DataAprovacao.HasValue ? f.DataAprovacao.Value : DateTime.Now,
-                        Selecionado = true
-                        // ✅ REMOVIDO: Detalhes serão carregados sob demanda se necessário
-                        // Isso evita operações simultâneas no DbContext
+                        DataAprovacao = f.DataAprovacao.HasValue ? f.DataAprovacao.Value : f.DataSubmissao,
+                        Status = f.Status,
+                        Selecionado = f.Status == StatusFechamentoPeriodo.Aprovado // Apenas aprovados vêm selecionados
                     })
                     .ToListAsync();
             }
@@ -318,19 +320,28 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     try
                     {
 
-                        // Buscar fechamentos das congregações selecionados (apenas se for SEDE)
+                        // 1. Buscar fechamentos das congregações selecionados (apenas se for SEDE)
                         List<FechamentoPeriodo> fechamentosCongregacoes = new List<FechamentoPeriodo>();
 
                         if (viewModel.EhSede && viewModel.FechamentosIncluidos != null && viewModel.FechamentosIncluidos.Any())
                         {
+                            // ✅ MODIFICADO: Aceitar fechamentos Pendentes E Aprovados
                             fechamentosCongregacoes = await _context.FechamentosPeriodo
                                 .Include(f => f.CentroCusto)
                                 .Where(f => viewModel.FechamentosIncluidos.Contains(f.Id) &&
-                                    f.Status == StatusFechamentoPeriodo.Aprovado &&
+                                    (f.Status == StatusFechamentoPeriodo.Pendente ||
+                                     f.Status == StatusFechamentoPeriodo.Aprovado) &&
                                     f.FoiProcessadoPelaSede == false)
                                 .ToListAsync();
 
                             _logger.LogInformation($"Selecionados {fechamentosCongregacoes.Count} fechamentos de congregações para consolidação");
+
+                            // ✅ NOVO: Avisar se há fechamentos pendentes incluídos
+                            var fechamentosPendentes = fechamentosCongregacoes.Where(f => f.Status == StatusFechamentoPeriodo.Pendente).ToList();
+                            if (fechamentosPendentes.Any())
+                            {
+                                _logger.LogWarning($"ATENÇÃO: {fechamentosPendentes.Count} fechamento(s) PENDENTE(S) incluído(s) no fechamento da SEDE");
+                            }
                         }
 
                         // ✅ CALCULAR TOTAIS USANDO HELPER (APENAS LANÇAMENTOS NÃO INCLUÍDOS)
@@ -483,168 +494,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     catch (Exception ex)
                     {
                         await transaction.RollbackAsync();
-                        _logger.LogError(ex, "Erro ao criar fechamento interno");
+                        _logger.LogError(ex, "Erro ao criar fechamento da SEDE interno");
                         throw; // Re-lançar para que o ExecuteAsync possa tratar
                     }
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao criar fechamento");
+                _logger.LogError(ex, "Erro ao criar fechamento da SEDE");
                 TempData["ErrorMessage"] = $"Erro ao criar fechamento: {ex.Message}";
 
-                // Recarregar dados se for SEDE
-                if (viewModel.EhSede)
-                {
-                    viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-                }
+                viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
                 return View(viewModel);
             }
-        }
-
-        // GET: FechamentoPeriodo/Edit/5
-        [HttpGet]
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var fechamento = await _context.FechamentosPeriodo
-                .Include(f => f.CentroCusto)
-                .Include(f => f.UsuarioSubmissao)
-                .Include(f => f.UsuarioAprovacao)
-                .Include(f => f.ItensRateio)
-                .Include(f => f.DetalhesFechamento)
-                .FirstOrDefaultAsync(f => f.Id == id);
-
-            if (fechamento == null)
-            {
-                return NotFound();
-            }
-
-            // VALIDAR PERMISSÃO DE ACESSO
-            if (!await CanAccessFechamento(fechamento))
-            {
-                return Forbid();
-            }
-
-            // Verificar se o fechamento pode ser editado
-            if (fechamento.Status != StatusFechamentoPeriodo.Pendente)
-            {
-                TempData["ErrorMessage"] = "Apenas fechamentos pendentes podem ser editados.";
-                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
-            }
-
-            await PopulateDropdowns(fechamento);
-            return View(fechamento);
-        }
-
-        // POST: FechamentoPeriodo/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Observacoes")] FechamentoPeriodo fechamentoForm)
-        {
-            if (id != fechamentoForm.Id)
-            {
-                return NotFound();
-            }
-
-            // Buscar o fechamento original do banco COM TRACKING
-            var fechamento = await _context.FechamentosPeriodo
-                .Include(f => f.CentroCusto)
-                .Include(f => f.UsuarioSubmissao)
-                .Include(f => f.ItensRateio)
-                .Include(f => f.DetalhesFechamento)
-                .FirstOrDefaultAsync(f => f.Id == id);
-
-            if (fechamento == null)
-            {
-                return NotFound();
-            }
-
-            // VALIDAR PERMISSÃO DE ACESSO
-            if (!await CanAccessFechamento(fechamento))
-            {
-                return Forbid();
-            }
-
-            // Verificar se ainda está pendente
-            if (fechamento.Status != StatusFechamentoPeriodo.Pendente)
-            {
-                TempData["ErrorMessage"] = "Apenas fechamentos pendentes podem ser editados.";
-                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
-            }
-
-            try
-            {
-                // ATUALIZAR APENAS AS OBSERVAÇÕES (único campo editável)
-                fechamento.Observacoes = fechamentoForm.Observacoes;
-
-                // REMOVER ITENS ANTIGOS
-                if (fechamento.ItensRateio.Any())
-                {
-                    _context.ItensRateioFechamento.RemoveRange(fechamento.ItensRateio);
-                }
-
-                if (fechamento.DetalhesFechamento.Any())
-                {
-                    _context.DetalhesFechamento.RemoveRange(fechamento.DetalhesFechamento);
-                }
-
-                // Limpar as coleções
-                fechamento.ItensRateio.Clear();
-                fechamento.DetalhesFechamento.Clear();
-
-                // RECALCULAR TODOS OS VALORES
-                await CalcularTotaisFechamento(fechamento);
-
-                // REAPLICAR RATEIOS SE FOR SEDE
-                var centroCusto = await _context.CentrosCusto.FindAsync(fechamento.CentroCustoId);
-                if (centroCusto?.Nome.ToUpper().Contains("SEDE") == true ||
-                    centroCusto?.Nome.ToUpper().Contains("GERAL") == true)
-                {
-                    await AplicarRateiosComLog(fechamento);
-                }
-                else
-                {
-                    fechamento.TotalRateios = 0;
-                    fechamento.SaldoFinal = fechamento.BalancoDigital;
-                }
-
-                // REGERAR DETALHES
-                await GerarDetalhesFechamento(fechamento);
-
-                // SALVAR (Entity já está sendo rastreado)
-                await _context.SaveChangesAsync();
-
-                // Log de auditoria
-                await _auditService.LogAsync("Atualização", "FechamentoPeriodo",
-                    $"Fechamento {(fechamento.TipoFechamento == TipoFechamento.Diario ? fechamento.DataInicio.ToString("dd/MM/yyyy") : $"{fechamento.Mes:00}/{fechamento.Ano}")} atualizado");
-
-                TempData["SuccessMessage"] = "Fechamento atualizado com sucesso! Valores recalculados automaticamente.";
-                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                if (!FechamentoPeriodoExists(fechamento.Id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    TempData["ErrorMessage"] = "Este fechamento foi modificado por outro usuário. Por favor, tente novamente.";
-                }
-            }
-            catch (Exception ex)
-            {
-                TempData["ErrorMessage"] = $"Erro ao atualizar fechamento: {ex.Message}";
-            }
-
-            // Se chegou aqui, houve erro - recarregar o formulário
-            await PopulateDropdowns(fechamento);
-            return View(fechamento);
         }
 
         // POST: FechamentoPeriodo/Aprovar/5
@@ -709,651 +571,158 @@ namespace SistemaTesourariaEclesiastica.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: FechamentoPeriodo/Rejeitar/5
-        [HttpGet]
-        [Authorize(Roles = Roles.AdminOuTesoureiroGeral)] // Apenas Admin e Tesoureiro Geral podem rejeitar
-        public async Task<IActionResult> Rejeitar(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var fechamento = await _context.FechamentosPeriodo
-                .Include(f => f.CentroCusto)
-                .Include(f => f.UsuarioSubmissao)
-                .Include(f => f.ItensRateio)
-                    .ThenInclude(i => i.RegraRateio)
-                        .ThenInclude(r => r.CentroCustoDestino)
-                .FirstOrDefaultAsync(f => f.Id == id);
-
-            if (fechamento == null)
-            {
-                return NotFound();
-            }
-
-            // Verificar se pode ser rejeitado
-            if (fechamento.Status != StatusFechamentoPeriodo.Pendente)
-            {
-                TempData["ErrorMessage"] = "Apenas fechamentos pendentes podem ser rejeitados.";
-                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
-            }
-
-            return View(fechamento);
-        }
-
-        // POST: FechamentoPeriodo/Rejeitar/5
-        [HttpPost, ActionName("Rejeitar")]
-        [ValidateAntiForgeryToken]
+        // ✅ NOVO: POST AJAX: FechamentoPeriodo/AprovarAjax/5
+        [HttpPost]
         [Authorize(Roles = Roles.AdminOuTesoureiroGeral)]
-        public async Task<IActionResult> RejeitarConfirmed(int id, string? motivoRejeicao)
+        public async Task<IActionResult> AprovarAjax(int id)
         {
-            var fechamento = await _context.FechamentosPeriodo
-                .Include(f => f.CentroCusto)
-                .FirstOrDefaultAsync(f => f.Id == id);
-
-            if (fechamento == null)
-            {
-                return NotFound();
-            }
-
-            // Verificar se pode ser rejeitado
-            if (fechamento.Status != StatusFechamentoPeriodo.Pendente)
-            {
-                TempData["ErrorMessage"] = "Apenas fechamentos pendentes podem ser rejeitados.";
-                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
-            }
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Unauthorized();
-            }
-
             try
             {
-                // ✅ DESMARCAR LANÇAMENTOS QUANDO REJEITAR
-                await DesmarcarLancamentosComoIncluidos(id);
+                var fechamento = await _context.FechamentosPeriodo
+                    .Include(f => f.ItensRateio)
+                    .FirstOrDefaultAsync(f => f.Id == id);
 
-                // Atualizar status para Rejeitado
-                fechamento.Status = StatusFechamentoPeriodo.Rejeitado;
+                if (fechamento == null)
+                {
+                    return Json(new { success = false, message = "Fechamento não encontrado." });
+                }
+
+                if (fechamento.Status != StatusFechamentoPeriodo.Pendente)
+                {
+                    return Json(new { success = false, message = "Apenas fechamentos pendentes podem ser aprovados." });
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return Json(new { success = false, message = "Usuário não autenticado." });
+                }
+
+                fechamento.Status = StatusFechamentoPeriodo.Aprovado;
                 fechamento.DataAprovacao = DateTime.Now;
                 fechamento.UsuarioAprovacaoId = user.Id;
-
-                // Adicionar motivo da rejeição nas observações
-                if (!string.IsNullOrWhiteSpace(motivoRejeicao))
-                {
-                    fechamento.Observacoes = string.IsNullOrWhiteSpace(fechamento.Observacoes)
-                        ? $"REJEITADO: {motivoRejeicao}"
-                        : $"{fechamento.Observacoes}\n\nREJEITADO: {motivoRejeicao}";
-                }
 
                 _context.Update(fechamento);
                 await _context.SaveChangesAsync();
 
-                // Log de auditoria
-                await _auditService.LogAsync("Rejeição", "FechamentoPeriodo",
-                    $"Fechamento {ObterDescricaoFechamento(fechamento)} rejeitado. Motivo: {motivoRejeicao ?? "Não informado"}. Lançamentos liberados para novo fechamento.");
+                await _auditService.LogAsync("Aprovação", "FechamentoPeriodo",
+                    $"Fechamento {fechamento.Mes:00}/{fechamento.Ano} aprovado via AJAX por {user.UserName}");
 
-                TempData["SuccessMessage"] = "Fechamento rejeitado com sucesso! Os lançamentos foram liberados para novo fechamento.";
-                _logger.LogInformation($"Fechamento ID {id} rejeitado por {user.UserName}. Motivo: {motivoRejeicao}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao rejeitar fechamento");
-                TempData["ErrorMessage"] = $"Erro ao rejeitar fechamento: {ex.Message}";
-                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
-            }
+                _logger.LogInformation($"Fechamento ID {id} aprovado com sucesso via AJAX por {user.UserName}");
 
-            return RedirectToAction(nameof(Index));
-        }
-
-        // GET: FechamentoPeriodo/GerarPdf/5
-        public async Task<IActionResult> GerarPdf(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            // ✅ OTIMIZADO: Usar AsNoTracking para consultas somente leitura
-            var fechamento = await _context.FechamentosPeriodo
-                .AsNoTracking()
-                .Include(f => f.CentroCusto)
-                .Include(f => f.UsuarioSubmissao)
-                .Include(f => f.UsuarioAprovacao)
-                .Include(f => f.DetalhesFechamento)
-                .Include(f => f.ItensRateio)
-                    .ThenInclude(i => i.RegraRateio)
-                        .ThenInclude(r => r.CentroCustoDestino)
-                // NOVOS INCLUDES PARA DETALHES COMPLETOS
-                .Include(f => f.FechamentosCongregacoesIncluidos)
-                    .ThenInclude(fc => fc.CentroCusto)
-                .Include(f => f.FechamentosCongregacoesIncluidos)
-                    .ThenInclude(fc => fc.DetalhesFechamento)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
-            if (fechamento == null)
-            {
-                return NotFound();
-            }
-
-            // VALIDAR PERMISSÃO DE ACESSO
-            if (!await CanAccessFechamento(fechamento))
-            {
-                return Forbid();
-            }
-
-            var pdfBytes = _pdfService.GerarReciboFechamento(fechamento);
-            var fileName = $"Fechamento_{fechamento.CentroCusto.Nome.Replace(" ", "_")}_{fechamento.Mes:00}_{fechamento.Ano}.pdf";
-
-            await _auditService.LogAsync("Geração PDF", "FechamentoPeriodo",
-                $"PDF do fechamento {fechamento.Mes:00}/{fechamento.Ano} gerado");
-
-            return File(pdfBytes, "application/pdf", fileName);
-        }
-
-        // GET: FechamentoPeriodo/Delete/5
-        [HttpGet]
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var fechamento = await _context.FechamentosPeriodo
-                .Include(f => f.CentroCusto)
-                .Include(f => f.UsuarioSubmissao)
-                .Include(f => f.UsuarioAprovacao)
-                .Include(f => f.ItensRateio)
-                    .ThenInclude(i => i.RegraRateio)
-                        .ThenInclude(r => r.CentroCustoDestino)
-                .Include(f => f.DetalhesFechamento)
-                .FirstOrDefaultAsync(f => f.Id == id);
-
-            if (fechamento == null)
-            {
-                return NotFound();
-            }
-
-            // VALIDAR PERMISSÃO DE ACESSO
-            if (!await CanAccessFechamento(fechamento))
-            {
-                return Forbid();
-            }
-
-            // ✅ NOVO: Verificar se pode ser excluído
-            // APENAS ADMINISTRADORES podem excluir fechamentos aprovados
-            if (fechamento.Status == StatusFechamentoPeriodo.Aprovado)
-            {
-                if (!User.IsInRole(Roles.Administrador))
+                return Json(new
                 {
-                    TempData["ErrorMessage"] = "Apenas administradores podem excluir fechamentos aprovados. Entre em contato com um administrador do sistema.";
-                    return RedirectToAction(nameof(Details), new { id = fechamento.Id });
-                }
-
-                // Admin pode ver a página, mas com aviso especial
-                ViewBag.FechamentoAprovado = true;
-                ViewBag.AvisoAdmin = "ATENÇÃO ADMINISTRADOR: Este fechamento está APROVADO. A exclusão afetará relatórios e pode impactar a integridade financeira. Prossiga apenas se tiver certeza absoluta!";
-            }
-            else
-            {
-                ViewBag.FechamentoAprovado = false;
-            }
-
-            return View(fechamento);
-        }
-
-        // POST: FechamentoPeriodo/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var fechamento = await _context.FechamentosPeriodo
-                .Include(f => f.CentroCusto)
-                .Include(f => f.ItensRateio)
-                .Include(f => f.DetalhesFechamento)
-                .FirstOrDefaultAsync(f => f.Id == id);
-
-            if (fechamento == null)
-            {
-                return NotFound();
-            }
-
-            // VALIDAR PERMISSÃO DE ACESSO
-            if (!await CanAccessFechamento(fechamento))
-            {
-                return Forbid();
-            }
-
-            // ✅ NOVO: Verificar permissão especial para excluir fechamentos aprovados
-            if (fechamento.Status == StatusFechamentoPeriodo.Aprovado)
-            {
-                if (!User.IsInRole(Roles.Administrador))
-                {
-                    TempData["ErrorMessage"] = "Apenas administradores podem excluir fechamentos aprovados.";
-                    return RedirectToAction(nameof(Details), new { id = fechamento.Id });
-                }
-
-                _logger.LogWarning($"ATENÇÃO: Administrador {User.Identity.Name} está excluindo fechamento APROVADO ID {id}");
-            }
-
-            try
-            {
-                // ✅ DESMARCAR LANÇAMENTOS ANTES DE EXCLUIR
-                await DesmarcarLancamentosComoIncluidos(fechamento.Id);
-
-                // ✅ NOVO: Liberar fechamentos de congregações se for fechamento da SEDE
-                if (fechamento.EhFechamentoSede)
-                {
-                    await LiberarFechamentosCongregacoesProcessados(fechamento.Id);
-                }
-
-                // Remover itens relacionados primeiro
-                if (fechamento.ItensRateio.Any())
-                {
-                    _context.ItensRateioFechamento.RemoveRange(fechamento.ItensRateio);
-                }
-
-                if (fechamento.DetalhesFechamento.Any())
-                {
-                    _context.DetalhesFechamento.RemoveRange(fechamento.DetalhesFechamento);
-                }
-
-                // Remover o fechamento
-                _context.FechamentosPeriodo.Remove(fechamento);
-                await _context.SaveChangesAsync();
-
-                // Log de auditoria detalhado
-                var logMensagem = fechamento.Status == StatusFechamentoPeriodo.Aprovado
-                    ? $"⚠️ EXCLUSÃO DE FECHAMENTO APROVADO por ADMINISTRADOR - Fechamento {ObterDescricaoFechamento(fechamento)} do centro {fechamento.CentroCusto.Nome} excluído. Total Entradas: {fechamento.TotalEntradas:C}, Total Saídas: {fechamento.TotalSaidas:C}. Lançamentos liberados."
-                    : $"Fechamento {ObterDescricaoFechamento(fechamento)} excluído. Lançamentos liberados para novo fechamento.";
-
-                await _auditService.LogAsync("Exclusão", "FechamentoPeriodo", logMensagem);
-
-                var mensagemSucesso = fechamento.Status == StatusFechamentoPeriodo.Aprovado
-                    ? "Fechamento APROVADO excluído com sucesso! ⚠️ Os lançamentos e fechamentos de congregações foram liberados. Considere refazer o fechamento com os dados corretos."
-                    : "Fechamento excluído com sucesso! Os lançamentos foram liberados para novo fechamento.";
-
-                TempData["SuccessMessage"] = mensagemSucesso;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Erro ao excluir fechamento ID {id}");
-                TempData["ErrorMessage"] = $"Erro ao excluir fechamento: {ex.Message}";
-                return RedirectToAction(nameof(Details), new { id = fechamento.Id });
-            }
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        // DIAGNÓSTICO: DiagnósticoRateios
-        [HttpGet]
-        [Authorize(Roles = Roles.AdminOuTesoureiroGeral)]
-        public async Task<IActionResult> DiagnosticoRateios()
-        {
-            var diagnostico = new StringBuilder();
-            diagnostico.AppendLine("=== DIAGNÓSTICO COMPLETO DO SISTEMA DE RATEIOS ===");
-            diagnostico.AppendLine($"Data/Hora: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
-            diagnostico.AppendLine("");
-
-            try
-            {
-                // 1. Verificar Centro de Custo FUNDO
-                diagnostico.AppendLine("1. CENTRO DE CUSTO FUNDO");
-                var centroCustoFundo = await _context.CentrosCusto
-                    .FirstOrDefaultAsync(c => c.Nome.ToUpper().Contains("FUNDO") ||
-                                             c.Nome.ToUpper().Contains("REPASSE") ||
-                                             c.Nome.ToUpper().Contains("DÍZIMO") ||
-                                             c.Nome.ToUpper().Contains("DIZIMO"));
-
-                if (centroCustoFundo != null)
-                {
-                    diagnostico.AppendLine($"   ✓ Encontrado: {centroCustoFundo.Nome} (ID: {centroCustoFundo.Id})");
-                    diagnostico.AppendLine($"   ✓ Ativo: {centroCustoFundo.Ativo}");
-                }
-                else
-                {
-                    diagnostico.AppendLine("   ❌ NÃO ENCONTRADO!");
-                    diagnostico.AppendLine("   AÇÃO NECESSÁRIA: Criar um Centro de Custo com nome 'FUNDO' ou 'REPASSE'");
-                }
-                diagnostico.AppendLine("");
-
-                // 2. Verificar Centro de Custo SEDE
-                diagnostico.AppendLine("2. CENTRO DE CUSTO SEDE");
-                var centroCustoSede = await _context.CentrosCusto
-                    .FirstOrDefaultAsync(c => c.Nome.ToUpper().Contains("SEDE") ||
-                                             c.Nome.ToUpper().Contains("GERAL") ||
-                                             c.Nome.ToUpper().Contains("PRINCIPAL") ||
-                                             c.Nome.ToUpper().Contains("CENTRAL"));
-
-                if (centroCustoSede != null)
-                {
-                    diagnostico.AppendLine($"   ✓ Encontrado: {centroCustoSede.Nome} (ID: {centroCustoSede.Id})");
-                    diagnostico.AppendLine($"   ✓ Ativo: {centroCustoSede.Ativo}");
-                }
-                else
-                {
-                    diagnostico.AppendLine("   ❌ NÃO ENCONTRADO!");
-                    diagnostico.AppendLine("   AÇÃO NECESSÁRIA: Criar um Centro de Custo com nome 'SEDE' ou 'GERAL'");
-                }
-                diagnostico.AppendLine("");
-
-                // 3. Verificar Regras de Rateio
-                diagnostico.AppendLine("3. REGRAS DE RATEIO ATIVAS");
-                var regrasAtivas = await _context.RegrasRateio
-                    .Include(r => r.CentroCustoOrigem)
-                    .Include(r => r.CentroCustoDestino)
-                    .Where(r => r.Ativo)
-                    .ToListAsync();
-
-                if (regrasAtivas.Any())
-                {
-                    diagnostico.AppendLine($"   ✓ Total de regras ativas: {regrasAtivas.Count}");
-                    foreach (var regra in regrasAtivas)
-                    {
-                        diagnostico.AppendLine($"   - {regra.Nome}: {regra.CentroCustoOrigem.Nome} → {regra.CentroCustoDestino.Nome} ({regra.Percentual:F2}%)");
-                    }
-                }
-                else
-                {
-                    diagnostico.AppendLine("   ❌ NENHUMA REGRA ATIVA ENCONTRADA!");
-                    diagnostico.AppendLine("   AÇÃO NECESSÁRIA: Criar regras de rateio em Cadastros > Regras de Rateio");
-                }
-
-                ViewBag.DiagnosticoRateios = diagnostico.ToString();
-            }
-            catch (Exception ex)
-            {
-                diagnostico.AppendLine($"❌ ERRO no diagnóstico: {ex.Message}");
-                _logger.LogError(ex, "Erro no diagnóstico de rateios");
-            }
-
-            return View("DiagnosticoRateios");
-        }
-
-        // GET: FechamentoPeriodo/CreateSede
-        [HttpGet]
-        [Authorize(Roles = Roles.AdminOuTesoureiroGeral)]
-        public async Task<IActionResult> CreateSede()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Unauthorized();
-
-            // ✅ OTIMIZADO: Usar AsNoTracking para consultas somente leitura
-            // Buscar apenas o Centro de Custo SEDE
-            var sede = await _context.CentrosCusto
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Tipo == TipoCentroCusto.Sede && c.Ativo);
-
-            if (sede == null)
-            {
-                TempData["ErrorMessage"] = "Nenhuma SEDE configurada no sistema.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            // Buscar fechamentos de congregações APROVADOS e NÃO PROCESSADOS
-            var fechamentosDisponiveis = await _context.FechamentosPeriodo
-                .AsNoTracking()
-                .Include(f => f.CentroCusto)
-                .Where(f => f.CentroCusto.Tipo == TipoCentroCusto.Congregacao &&
-                            f.Status == StatusFechamentoPeriodo.Aprovado &&
-                            f.FoiProcessadoPelaSede == false)
-                .OrderByDescending(f => f.DataAprovacao)
-                .Select(f => new FechamentoCongregacaoDisponivel
-                {
-                    Id = f.Id,
-                    NomeCongregacao = f.CentroCusto.Nome,
-                    DataInicio = f.DataInicio,
-                    DataFim = f.DataFim,
-                    TotalEntradas = f.TotalEntradas,
-                    TotalSaidas = f.TotalSaidas,
-                    BalancoFisico = f.BalancoFisico,
-                    BalancoDigital = f.BalancoDigital,
-                    DataAprovacao = f.DataAprovacao.Value,
-                    Selecionado = true // Por padrão, todos selecionados
-                })
-                .ToListAsync();
-
-            var viewModel = new FechamentoSedeViewModel
-            {
-                DataInicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1),
-                DataFim = DateTime.Now.Date,
-                Ano = DateTime.Now.Year,
-                Mes = DateTime.Now.Month,
-                TipoFechamento = TipoFechamento.Mensal,
-                FechamentosDisponiveis = fechamentosDisponiveis
-            };
-
-            ViewBag.SedeId = sede.Id;
-            ViewBag.SedeNome = sede.Nome;
-
-            return View(viewModel);
-        }
-
-        // POST: FechamentoPeriodo/CreateSede
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize(Roles = Roles.AdminOuTesoureiroGeral)]
-        public async Task<IActionResult> CreateSede(FechamentoSedeViewModel viewModel)
-        {
-            if (!ModelState.IsValid)
-            {
-                viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-                return View(viewModel);
-            }
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Unauthorized();
-
-            var sede = await _context.CentrosCusto
-                .FirstOrDefaultAsync(c => c.Tipo == TipoCentroCusto.Sede && c.Ativo);
-
-            if (sede == null)
-            {
-                TempData["ErrorMessage"] = "SEDE não encontrada.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            // ✅ VALIDAÇÕES ANTES DA TRANSAÇÃO
-            var fechamentoExistente = await FechamentoQueryHelper.BuscarFechamentoAprovadoNoPeriodo(
-                _context, sede.Id, viewModel.DataInicio, viewModel.DataFim);
-
-            if (fechamentoExistente != null)
-            {
-                // Para fechamentos NÃO DIÁRIOS, bloquear totalmente
-                if (viewModel.TipoFechamento != TipoFechamento.Diario)
-                {
-                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO da SEDE para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}).";
-                    viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-                    return View(viewModel);
-                }
-
-                // Para fechamentos DIÁRIOS, verificar se há lançamentos novos
-                var temLancamentosNovosAntesDeCalcular = await FechamentoQueryHelper.TemLancamentosNovos(
-                    _context, sede.Id, viewModel.DataInicio, viewModel.DataFim);
-
-                if (!temLancamentosNovosAntesDeCalcular)
-                {
-                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para o dia {viewModel.DataInicio:dd/MM/yyyy} e não há novos lançamentos desde então.";
-                    viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-                    return View(viewModel);
-                }
-            }
-
-            // ✅ CORREÇÃO: Usar ExecutionStrategy para suportar SqlServerRetryingExecutionStrategy
-            try
-            {
-                var strategy = _context.Database.CreateExecutionStrategy();
-                return await strategy.ExecuteAsync(async () =>
-                {
-                    using var transaction = await _context.Database.BeginTransactionAsync();
-                    try
-                    {
-
-                        // 1. Buscar fechamentos das congregações selecionados (SE HOUVER)
-                        List<FechamentoPeriodo> fechamentosCongregacoes = new List<FechamentoPeriodo>();
-
-                        if (viewModel.FechamentosIncluidos != null && viewModel.FechamentosIncluidos.Any())
-                        {
-                            fechamentosCongregacoes = await _context.FechamentosPeriodo
-                                .Include(f => f.CentroCusto)
-                                .Where(f => viewModel.FechamentosIncluidos.Contains(f.Id) &&
-                                    f.Status == StatusFechamentoPeriodo.Aprovado &&
-                                    f.FoiProcessadoPelaSede == false)
-                                .ToListAsync();
-
-                            _logger.LogInformation($"Selecionados {fechamentosCongregacoes.Count} fechamentos de congregações para consolidação");
-                        }
-
-                        // 2. Calcular totais da SEDE no período usando HELPER
-                        var totais = await FechamentoQueryHelper.CalcularTotais(
-                            _context, sede.Id, viewModel.DataInicio, viewModel.DataFim);
-
-                        // ✅ VERIFICAR SE HÁ LANÇAMENTOS NOVOS
-                        var temLancamentosNovos = totais.TotalEntradas > 0 || totais.TotalSaidas > 0;
-
-                        if (!temLancamentosNovos && !fechamentosCongregacoes.Any())
-                        {
-                            TempData["ErrorMessage"] = "Não há lançamentos novos da SEDE nem prestações de congregações para incluir neste fechamento.";
-                            viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-                            throw new InvalidOperationException("Sem lançamentos para processar");
-                        }
-
-                        // 3. Somar valores das congregações APROVADAS (SE HOUVER)
-                        decimal totalEntradasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradas);
-                        decimal totalSaidasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidas);
-                        decimal totalEntradasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasFisicas);
-                        decimal totalSaidasFisicasCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasFisicas);
-                        decimal totalEntradasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalEntradasDigitais);
-                        decimal totalSaidasDigitaisCongregacoes = fechamentosCongregacoes.Sum(f => f.TotalSaidasDigitais);
-
-                        // 4. Criar fechamento consolidado da SEDE
-                        var observacaoFinal = viewModel.Observacoes ?? "";
-
-                        if (fechamentosCongregacoes.Any())
-                        {
-                            observacaoFinal += $"\n\n✓ Fechamento consolidado: incluídos {fechamentosCongregacoes.Count} fechamento(s) de congregações aprovados.";
-                        }
-
-                        if (temLancamentosNovos)
-                        {
-                            observacaoFinal += $"\n\n✓ Lançamentos novos da SEDE incluídos: {totais.TotalEntradas:C} em entradas e {totais.TotalSaidas:C} em saídas.";
-                        }
-
-                        var fechamentoSede = new FechamentoPeriodo
-                        {
-                            CentroCustoId = sede.Id,
-                            Ano = viewModel.Ano,
-                            Mes = viewModel.Mes,
-                            DataInicio = viewModel.DataInicio,
-                            DataFim = viewModel.DataFim,
-                            TipoFechamento = viewModel.TipoFechamento,
-
-                            // TOTAIS CONSOLIDADOS (SEDE + CONGREGAÇÕES, se houver)
-                            TotalEntradas = totais.TotalEntradas + totalEntradasCongregacoes,
-                            TotalSaidas = totais.TotalSaidas + totalSaidasCongregacoes,
-
-                            TotalEntradasFisicas = totais.EntradasFisicas + totalEntradasFisicasCongregacoes,
-                            TotalSaidasFisicas = totais.SaidasFisicas + totalSaidasFisicasCongregacoes,
-
-                            TotalEntradasDigitais = totais.EntradasDigitais + totalEntradasDigitaisCongregacoes,
-                            TotalSaidasDigitais = totais.SaidasDigitais + totalSaidasDigitaisCongregacoes,
-
-                            BalancoFisico = (totais.EntradasFisicas + totalEntradasFisicasCongregacoes) -
-                                (totais.SaidasFisicas + totalSaidasFisicasCongregacoes),
-
-                            BalancoDigital = (totais.EntradasDigitais + totalEntradasDigitaisCongregacoes) -
-                                (totais.SaidasDigitais + totalSaidasDigitaisCongregacoes),
-
-                            Observacoes = observacaoFinal,
-
-                            // NOVAS PROPRIEDADES
-                            EhFechamentoSede = true,
-                            QuantidadeCongregacoesIncluidas = fechamentosCongregacoes.Count,
-
-                            Status = StatusFechamentoPeriodo.Pendente,
-                            UsuarioSubmissaoId = user.Id,
-                            DataSubmissao = DateTime.Now
-                        };
-
-                        // 5. Aplicar RATEIOS sobre o TOTAL CONSOLIDADO
-                        await AplicarRateiosComLog(fechamentoSede);
-
-                        // 6. Gerar detalhes do fechamento (APENAS COM LANÇAMENTOS NOVOS)
-                        await GerarDetalhesFechamento(fechamentoSede);
-
-                        // 7. Salvar fechamento da SEDE
-                        _context.Add(fechamentoSede);
-                        await _context.SaveChangesAsync();
-
-                        // ✅ 8. MARCAR LANÇAMENTOS DA SEDE COMO INCLUÍDOS
-                        if (temLancamentosNovos)
-                        {
-                            await MarcarLancamentosComoIncluidos(fechamentoSede);
-                        }
-
-                        // 9. Marcar fechamentos das congregações como PROCESSADOS (SE HOUVER)
-                        if (fechamentosCongregacoes.Any())
-                        {
-                            foreach (var fechamentoCongregacao in fechamentosCongregacoes)
-                            {
-                                fechamentoCongregacao.FoiProcessadoPelaSede = true;
-                                fechamentoCongregacao.FechamentoSedeProcessadorId = fechamentoSede.Id;
-                                fechamentoCongregacao.DataProcessamentoPelaSede = DateTime.Now;
-                                fechamentoCongregacao.Status = StatusFechamentoPeriodo.Processado;
-                                _context.Update(fechamentoCongregacao);
-                            }
-                        }
-
-                        await _context.SaveChangesAsync();
-                        await transaction.CommitAsync();
-
-                        var mensagemSucesso = fechamentosCongregacoes.Any()
-                            ? $"Fechamento da SEDE criado com sucesso! {fechamentosCongregacoes.Count} prestação(ões) de congregação(ões) incluída(s)."
-                            : "Fechamento da SEDE criado com sucesso! (Sem congregações incluídas)";
-
-                        if (temLancamentosNovos)
-                        {
-                            mensagemSucesso += $" Total de {totais.TotalEntradas:C} em entradas e {totais.TotalSaidas:C} em saídas da SEDE foram incluídos.";
-                        }
-
-                        await _auditService.LogAsync("Criação", "FechamentoPeriodo", mensagemSucesso);
-
-                        TempData["SuccessMessage"] = mensagemSucesso;
-
-                        return RedirectToAction(nameof(Details), new { id = fechamentoSede.Id });
-                    }
-                    catch (Exception ex)
-                    {
-                        await transaction.RollbackAsync();
-                        _logger.LogError(ex, "Erro ao criar fechamento da SEDE interno");
-                        throw; // Re-lançar para que o ExecuteAsync possa tratar
-                    }
+                    success = true,
+                    message = "Fechamento aprovado com sucesso!",
+                    novoStatus = "Aprovado"
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao criar fechamento da SEDE");
-                TempData["ErrorMessage"] = $"Erro ao criar fechamento: {ex.Message}";
+                _logger.LogError(ex, $"Erro ao aprovar fechamento ID {id} via AJAX");
+                return Json(new { success = false, message = $"Erro ao aprovar: {ex.Message}" });
+            }
+        }
 
-                viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
-                return View(viewModel);
+        // GET: FechamentoPeriodo/GerarPdf/5
+        [HttpGet]
+        public async Task<IActionResult> GerarPdf(int id)
+        {
+            try
+            {
+                _logger.LogInformation($"Solicitação de geração de PDF para fechamento ID {id}");
+
+                // Buscar fechamento com todos os relacionamentos necessários
+                var fechamento = await _context.FechamentosPeriodo
+                    .Include(f => f.CentroCusto)
+                    .Include(f => f.UsuarioSubmissao)
+                    .Include(f => f.UsuarioAprovacao)
+                    .Include(f => f.DetalhesFechamento)
+                    .Include(f => f.ItensRateio)
+                        .ThenInclude(i => i.RegraRateio)
+                            .ThenInclude(r => r.CentroCustoDestino)
+                    .Include(f => f.FechamentosCongregacoesIncluidos)
+                        .ThenInclude(fc => fc.CentroCusto)
+                    .Include(f => f.FechamentosCongregacoesIncluidos)
+                        .ThenInclude(fc => fc.DetalhesFechamento)
+                    .FirstOrDefaultAsync(f => f.Id == id);
+
+                if (fechamento == null)
+                {
+                    _logger.LogWarning($"Fechamento ID {id} não encontrado");
+                    return NotFound();
+                }
+
+                // Verificar permissão de acesso
+                if (!await CanAccessFechamento(fechamento))
+                {
+                    _logger.LogWarning($"Acesso negado ao fechamento ID {id} para usuário {User.Identity.Name}");
+                    return Forbid();
+                }
+
+                // Verificar se está aprovado
+                if (fechamento.Status != StatusFechamentoPeriodo.Aprovado)
+                {
+                    _logger.LogWarning($"Tentativa de gerar PDF de fechamento não aprovado (ID: {id}, Status: {fechamento.Status})");
+                    TempData["ErrorMessage"] = "Apenas fechamentos aprovados podem gerar PDF.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
+                _logger.LogInformation($"Gerando PDF para fechamento ID {id} - {fechamento.CentroCusto?.Nome}");
+
+                // Gerar PDF usando o serviço
+                var pdfBytes = _pdfService.GerarReciboFechamento(fechamento);
+
+                // Registrar no log de auditoria
+                await _auditService.LogAsync("PDF Gerado", "FechamentoPeriodo",
+                    $"PDF gerado para fechamento {fechamento.Mes:00}/{fechamento.Ano} - {fechamento.CentroCusto?.Nome}");
+
+                _logger.LogInformation($"PDF gerado com sucesso para fechamento ID {id} - Tamanho: {pdfBytes.Length} bytes");
+
+                // ✅ Nome do arquivo com data completa do período
+                string periodoTexto;
+                if (fechamento.TipoFechamento == TipoFechamento.Diario)
+                {
+                    periodoTexto = fechamento.DataInicio.ToString("dd-MM-yyyy");
+                }
+                else if (fechamento.TipoFechamento == TipoFechamento.Semanal)
+                {
+                    periodoTexto = $"{fechamento.DataInicio:dd-MM-yyyy}_a_{fechamento.DataFim:dd-MM-yyyy}";
+                }
+                else // Mensal
+                {
+                    periodoTexto = $"{fechamento.DataInicio:dd-MM-yyyy}_a_{fechamento.DataFim:dd-MM-yyyy}";
+                }
+
+                var nomeCentroCusto = fechamento.CentroCusto?.Nome?.Replace(" ", "_") ?? "SemNome";
+                var nomeArquivo = $"Fechamento_{nomeCentroCusto}_{periodoTexto}.pdf";
+
+                // Retornar PDF
+                return File(pdfBytes, "application/pdf", nomeArquivo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao gerar PDF do fechamento ID {id}");
+                TempData["ErrorMessage"] = $"Erro ao gerar PDF: {ex.Message}";
+                return RedirectToAction(nameof(Details), new { id });
             }
         }
 
         // Método auxiliar para recarregar lista
         // ✅ OTIMIZADO: Usa AsNoTracking e projeta apenas campos necessários
+        // ✅ MODIFICADO: Incluir fechamentos Pendentes E Aprovados para permitir aprovação inline
         private async Task<List<FechamentoCongregacaoDisponivel>> CarregarFechamentosDisponiveis()
         {
             return await _context.FechamentosPeriodo
                 .AsNoTracking()
                 .Include(f => f.CentroCusto)
                 .Where(f => f.CentroCusto.Tipo == TipoCentroCusto.Congregacao &&
-                            f.Status == StatusFechamentoPeriodo.Aprovado &&
+                            (f.Status == StatusFechamentoPeriodo.Pendente ||
+                             f.Status == StatusFechamentoPeriodo.Aprovado) &&
                             f.FoiProcessadoPelaSede == false)
-                .OrderByDescending(f => f.DataAprovacao)
+                .OrderBy(f => f.Status) // Pendentes primeiro
+                .ThenByDescending(f => f.DataAprovacao)
+                .ThenByDescending(f => f.DataSubmissao)
                 .Select(f => new FechamentoCongregacaoDisponivel
                 {
                     Id = f.Id,
@@ -1364,8 +733,9 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     TotalSaidas = f.TotalSaidas,
                     BalancoFisico = f.BalancoFisico,
                     BalancoDigital = f.BalancoDigital,
-                    DataAprovacao = f.DataAprovacao.Value,
-                    Selecionado = true
+                    DataAprovacao = f.DataAprovacao.HasValue ? f.DataAprovacao.Value : f.DataSubmissao,
+                    Status = f.Status,
+                    Selecionado = f.Status == StatusFechamentoPeriodo.Aprovado // Apenas aprovados vêm selecionados por padrão
                 })
                 .ToListAsync();
         }
@@ -1666,7 +1036,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             // Atualizar entradas em massa usando ExecuteUpdate (EF Core 7+)
             var entradasAtualizadas = await _context.Entradas
-                .Where(FechamentoQueryHelper.EntradasNaoIncluidasEmFechamentosAprovados(
+                               .Where(FechamentoQueryHelper.EntradasNaoIncluidasEmFechamentosAprovados(
                     fechamento.CentroCustoId,
                     fechamento.DataInicio,
                     fechamento.DataFim,

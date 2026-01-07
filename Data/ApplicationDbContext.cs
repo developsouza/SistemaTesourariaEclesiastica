@@ -484,7 +484,7 @@ namespace SistemaTesourariaEclesiastica.Data
          .HasDatabaseName("IX_Fechamentos_CentroCusto_Periodo_Status");
 
             builder.Entity<FechamentoPeriodo>()
-           .HasIndex(f => new { f.EhFechamentoSede, f.Status, f.DataAprovacao })
+        .HasIndex(f => new { f.EhFechamentoSede, f.Status, f.DataAprovacao })
               .IsDescending(false, false, true)
              .HasDatabaseName("IX_Fechamentos_Sede_Status_DataAprovacao");
 
@@ -706,6 +706,86 @@ namespace SistemaTesourariaEclesiastica.Data
                 entity.HasIndex(e => e.DataHoraTentativa)
                     .HasDatabaseName("IX_TentativaAcesso_DataHora");
             });
+
+            // ========================================
+            // 🛡️ CONSISTÊNCIA FINANCEIRA - ÍNDICES E CONSTRAINTS
+            // ========================================
+
+            #region Índices de Consistência para Fechamentos
+
+            // Entradas - índice composto otimizado para queries de fechamento com include
+            builder.Entity<Entrada>()
+                .HasIndex(e => new { e.CentroCustoId, e.Data, e.IncluidaEmFechamento })
+                .HasDatabaseName("IX_Entradas_CentroCustoId_Data_IncluidaEmFechamento")
+                .IncludeProperties(e => new { e.Valor, e.MeioDePagamentoId, e.FechamentoQueIncluiuId });
+
+            // Saídas - índice composto otimizado para queries de fechamento com include
+            builder.Entity<Saida>()
+                .HasIndex(s => new { s.CentroCustoId, s.Data, s.IncluidaEmFechamento })
+                .HasDatabaseName("IX_Saidas_CentroCustoId_Data_IncluidaEmFechamento")
+                .IncludeProperties(s => new { s.Valor, s.MeioDePagamentoId, s.FechamentoQueIncluiuId });
+
+            // FechamentosPeriodo - índice para busca por status e período com include
+            builder.Entity<FechamentoPeriodo>()
+                .HasIndex(f => new { f.Status, f.DataInicio, f.DataFim })
+                .HasDatabaseName("IX_FechamentosPeriodo_Status_DataInicio_DataFim")
+                .IncludeProperties(f => new { f.CentroCustoId, f.TotalEntradas, f.TotalSaidas, f.SaldoFinal });
+
+            // Entradas - índice filtrado para lançamentos incluídos em fechamentos
+            builder.Entity<Entrada>()
+                .HasIndex(e => e.FechamentoQueIncluiuId)
+                .HasDatabaseName("IX_Entradas_FechamentoQueIncluiuId")
+                .HasFilter("[FechamentoQueIncluiuId] IS NOT NULL");
+
+            // Saídas - índice filtrado para lançamentos incluídos em fechamentos
+            builder.Entity<Saida>()
+                .HasIndex(s => s.FechamentoQueIncluiuId)
+                .HasDatabaseName("IX_Saidas_FechamentoQueIncluiuId")
+                .HasFilter("[FechamentoQueIncluiuId] IS NOT NULL");
+
+            #endregion
+
+            #region Constraints de Integridade de Dados
+
+            // Entradas - valor deve ser positivo
+            builder.Entity<Entrada>()
+                .ToTable(t => t.HasCheckConstraint("CK_Entradas_Valor_Positivo", "[Valor] > 0"));
+
+            // Saídas - valor deve ser positivo
+            builder.Entity<Saida>()
+                .ToTable(t => t.HasCheckConstraint("CK_Saidas_Valor_Positivo", "[Valor] > 0"));
+
+            // TransferenciasInternas - valor deve ser positivo
+            builder.Entity<TransferenciaInterna>()
+                .ToTable(t => t.HasCheckConstraint("CK_TransferenciasInternas_Valor_Positivo", "[Valor] > 0"));
+
+            // FechamentosPeriodo - data fim deve ser maior ou igual à data início
+            builder.Entity<FechamentoPeriodo>()
+                .ToTable(t => t.HasCheckConstraint("CK_FechamentosPeriodo_DataFim_Maior_DataInicio", "[DataFim] >= [DataInicio]"));
+
+            // TransferenciasInternas - centros de custo origem e destino devem ser diferentes
+            builder.Entity<TransferenciaInterna>()
+                .ToTable(t => t.HasCheckConstraint("CK_TransferenciasInternas_CentrosCusto_Diferentes",
+                    "[CentroCustoOrigemId] != [CentroCustoDestinoId]"));
+
+            // TransferenciasInternas - meios de pagamento origem e destino devem ser diferentes
+            builder.Entity<TransferenciaInterna>()
+                .ToTable(t => t.HasCheckConstraint("CK_TransferenciasInternas_MeiosPagamento_Diferentes",
+                    "[MeioDePagamentoOrigemId] != [MeioDePagamentoDestinoId]"));
+
+            // Entradas - consistência de flags de fechamento
+            builder.Entity<Entrada>()
+                .ToTable(t => t.HasCheckConstraint("CK_Entradas_Consistencia_Fechamento",
+                    "([IncluidaEmFechamento] = 0 AND [FechamentoQueIncluiuId] IS NULL) OR " +
+                    "([IncluidaEmFechamento] = 1 AND [FechamentoQueIncluiuId] IS NOT NULL)"));
+
+            // Saídas - consistência de flags de fechamento
+            builder.Entity<Saida>()
+                .ToTable(t => t.HasCheckConstraint("CK_Saidas_Consistencia_Fechamento",
+                    "([IncluidaEmFechamento] = 0 AND [FechamentoQueIncluiuId] IS NULL) OR " +
+                    "([IncluidaEmFechamento] = 1 AND [FechamentoQueIncluiuId] IS NOT NULL)"));
+
+            #endregion
         }
     }
 }

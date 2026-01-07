@@ -227,12 +227,12 @@ namespace SistemaTesourariaEclesiastica.Helpers
 
             // CABEÇALHO PADRONIZADO COM GRID
             html.AppendLine("<div class='header'>");
-            
+
             // Logo à esquerda
             html.AppendLine("<div class='header-logo'>");
             html.AppendLine("<img src='wwwroot/images/logoadpb.png' alt='Logo ADPB' />");
             html.AppendLine("</div>");
-            
+
             // Conteúdo do cabeçalho
             html.AppendLine("<div class='header-content'>");
             html.AppendLine("<div class='header-title'>");
@@ -243,7 +243,7 @@ namespace SistemaTesourariaEclesiastica.Helpers
             html.AppendLine("<p style='margin-bottom: 0;'>Realizado em</p>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
-            
+
             html.AppendLine("</div>"); // Fim header
 
             // Informações do Período
