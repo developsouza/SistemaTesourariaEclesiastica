@@ -164,6 +164,7 @@ namespace SistemaTesourariaEclesiastica.Services
 
         /// <summary>
         /// Valida se os totais dos fechamentos batem com os lançamentos incluídos
+        /// ? CORRIGIDO: Considera fechamentos de congregações consolidados no fechamento da SEDE
         /// </summary>
         private async Task ValidarTotaisFechamentos(RelatorioConsistenciaViewModel relatorio)
         {
@@ -172,12 +173,17 @@ namespace SistemaTesourariaEclesiastica.Services
             var fechamentos = await _context.FechamentosPeriodo
                 .Include(f => f.CentroCusto)
                 .Include(f => f.DetalhesFechamento)
+                .Include(f => f.FechamentosCongregacoesIncluidos) // ? NOVO: Incluir fechamentos de congregações processados
                 .Where(f => f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Pendente)
                 .ToListAsync();
 
             foreach (var fechamento in fechamentos)
             {
-                // Calcular totais a partir dos lançamentos incluídos
+                // ? NOVO: Verificar se este fechamento é uma consolidação da SEDE
+                var ehFechamentoSedeConsolidado = fechamento.EhFechamentoSede && 
+                                                  fechamento.FechamentosCongregacoesIncluidos.Any();
+
+                // Calcular totais a partir dos lançamentos DIRETAMENTE incluídos NESTE fechamento
                 var entradas = await _context.Entradas
                     .Include(e => e.MeioDePagamento)
                     .Where(e => e.FechamentoQueIncluiuId == fechamento.Id)
@@ -196,6 +202,29 @@ namespace SistemaTesourariaEclesiastica.Services
                 var totalSaidasFisicasReal = saidas.Where(s => s.MeioDePagamento.TipoCaixa == TipoCaixa.Fisico).Sum(s => s.Valor);
                 var totalSaidasDigitaisReal = saidas.Where(s => s.MeioDePagamento.TipoCaixa == TipoCaixa.Digital).Sum(s => s.Valor);
 
+                // ? NOVO: Se for fechamento consolidado da SEDE, SOMAR os totais das congregações
+                if (ehFechamentoSedeConsolidado)
+                {
+                    _logger.LogInformation($"Fechamento #{fechamento.Id} é consolidado - incluindo {fechamento.FechamentosCongregacoesIncluidos.Count} congregações");
+
+                    var totalEntradasCongregacoes = fechamento.FechamentosCongregacoesIncluidos.Sum(fc => fc.TotalEntradas);
+                    var totalSaidasCongregacoes = fechamento.FechamentosCongregacoesIncluidos.Sum(fc => fc.TotalSaidas);
+                    var totalEntradasFisicasCongregacoes = fechamento.FechamentosCongregacoesIncluidos.Sum(fc => fc.TotalEntradasFisicas);
+                    var totalEntradasDigitaisCongregacoes = fechamento.FechamentosCongregacoesIncluidos.Sum(fc => fc.TotalEntradasDigitais);
+                    var totalSaidasFisicasCongregacoes = fechamento.FechamentosCongregacoesIncluidos.Sum(fc => fc.TotalSaidasFisicas);
+                    var totalSaidasDigitaisCongregacoes = fechamento.FechamentosCongregacoesIncluidos.Sum(fc => fc.TotalSaidasDigitais);
+
+                    // Adicionar aos totais reais
+                    totalEntradasReal += totalEntradasCongregacoes;
+                    totalSaidasReal += totalSaidasCongregacoes;
+                    totalEntradasFisicasReal += totalEntradasFisicasCongregacoes;
+                    totalEntradasDigitaisReal += totalEntradasDigitaisCongregacoes;
+                    totalSaidasFisicasReal += totalSaidasFisicasCongregacoes;
+                    totalSaidasDigitaisReal += totalSaidasDigitaisCongregacoes;
+
+                    _logger.LogInformation($"Totais com congregações - Entradas: {totalEntradasReal:C}, Saídas: {totalSaidasReal:C}");
+                }
+
                 // Comparar com os valores armazenados no fechamento
                 var diferencaEntradas = fechamento.TotalEntradas - totalEntradasReal;
                 var diferencaSaidas = fechamento.TotalSaidas - totalSaidasReal;
@@ -210,9 +239,10 @@ namespace SistemaTesourariaEclesiastica.Services
                     {
                         Tipo = "Total Incorreto em Fechamento",
                         Categoria = "Fechamentos",
-                        Descricao = $"Fechamento #{fechamento.Id} ({fechamento.CentroCusto.Nome} - {fechamento.Mes}/{fechamento.Ano}): " +
+                        Descricao = $"Fechamento #{fechamento.Id} ({fechamento.CentroCusto.Nome} - {fechamento.DataInicio:dd/MM/yyyy} a {fechamento.DataFim:dd/MM/yyyy}): " +
                                     $"Total Entradas Registrado: {fechamento.TotalEntradas:C}, Real: {totalEntradasReal:C} (Diferença: {diferencaEntradas:C}). " +
-                                    $"Total Saídas Registrado: {fechamento.TotalSaidas:C}, Real: {totalSaidasReal:C} (Diferença: {diferencaSaidas:C}).",
+                                    $"Total Saídas Registrado: {fechamento.TotalSaidas:C}, Real: {totalSaidasReal:C} (Diferença: {diferencaSaidas:C})." +
+                                    (ehFechamentoSedeConsolidado ? $" (Consolidado com {fechamento.FechamentosCongregacoesIncluidos.Count} congregações)" : ""),
                         Severidade = SeveridadeInconsistencia.Critica,
                         EntidadeId = fechamento.Id.ToString(),
                         EntidadeTipo = "FechamentoPeriodo",
@@ -231,7 +261,8 @@ namespace SistemaTesourariaEclesiastica.Services
                                     $"Entradas Físicas: Registrado {fechamento.TotalEntradasFisicas:C}, Real {totalEntradasFisicasReal:C} ({diferencaEntradasFisicas:C}). " +
                                     $"Entradas Digitais: Registrado {fechamento.TotalEntradasDigitais:C}, Real {totalEntradasDigitaisReal:C} ({diferencaEntradasDigitais:C}). " +
                                     $"Saídas Físicas: Registrado {fechamento.TotalSaidasFisicas:C}, Real {totalSaidasFisicasReal:C} ({diferencaSaidasFisicas:C}). " +
-                                    $"Saídas Digitais: Registrado {fechamento.TotalSaidasDigitais:C}, Real {totalSaidasDigitaisReal:C} ({diferencaSaidasDigitais:C}).",
+                                    $"Saídas Digitais: Registrado {fechamento.TotalSaidasDigitais:C}, Real {totalSaidasDigitaisReal:C} ({diferencaSaidasDigitais:C})." +
+                                    (ehFechamentoSedeConsolidado ? $" (Consolidado com {fechamento.FechamentosCongregacoesIncluidos.Count} congregações)" : ""),
                         Severidade = SeveridadeInconsistencia.Critica,
                         EntidadeId = fechamento.Id.ToString(),
                         EntidadeTipo = "FechamentoPeriodo",
