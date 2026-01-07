@@ -62,7 +62,7 @@
 </div>
 
 @* ✅ NOVO: Alert indicando dados consolidados quando há múltiplos CCs *@
-@if ((User.IsInRole("Administrador") || User.IsInRole("Pastor") || User.IsInRole("TesoureiroGeral")) && 
+@if ((User.IsInRole("Administrador") || User.IsInRole("Pastor") || User.IsInRole("TesoureiroGeral")) &&
      ViewBag.ResumoPorCentroCusto != null && ((IEnumerable<dynamic>)ViewBag.ResumoPorCentroCusto).Count() > 1)
 {
     <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
@@ -215,9 +215,12 @@
                 <i class="bi bi-list-ul me-2 text-danger"></i>
                 Detalhamento das Despesas
             </h5>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
-                <i class="bi bi-printer me-1"></i>Imprimir
-            </button>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="text-muted small me-2" id="paginationInfo"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i>Imprimir
+                </button>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -233,7 +236,7 @@
                             <th class="text-end">Valor</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="despesasTableBody">
                         @foreach (var item in Model)
                         {
                             <tr>
@@ -290,6 +293,22 @@
                 </table>
             </div>
         </div>
+        <div class="card-footer bg-white border-top">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="small fw-semibold mb-0">Itens por página:</label>
+                    <select class="form-select form-select-sm" id="itemsPerPage" style="width: auto;">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <nav aria-label="Paginação">
+                    <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+                </nav>
+            </div>
+        </div>
     </div>
 }
 else
@@ -301,4 +320,154 @@ else
             <p class="text-muted">Não há despesas para o período e filtros selecionados.</p>
         </div>
     </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tableBody = document.getElementById('despesasTableBody');
+            const pagination = document.getElementById('pagination');
+            const itemsPerPageSelect = document.getElementById('itemsPerPage');
+            const paginationInfo = document.getElementById('paginationInfo');
+
+            if (!tableBody) return;
+
+            // Obter todas as linhas da tabela
+            const allRows = Array.from(tableBody.querySelectorAll('tr'));
+            const totalItems = allRows.length;
+
+            if (totalItems === 0) return;
+
+            let currentPage = 1;
+            let itemsPerPage = parseInt(itemsPerPageSelect.value);
+
+            function displayPage(page) {
+                const startIndex = (page - 1) * itemsPerPage;
+                const endIndex = startIndex + itemsPerPage;
+
+                // Esconder todas as linhas
+                allRows.forEach(row => row.style.display = 'none');
+
+                // Mostrar apenas as linhas da página atual
+                allRows.slice(startIndex, endIndex).forEach(row => row.style.display = '');
+
+                // Atualizar informações de paginação
+                const showingFrom = totalItems > 0 ? startIndex + 1 : 0;
+                const showingTo = Math.min(endIndex, totalItems);
+                paginationInfo.textContent = `Mostrando ${showingFrom}-${showingTo} de ${totalItems}`;
+            }
+
+            function createPagination() {
+                const totalPages = Math.ceil(totalItems / itemsPerPage);
+                pagination.innerHTML = '';
+
+                // Botão Anterior
+                const prevLi = document.createElement('li');
+                prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+                prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Anterior"><span aria-hidden="true">&laquo;</span></a>`;
+                if (currentPage > 1) {
+                    prevLi.querySelector('a').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        currentPage--;
+                        displayPage(currentPage);
+                        createPagination();
+                    });
+                }
+                pagination.appendChild(prevLi);
+
+                // Lógica de páginas numeradas
+                const maxVisiblePages = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+                if (endPage - startPage < maxVisiblePages - 1) {
+                    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                }
+
+                // Primeira página
+                if (startPage > 1) {
+                    const firstLi = document.createElement('li');
+                    firstLi.className = 'page-item';
+                    firstLi.innerHTML = `<a class="page-link" href="#">1</a>`;
+                    firstLi.querySelector('a').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        currentPage = 1;
+                        displayPage(currentPage);
+                        createPagination();
+                    });
+                    pagination.appendChild(firstLi);
+
+                    if (startPage > 2) {
+                        const ellipsisLi = document.createElement('li');
+                        ellipsisLi.className = 'page-item disabled';
+                        ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+                        pagination.appendChild(ellipsisLi);
+                    }
+                }
+
+                // Páginas numeradas
+                for (let i = startPage; i <= endPage; i++) {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                    li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                    if (i !== currentPage) {
+                        li.querySelector('a').addEventListener('click', function(e) {
+                            e.preventDefault();
+                            currentPage = i;
+                            displayPage(currentPage);
+                            createPagination();
+                        });
+                    }
+                    pagination.appendChild(li);
+                }
+
+                // Última página
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        const ellipsisLi = document.createElement('li');
+                        ellipsisLi.className = 'page-item disabled';
+                        ellipsisLi.innerHTML = `<span class="page-link">...</span>`;
+                        pagination.appendChild(ellipsisLi);
+                    }
+
+                    const lastLi = document.createElement('li');
+                    lastLi.className = 'page-item';
+                    lastLi.innerHTML = `<a class="page-link" href="#">${totalPages}</a>`;
+                    lastLi.querySelector('a').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        currentPage = totalPages;
+                        displayPage(currentPage);
+                        createPagination();
+                    });
+                    pagination.appendChild(lastLi);
+                }
+
+                // Botão Próximo
+                const nextLi = document.createElement('li');
+                nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+                nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Próximo"><span aria-hidden="true">&raquo;</span></a>`;
+                if (currentPage < totalPages) {
+                    nextLi.querySelector('a').addEventListener('click', function(e) {
+                        e.preventDefault();
+                        currentPage++;
+                        displayPage(currentPage);
+                        createPagination();
+                    });
+                }
+                pagination.appendChild(nextLi);
+            }
+
+            // Event listener para mudança de itens por página
+            itemsPerPageSelect.addEventListener('change', function() {
+                itemsPerPage = parseInt(this.value);
+                currentPage = 1;
+                displayPage(currentPage);
+                createPagination();
+            });
+
+            // Inicializar paginação
+            displayPage(currentPage);
+            createPagination();
+        });
+    </script>
 }
