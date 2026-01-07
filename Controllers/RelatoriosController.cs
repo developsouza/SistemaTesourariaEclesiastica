@@ -514,10 +514,14 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ViewBag.DataInicio = dataInicio.Value.ToString("yyyy-MM-dd");
                 ViewBag.DataFim = dataFim.Value.ToString("yyyy-MM-dd");
 
+                // ✅ CORRIGIDO: Verificar se é Tesoureiro Geral DA SEDE
+                bool isTesoureiroGeralSede = User.IsInRole(Roles.TesoureiroGeral) &&
+                                             user.CentroCusto?.Tipo == TipoCentroCusto.Sede;
+
                 // Configurar dropdowns de filtros
                 if (User.IsInRole(Roles.Administrador) ||
                     User.IsInRole(Roles.Pastor) ||
-                    User.IsInRole(Roles.TesoureiroGeral))
+                    isTesoureiroGeralSede)
                 {
                     ViewBag.CentrosCusto = new SelectList(
                    await _context.CentrosCusto.Where(c => c.Ativo).OrderBy(c => c.Nome).ToListAsync(),
@@ -544,10 +548,10 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 // Determinar centro de custo para filtro de aprovação
                 int? centroCustoParaAprovacao = null;
 
-                // Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
+                // ✅ CORRIGIDO: Administrador, Pastor e TesoureiroGeral da SEDE veem TODOS os dados
                 if (!User.IsInRole(Roles.Administrador) &&
                     !User.IsInRole(Roles.Pastor) &&
-                    !User.IsInRole(Roles.TesoureiroGeral))
+                    !isTesoureiroGeralSede)
                 {
                     // Tesoureiro Local OU Tesoureiro Geral de congregação: filtro obrigatório
                     centroCustoParaAprovacao = user.CentroCustoId;
@@ -560,7 +564,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
                 else
                 {
-                    // Administrador, Pastor e TesoureiroGeral da SEDE: podem filtrar opcionalmente
+                    // ✅ CORRIGIDO: Administrador, Pastor e TesoureiroGeral da SEDE: podem filtrar opcionalmente
                     centroCustoParaAprovacao = centroCustoId;
                 }
 
@@ -598,21 +602,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     .Include(s => s.PlanoDeContas)
                     .Where(s => idsSaidasAprovadas.Contains(s.Id));
 
-                // Aplicar filtros adicionais
-                if (User.IsInRole(Roles.Administrador) || User.IsInRole(Roles.TesoureiroGeral))
-                {
-                    if (centroCustoId.HasValue)
-                    {
-                        query = query.Where(s => s.CentroCustoId == centroCustoId.Value);
-                    }
-                }
-                else
-                {
-                    if (user.CentroCustoId.HasValue)
-                    {
-                        query = query.Where(s => s.CentroCustoId == user.CentroCustoId.Value);
-                    }
-                }
+                // ✅ REMOVIDO: Aplicação de filtro duplicado
+                // A filtragem por centroCustoId já foi aplicada em centroCustoParaAprovacao
 
                 if (fornecedorId.HasValue)
                 {
