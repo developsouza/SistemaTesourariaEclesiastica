@@ -191,11 +191,30 @@ class SidebarManager {
             });
         });
 
-        // Fechar sidebar ao clicar em links no mobile
+        // Fechar sidebar ao clicar em links no mobile (apenas se não for item com submenu)
         document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-            link.addEventListener('click', () => {
+            link.addEventListener('click', (e) => {
+                // Não fechar se for um item com submenu
+                const hasSubmenu = link.closest('.has-submenu');
+                if (hasSubmenu) {
+                    return; // Deixa o SubmenuManager tratar
+                }
+
+                // Fechar apenas no mobile e se não for item de submenu
                 if (window.innerWidth <= 991 && this.sidebar.classList.contains('show')) {
                     this.closeMobile();
+                }
+            });
+        });
+
+        // Fechar sidebar ao clicar em links DENTRO de submenus no mobile
+        document.querySelectorAll('.sidebar .submenu .nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 991 && this.sidebar.classList.contains('show')) {
+                    // Delay para permitir navegação
+                    setTimeout(() => {
+                        this.closeMobile();
+                    }, 150);
                 }
             });
         });
@@ -409,6 +428,7 @@ class SubmenuManager {
                 }
 
                 e.preventDefault();
+                e.stopPropagation(); // Prevenir propagação para não fechar o sidebar
 
                 const parent = item.closest('.has-submenu');
                 const submenu = parent.querySelector('.submenu');
@@ -416,7 +436,7 @@ class SubmenuManager {
                 if (submenu) {
                     const isShowing = parent.classList.contains('show');
 
-                    // Fechar outros submenus
+                    // Fechar outros submenus (opcional - comentar se quiser múltiplos abertos)
                     document.querySelectorAll('.has-submenu.show').forEach(other => {
                         if (other !== parent) {
                             other.classList.remove('show');

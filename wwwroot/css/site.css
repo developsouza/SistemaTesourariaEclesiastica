@@ -137,6 +137,8 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-lg);
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .sidebar-header {
@@ -147,6 +149,7 @@ body {
     justify-content: space-between;
     border-bottom: 1px solid var(--border-light);
     background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
+    flex-shrink: 0;
 }
 
 .sidebar-brand {
@@ -396,6 +399,8 @@ body {
     transition: margin-left var(--transition);
     min-height: 100vh;
     background: var(--bg-main);
+    width: 100%;
+    max-width: 100%;
 }
 
 .sidebar.collapsed + .content {
@@ -413,6 +418,9 @@ body {
     padding: 0 2rem;
     height: var(--topbar-height);
     box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 1020;
 }
 
 .navbar .dropdown-toggle {
@@ -451,6 +459,8 @@ body {
 .main-content {
     padding: 2rem;
     min-height: calc(100vh - var(--topbar-height));
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 /* Breadcrumb */
@@ -486,9 +496,11 @@ body {
     border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
     transition: all var(--transition);
+    overflow: hidden;
+    max-width: 100%;
 }
 
-    .card:hover {
+.card:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-lg);
     }
@@ -623,6 +635,8 @@ body {
     color: var(--input-text);
     padding: 0.675rem 1rem;
     transition: all var(--transition);
+    width: 100%;
+    max-width: 100%;
 }
 
     .form-control::placeholder {
@@ -741,6 +755,8 @@ body {
     background: var(--bg-card);
     color: var(--text-primary);
     border-color: var(--border);
+    width: 100%;
+    max-width: 100%;
 }
 
     .table thead th {
@@ -769,6 +785,8 @@ body {
 
     .table-responsive {
         border-radius: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
 /* DataTables */
@@ -984,13 +1002,49 @@ body {
         visibility: visible;
     }
 
+/* Tablets e dispositivos médios */
+@media (max-width: 1199.98px) {
+    .main-content {
+        padding: 1.75rem 1.5rem;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    .navbar .dropdown-menu {
+        min-width: 260px;
+    }
+
+    /* Ajustar tamanho de fonte em títulos */
+    h1, .h1 {
+        font-size: 1.75rem;
+    }
+
+    h2, .h2 {
+        font-size: 1.5rem;
+    }
+
+    h3, .h3 {
+        font-size: 1.3rem;
+    }
+}
+
+/* Tablets menores */
 @media (max-width: 991.98px) {
+    :root {
+        --sidebar-width: 280px;
+        --topbar-height: 60px;
+    }
+
     .sidebar {
         transform: translateX(-100%);
+        box-shadow: none;
     }
 
         .sidebar.show {
             transform: translateX(0);
+            box-shadow: var(--shadow-lg);
         }
 
     .content {
@@ -999,6 +1053,7 @@ body {
 
         .content .navbar {
             padding: 0 1rem;
+            height: 60px;
         }
 
     .main-content {
@@ -1011,23 +1066,425 @@ body {
 
     /* No mobile, expansão temporária não é necessária */
     .sidebar.collapsed.temp-expanded {
-        width: var(--sidebar-collapsed);
-    }
-}
-
-@media (max-width: 575.98px) {
-    .main-content {
-        padding: 1rem 0.75rem;
+        width: var(--sidebar-width);
     }
 
+    /* Ajustar dropdowns no navbar */
+    .navbar .dropdown-menu {
+        position: absolute !important;
+        left: auto !important;
+        right: 0 !important;
+        min-width: 280px;
+        max-width: 90vw;
+    }
+
+    /* Ajustar profile dropdown */
+    .navbar .user-avatar-small {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* Breadcrumb menor */
+    .breadcrumb {
+        font-size: 0.875rem;
+        padding: 0.5rem 0;
+    }
+
+    /* Botões com melhor toque */
+    .btn {
+        min-height: 44px;
+        padding: 0.625rem 1.25rem;
+    }
+
+    .btn-sm {
+        min-height: 38px;
+    }
+
+    /* Cards mais compactos */
     .card-header {
         padding: 1rem 1.25rem;
         font-size: 1rem;
     }
 
+    /* Stats cards */
+    .stat-icon-modern {
+        width: 48px;
+        height: 48px;
+        font-size: 1.5rem;
+    }
+
+    /* Tabelas responsivas */
+    .table {
+        font-size: 0.9rem;
+    }
+
+    .table thead th {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .table tbody td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    /* Formulários */
+    .form-control,
+    .form-select {
+        min-height: 44px;
+        font-size: 1rem;
+    }
+
+    .form-label {
+        font-size: 0.9rem;
+    }
+
+    /* Alertas */
+    .alert {
+        padding: 1rem 1.25rem;
+        font-size: 0.9rem;
+    }
+
+    /* Modal */
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    .modal-content {
+        border-radius: var(--radius-sm);
+    }
+}
+
+@media (max-width: 767.98px) {
+    /* Tablets pequenos e smartphones grandes */
+    .main-content {
+        padding: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    /* Cards em coluna única */
+    .col-md-6, .col-md-4, .col-md-3 {
+        margin-bottom: 1rem;
+    }
+
+    /* Tabelas mais compactas */
+    .table {
+        font-size: 0.85rem;
+    }
+
+    .table thead th,
+    .table tbody td {
+        padding: 0.5rem 0.25rem;
+    }
+
+    /* Ocultar colunas menos importantes em tabelas */
+    .table .d-none.d-md-table-cell {
+        display: none !important;
+    }
+
+    /* Botões em largura total */
+    .btn-group-vertical .btn {
+        width: 100%;
+    }
+
+    /* Spacing menor */
+    .mb-3, .my-3 {
+        margin-bottom: 0.75rem !important;
+    }
+
+    .mt-3, .my-3 {
+        margin-top: 0.75rem !important;
+    }
+
+    /* Cards sem margem nas laterais */
+    .card {
+        border-left: 0;
+        border-right: 0;
+        border-radius: 0;
+    }
+
+    .card:first-child {
+        border-top: 0;
+    }
+
+    /* Dropdown menu full width em mobile */
+    .navbar .dropdown-menu {
+        min-width: 100vw;
+        left: 0 !important;
+        right: 0 !important;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+    }
+}
+
+@media (max-width: 575.98px) {
+    /* Smartphones */
+    :root {
+        --topbar-height: 56px;
+    }
+
+    .content .navbar {
+        height: 56px;
+    }
+
+    .main-content {
+        padding: 0.75rem;
+    }
+
+    .card-header {
+        padding: 0.875rem 1rem;
+        font-size: 0.95rem;
+    }
+
+    .card-body {
+        padding: 0.875rem;
+    }
+
     .btn {
         padding: 0.5rem 1rem;
         font-size: 0.875rem;
+        min-height: 42px;
+    }
+
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8125rem;
+        min-height: 36px;
+    }
+
+    /* Títulos menores */
+    h1, .h1 {
+        font-size: 1.5rem;
+    }
+
+    h2, .h2 {
+        font-size: 1.3rem;
+    }
+
+    h3, .h3 {
+        font-size: 1.15rem;
+    }
+
+    h4, .h4 {
+        font-size: 1.05rem;
+    }
+
+    /* Breadcrumb ainda menor */
+    .breadcrumb {
+        font-size: 0.8125rem;
+    }
+
+    /* Profile card no sidebar */
+    .profile-card {
+        margin: 1rem 0.75rem;
+        padding: 1rem;
+    }
+
+    .profile-avatar {
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+    }
+
+    .profile-name {
+        font-size: 0.875rem;
+    }
+
+    .profile-role {
+        font-size: 0.75rem;
+    }
+
+    /* Nav links menores */
+    .nav-link {
+        padding: 0.75rem 0.875rem;
+        font-size: 0.875rem;
+    }
+
+    .nav-link i {
+        font-size: 1rem;
+    }
+
+    .submenu .nav-link {
+        padding: 0.5rem 0.875rem;
+        font-size: 0.8125rem;
+    }
+
+    /* Formulários */
+    .form-control,
+    .form-select {
+        font-size: 16px; /* Evita zoom no iOS */
+        padding: 0.625rem 0.875rem;
+    }
+
+    .form-label {
+        font-size: 0.875rem;
+    }
+
+    .form-text {
+        font-size: 0.8125rem;
+    }
+
+    /* Input group */
+    .input-group-text {
+        font-size: 0.875rem;
+        padding: 0.625rem 0.875rem;
+    }
+
+    /* Tabelas muito compactas */
+    .table {
+        font-size: 0.8125rem;
+    }
+
+    .table thead th,
+    .table tbody td {
+        padding: 0.5rem 0.25rem;
+        vertical-align: middle;
+    }
+
+    /* Badges menores */
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    /* Alertas */
+    .alert {
+        padding: 0.875rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    /* Modal full screen */
+    .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+        height: 100vh;
+    }
+
+    .modal-content {
+        height: 100%;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .modal-body {
+        overflow-y: auto;
+    }
+
+    /* Stats icon menor */
+    .stat-icon-modern {
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+    }
+
+    /* Pagination menor */
+    .pagination {
+        font-size: 0.875rem;
+    }
+
+    .pagination .page-link {
+        padding: 0.375rem 0.625rem;
+    }
+
+    /* DataTables responsivo */
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        margin-bottom: 0.75rem;
+    }
+
+    .dataTables_wrapper .dataTables_length select,
+    .dataTables_wrapper .dataTables_filter input {
+        font-size: 0.875rem;
+    }
+
+    /* Toast menor */
+    .toast {
+        font-size: 0.875rem;
+        max-width: calc(100vw - 1rem);
+    }
+
+    /* Loading overlay */
+    .loading-content {
+        padding: 1.5rem;
+    }
+
+    .loading-text {
+        font-size: 0.875rem;
+    }
+}
+
+/* Landscape em smartphones */
+@media (max-width: 767.98px) and (orientation: landscape) {
+    .content .navbar {
+        height: 50px;
+    }
+
+    .main-content {
+        padding: 0.75rem;
+    }
+
+    .sidebar {
+        max-height: 100vh;
+        overflow-y: auto;
+    }
+}
+
+/* Dispositivos muito pequenos */
+@media (max-width: 374.98px) {
+    .main-content {
+        padding: 0.5rem;
+    }
+
+    .card-body {
+        padding: 0.75rem;
+    }
+
+    .btn {
+        font-size: 0.8125rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    h1, .h1 {
+        font-size: 1.35rem;
+    }
+
+    .table {
+        font-size: 0.75rem;
+    }
+}
+
+/* Melhoria para touch devices */
+@media (hover: none) and (pointer: coarse) {
+    /* Aumentar área de toque */
+    .btn,
+    .nav-link,
+    .dropdown-item,
+    .page-link {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Remover hover effects */
+    .card:hover,
+    .stat-card:hover {
+        transform: none;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn:hover {
+        transform: none;
+    }
+
+    /* Melhorar feedback visual em toque */
+    .btn:active,
+    .nav-link:active {
+        opacity: 0.7;
+        transition: opacity 0.1s;
     }
 }
 
@@ -1067,7 +1524,7 @@ a {
         color: var(--primary-hover);
     }
 
-/* ===== SELEÇÃO DE TEXTO ===== */
+    /* ===== SELEÇÃO DE TEXTO ===== */
 ::selection {
     background: var(--primary);
     color: white;
@@ -1127,6 +1584,8 @@ a {
 /* Tabelas responsivas melhoradas */
 .table-responsive {
     border-radius: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .table-hover tbody tr {
@@ -1238,7 +1697,7 @@ a {
         border-bottom-right-radius: 0.25rem;
     }
 
-/* Tooltips para mobile */
+    /* Tooltips para mobile */
 @media (max-width: 576px) {
     .btn[title] {
         position: relative;
@@ -1474,7 +1933,7 @@ tr.table-secondary {
         opacity: 1;
     }
 
-/* Badges com melhor contraste */
+    /* Badges com melhor contraste */
 .badge {
     font-weight: 500;
     letter-spacing: 0.3px;
@@ -1485,7 +1944,7 @@ tr.table-secondary {
     transform: scale(1.05);
   }
 
-/* Cards de resumo com melhor aparência */
+    /* Cards de resumo com melhor aparência */
 .card.text-center {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -1494,7 +1953,7 @@ tr.table-secondary {
         transform: translateY(-3px);
     }
 
-/* Melhoria em header de tabelas */
+    /* Melhoria em header de tabelas */
 .table thead {
     vertical-align: middle;
 }
@@ -1593,7 +2052,7 @@ tr.table-secondary {
         opacity: 0.95;
     }
 
-/* Tfoot styling */
+    /* Tfoot styling */
 .table tfoot tr.table-light,
 .table tfoot tr.table-warning,
 .table tfoot tr.table-info,

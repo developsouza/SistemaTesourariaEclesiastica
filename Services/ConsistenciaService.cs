@@ -180,7 +180,7 @@ namespace SistemaTesourariaEclesiastica.Services
             foreach (var fechamento in fechamentos)
             {
                 // ? NOVO: Verificar se este fechamento é uma consolidação da SEDE
-                var ehFechamentoSedeConsolidado = fechamento.EhFechamentoSede && 
+                var ehFechamentoSedeConsolidado = fechamento.EhFechamentoSede &&
                                                   fechamento.FechamentosCongregacoesIncluidos.Any();
 
                 // Calcular totais a partir dos lançamentos DIRETAMENTE incluídos NESTE fechamento
