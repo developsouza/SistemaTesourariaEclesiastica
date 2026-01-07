@@ -120,20 +120,25 @@ else
                 Detalhamento das Saídas
             </h5>
             <div class="d-flex gap-2 align-items-center">
-                <label class="small mb-0 me-2">Registros por página:</label>
+                <span class="text-muted small me-2 d-none d-md-inline" id="paginationInfo"></span>
+                <label class="small mb-0 me-2 d-none d-md-inline">Registros por página:</label>
                 <select class="form-select form-select-sm" id="pageSize" style="width: 80px;">
                     <option value="10">10</option>
                     <option value="25" selected>25</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
                 </select>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                <button type="button" class="btn btn-sm btn-outline-secondary d-none d-md-inline-block" onclick="window.print()">
                     <i class="bi bi-printer me-1"></i>Imprimir
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary d-md-none" onclick="window.print()">
+                    <i class="bi bi-printer"></i>
                 </button>
             </div>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <!-- Versão Desktop (Tabela) -->
+            <div class="table-responsive d-none d-lg-block">
                 <table class="table table-hover align-middle mb-0" id="saidasTable">
                     <thead class="table-light">
                         <tr>
@@ -141,8 +146,8 @@ else
                             <th>Centro de Custo</th>
                             <th>Descrição</th>
                             <th class="text-end">Valor</th>
-                            <th class="d-none d-lg-table-cell">Categoria</th>
-                            <th class="d-none d-xl-table-cell">Fornecedor</th>
+                            <th>Categoria</th>
+                            <th>Fornecedor</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -160,17 +165,16 @@ else
                                 </td>
                                 <td>
                                     <div>@item.Descricao</div>
-                                    <small class="text-muted d-lg-none">@item.PlanoDeContas?.Nome</small>
                                 </td>
                                 <td class="text-end">
                                     <span class="fw-bold text-danger">@item.Valor.ToString("C2")</span>
                                 </td>
-                                <td class="d-none d-lg-table-cell">
+                                <td>
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">
                                         @item.PlanoDeContas?.Nome
                                     </span>
                                 </td>
-                                <td class="d-none d-xl-table-cell">
+                                <td>
                                     @if (item.Fornecedor != null)
                                     {
                                         <span>@item.Fornecedor.Nome</span>
@@ -194,6 +198,58 @@ else
                     </tfoot>
                 </table>
             </div>
+
+            <!-- Versão Mobile (Cards) -->
+            <div class="d-lg-none" id="saidasCards">
+                @foreach (var item in Model)
+                {
+                    <div class="border-bottom p-3 saida-card-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <div class="fw-bold">@item.Descricao</div>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar3"></i> @item.Data.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-danger fs-5">@item.Valor.ToString("C2")</div>
+                            </div>
+                        </div>
+                        
+                        @if (item.Fornecedor != null)
+                        {
+                            <div class="mb-1">
+                                <small class="text-muted">
+                                    <i class="bi bi-shop"></i> @item.Fornecedor.Nome
+                                </small>
+                            </div>
+                        }
+                        
+                        <div class="d-flex flex-wrap gap-1 mt-2">
+                            @if (item.CentroCusto != null)
+                            {
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary">
+                                    <i class="bi bi-building"></i> @item.CentroCusto.Nome
+                                </span>
+                            }
+                            @if (item.PlanoDeContas != null)
+                            {
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">
+                                    <i class="bi bi-tag"></i> @item.PlanoDeContas.Nome
+                                </span>
+                            }
+                        </div>
+                    </div>
+                }
+                
+                <!-- Total para Mobile -->
+                <div class="bg-light p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>TOTAL</strong>
+                        <strong class="text-danger fs-5">@Model.Sum(x => x.Valor).ToString("C2")</strong>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="card-footer bg-white">
             <div class="d-flex justify-content-between align-items-center">
@@ -216,10 +272,18 @@ else
         let currentPage = 1;
         let pageSize = 25;
         let allRows = [];
+        let allCards = [];
 
         document.addEventListener('DOMContentLoaded', function() {
             const tbody = document.getElementById('tableBody');
-            allRows = Array.from(tbody.getElementsByTagName('tr'));
+            const cardsContainer = document.getElementById('saidasCards');
+            
+            if (tbody) {
+                allRows = Array.from(tbody.getElementsByTagName('tr'));
+            }
+            if (cardsContainer) {
+                allCards = Array.from(cardsContainer.querySelectorAll('.saida-card-item'));
+            }
             
             document.getElementById('pageSize').addEventListener('change', function() {
                 pageSize = parseInt(this.value);
@@ -231,22 +295,27 @@ else
         });
 
         function renderTable() {
-            const tbody = document.getElementById('tableBody');
-            const totalRecords = allRows.length;
+            const totalRecords = Math.max(allRows.length, allCards.length);
             const totalPages = Math.ceil(totalRecords / pageSize);
             
-            // Esconder todas as linhas
+            // Esconder todas as linhas e cards
             allRows.forEach(row => row.style.display = 'none');
+            allCards.forEach(card => card.style.display = 'none');
             
-            // Mostrar apenas as linhas da página atual
+            // Mostrar apenas os itens da página atual
             const start = (currentPage - 1) * pageSize;
             const end = Math.min(start + pageSize, totalRecords);
             
             for (let i = start; i < end; i++) {
-                allRows[i].style.display = '';
+                if (allRows[i]) allRows[i].style.display = '';
+                if (allCards[i]) allCards[i].style.display = '';
             }
             
             // Atualizar informações de paginação
+            const paginationInfo = document.getElementById('paginationInfo');
+            if (paginationInfo) {
+                paginationInfo.textContent = `Mostrando ${totalRecords > 0 ? start + 1 : 0}-${end} de ${totalRecords}`;
+            }
             document.getElementById('showingStart').textContent = totalRecords > 0 ? start + 1 : 0;
             document.getElementById('showingEnd').textContent = end;
             document.getElementById('totalRecords').textContent = totalRecords;
@@ -314,12 +383,12 @@ else
         }
 
         function changePage(page) {
-            const totalPages = Math.ceil(allRows.length / pageSize);
+            const totalPages = Math.ceil(Math.max(allRows.length, allCards.length) / pageSize);
             if (page < 1 || page > totalPages) return;
             currentPage = page;
             renderTable();
-            // Scroll suave para o topo da tabela
-            document.getElementById('saidasTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Scroll suave para o topo
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function exportToExcel() {

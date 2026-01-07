@@ -217,23 +217,27 @@
             </h5>
             <div class="d-flex gap-2 align-items-center">
                 <span class="text-muted small me-2" id="paginationInfo"></span>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                <button type="button" class="btn btn-sm btn-outline-secondary d-none d-md-inline-block" onclick="window.print()">
                     <i class="bi bi-printer me-1"></i>Imprimir
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary d-md-none" onclick="window.print()">
+                    <i class="bi bi-printer"></i>
                 </button>
             </div>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <!-- Versão Desktop (Tabela) -->
+            <div class="table-responsive d-none d-lg-block">
                 <table class="table table-hover align-middle mb-0" id="despesasTable">
                     <thead class="table-light">
                         <tr>
                             <th class="ps-3">Data</th>
                             <th>Descrição</th>
-                            <th class="d-none d-md-table-cell">Fornecedor</th>
-                            <th class="d-none d-lg-table-cell">Centro de Custo</th>
-                            <th class="d-none d-xl-table-cell">Categoria</th>
-                            <th class="d-none d-xl-table-cell">Meio Pgto</th>
-                            <th class="text-end">Valor</th>
+                            <th>Fornecedor</th>
+                            <th>Centro de Custo</th>
+                            <th>Categoria</th>
+                            <th>Meio Pgto</th>
+                            <th class="text-end pe-3">Valor</th>
                         </tr>
                     </thead>
                     <tbody id="despesasTableBody">
@@ -246,14 +250,8 @@
                                 </td>
                                 <td>
                                     <div class="fw-semibold">@item.Descricao</div>
-                                    <small class="text-muted d-md-none">
-                                        @if (item.Fornecedor != null)
-                                        {
-                                            @item.Fornecedor.Nome
-                                        }
-                                    </small>
                                 </td>
-                                <td class="d-none d-md-table-cell">
+                                <td>
                                     @if (item.Fornecedor != null)
                                     {
                                         <span>@item.Fornecedor.Nome</span>
@@ -263,20 +261,20 @@
                                         <span class="text-muted fst-italic">-</span>
                                     }
                                 </td>
-                                <td class="d-none d-lg-table-cell">
+                                <td>
                                     <span class="badge bg-info bg-opacity-10 text-info border border-info">
                                         @item.CentroCusto?.Nome
                                     </span>
                                 </td>
-                                <td class="d-none d-xl-table-cell">
+                                <td>
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">
                                         @item.PlanoDeContas?.Nome
                                     </span>
                                 </td>
-                                <td class="d-none d-xl-table-cell">
+                                <td>
                                     <small class="text-muted">@item.MeioDePagamento?.Nome</small>
                                 </td>
-                                <td class="text-end">
+                                <td class="text-end pe-3">
                                     <span class="fw-bold text-danger">@item.Valor.ToString("C2")</span>
                                 </td>
                             </tr>
@@ -285,12 +283,70 @@
                     <tfoot class="table-light">
                         <tr>
                             <th class="ps-3" colspan="6">TOTAL GERAL</th>
-                            <th class="text-end">
+                            <th class="text-end pe-3">
                                 <span class="fw-bold text-danger">@Model.Sum(x => x.Valor).ToString("C2")</span>
                             </th>
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+
+            <!-- Versão Mobile (Cards) -->
+            <div class="d-lg-none" id="despesasCards">
+                @foreach (var item in Model)
+                {
+                    <div class="border-bottom p-3 despesa-card-item">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <div class="fw-bold">@item.Descricao</div>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar3"></i> @item.Data.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-danger fs-5">@item.Valor.ToString("C2")</div>
+                            </div>
+                        </div>
+                        
+                        @if (item.Fornecedor != null)
+                        {
+                            <div class="mb-1">
+                                <small class="text-muted">
+                                    <i class="bi bi-shop"></i> @item.Fornecedor.Nome
+                                </small>
+                            </div>
+                        }
+                        
+                        <div class="d-flex flex-wrap gap-1 mt-2">
+                            @if (item.CentroCusto != null)
+                            {
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info">
+                                    <i class="bi bi-building"></i> @item.CentroCusto.Nome
+                                </span>
+                            }
+                            @if (item.PlanoDeContas != null)
+                            {
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">
+                                    <i class="bi bi-tag"></i> @item.PlanoDeContas.Nome
+                                </span>
+                            }
+                            @if (item.MeioDePagamento != null)
+                            {
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary">
+                                    <i class="bi bi-credit-card"></i> @item.MeioDePagamento.Nome
+                                </span>
+                            }
+                        </div>
+                    </div>
+                }
+                
+                <!-- Total para Mobile -->
+                <div class="bg-light p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>TOTAL GERAL</strong>
+                        <strong class="text-danger fs-5">@Model.Sum(x => x.Valor).ToString("C2")</strong>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="card-footer bg-white border-top">
@@ -326,15 +382,15 @@ else
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const tableBody = document.getElementById('despesasTableBody');
+            const cardsContainer = document.getElementById('despesasCards');
             const pagination = document.getElementById('pagination');
             const itemsPerPageSelect = document.getElementById('itemsPerPage');
             const paginationInfo = document.getElementById('paginationInfo');
 
-            if (!tableBody) return;
-
-            // Obter todas as linhas da tabela
-            const allRows = Array.from(tableBody.querySelectorAll('tr'));
-            const totalItems = allRows.length;
+            // Verificar se há dados para paginar
+            const allTableRows = tableBody ? Array.from(tableBody.querySelectorAll('tr')) : [];
+            const allCardItems = cardsContainer ? Array.from(cardsContainer.querySelectorAll('.despesa-card-item')) : [];
+            const totalItems = Math.max(allTableRows.length, allCardItems.length);
 
             if (totalItems === 0) return;
 
@@ -345,11 +401,17 @@ else
                 const startIndex = (page - 1) * itemsPerPage;
                 const endIndex = startIndex + itemsPerPage;
 
-                // Esconder todas as linhas
-                allRows.forEach(row => row.style.display = 'none');
+                // Atualizar tabela (desktop)
+                if (allTableRows.length > 0) {
+                    allTableRows.forEach(row => row.style.display = 'none');
+                    allTableRows.slice(startIndex, endIndex).forEach(row => row.style.display = '');
+                }
 
-                // Mostrar apenas as linhas da página atual
-                allRows.slice(startIndex, endIndex).forEach(row => row.style.display = '');
+                // Atualizar cards (mobile)
+                if (allCardItems.length > 0) {
+                    allCardItems.forEach(card => card.style.display = 'none');
+                    allCardItems.slice(startIndex, endIndex).forEach(card => card.style.display = '');
+                }
 
                 // Atualizar informações de paginação
                 const showingFrom = totalItems > 0 ? startIndex + 1 : 0;
