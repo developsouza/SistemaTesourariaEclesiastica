@@ -169,6 +169,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         public async Task<IActionResult> Create()
         {
             await PopulateDropdowns();
+            await PopulateDespesasRecorrentes(); // ✅ NOVO
 
             var user = await _userManager.GetUserAsync(User);
             var saida = new Saida
@@ -183,7 +184,8 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: Saidas/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Data,Valor,Descricao,MeioDePagamentoId,CentroCustoId,PlanoDeContasId,FornecedorId,TipoDespesa,NumeroDocumento,DataVencimento,ComprovanteUrl,Observacoes")] Saida saida)
+        public async Task<IActionResult> Create([Bind("Data,Valor,Descricao,MeioDePagamentoId,CentroCustoId,PlanoDeContasId,FornecedorId,TipoDespesa,NumeroDocumento,DataVencimento,ComprovanteUrl,Observacoes")] Saida saida, 
+            int? despesaRecorrenteId, string? pagamentoDespesaRecorrenteIds) // ✅ ALTERADO: string para múltiplos IDs
         {
             try
             {
@@ -210,6 +212,48 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     _context.Add(saida);
                     await _context.SaveChangesAsync();
 
+                    // ✅ NOVO: Se vinculado a despesa recorrente, marcar múltiplos pagamentos como pagos
+                    if (!string.IsNullOrEmpty(pagamentoDespesaRecorrenteIds))
+                    {
+                        var ids = pagamentoDespesaRecorrenteIds.Split(',')
+                            .Select(id => int.TryParse(id, out int result) ? result : 0)
+                            .Where(id => id > 0)
+                            .ToList();
+                        
+                        if (ids.Any())
+                        {
+                            var pagamentos = await _context.PagamentosDespesasRecorrentes
+                                .Where(p => ids.Contains(p.Id) && !p.Pago)
+                                .ToListAsync();
+                            
+                            // ✅ CORRIGIDO: Dividir valor igualmente entre os pagamentos
+                            decimal valorPorPagamento = pagamentos.Count > 0 ? saida.Valor / pagamentos.Count : 0;
+                            int pagamentosAtualizados = 0;
+                            
+                            foreach (var pagamento in pagamentos)
+                            {
+                                pagamento.Pago = true;
+                                pagamento.DataPagamento = saida.Data;
+                                pagamento.ValorPago = valorPorPagamento;
+                                pagamento.SaidaGerada = true;
+                                pagamento.SaidaId = saida.Id;
+                                pagamentosAtualizados++;
+                            }
+                            
+                            if (pagamentosAtualizados > 0)
+                            {
+                                await _context.SaveChangesAsync();
+                                
+                                _logger.LogInformation($"{pagamentosAtualizados} pagamento(s) ID(s): [{string.Join(", ", ids)}] vinculado(s) à saída ID {saida.Id}");
+                                
+                                if (pagamentosAtualizados > 1)
+                                {
+                                    TempData["InfoMessage"] = $"{pagamentosAtualizados} pagamentos foram marcados como pagos com esta saída.";
+                                }
+                            }
+                        }
+                    }
+
                     // Log de auditoria
                     if (user != null)
                     {
@@ -221,12 +265,15 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 }
 
                 await PopulateDropdowns(saida);
+                await PopulateDespesasRecorrentes(saida.CentroCustoId); // ✅ NOVO
                 return View(saida);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Erro ao criar saída");
                 ModelState.AddModelError(string.Empty, "Erro interno ao salvar saída. Tente novamente.");
                 await PopulateDropdowns(saida);
+                await PopulateDespesasRecorrentes(saida.CentroCustoId); // ✅ NOVO
                 return View(saida);
             }
         }
@@ -418,6 +465,416 @@ namespace SistemaTesourariaEclesiastica.Controllers
             });
         }
 
+        // ✅ NOVO: Endpoint para verificar pagamentos pendentes
+        [HttpGet]
+        public async Task<IActionResult> VerificarPagamentosPendentes(int despesaRecorrenteId, int mes, int ano)
+        {
+            var dataInicio = new DateTime(ano, mes, 1);
+            var dataFim = dataInicio.AddMonths(1).AddDays(-1);
+            
+            var pagamentos = await _context.PagamentosDespesasRecorrentes
+                .Where(p => p.DespesaRecorrenteId == despesaRecorrenteId)
+                .Where(p => p.DataVencimento >= dataInicio && p.DataVencimento <= dataFim)
+                .Select(p => new {
+                    p.Id,
+                    p.DataVencimento,
+                    p.ValorPrevisto,
+                    p.Pago,
+                    p.ValorPago,
+                    DiasAtraso = p.Pago ? (int?)null : (DateTime.Today > p.DataVencimento ? (DateTime.Today - p.DataVencimento).Days : 0)
+                })
+                .OrderBy(p => p.DataVencimento)
+                .ToListAsync();
+            
+            return Json(pagamentos);
+        }
+
+        // ✅ NOVO: Cadastro rápido de despesa recorrente via modal
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CadastrarDespesaRecorrenteRapido([Bind("Nome,ValorPadrao,Periodicidade,CentroCustoId,PlanoDeContasId,FornecedorId,MeioDePagamentoId,DiaVencimento")] DespesaRecorrente despesa)
+        {
+            try
+            {
+                ModelState.Remove("CentroCusto");
+                ModelState.Remove("PlanoDeContas");
+                ModelState.Remove("Fornecedor");
+                ModelState.Remove("MeioDePagamento");
+                ModelState.Remove("Pagamentos");
+                
+                if (!await CanAccessCentroCusto(despesa.CentroCustoId))
+                {
+                    return Json(new { success = false, message = "Você não tem permissão para criar despesas neste centro de custo." });
+                }
+                
+                if (ModelState.IsValid)
+                {
+                    despesa.DataCadastro = DateTime.Now;
+                    despesa.DataInicio = DateTime.Today;
+                    despesa.Ativa = true;
+                    
+                    _context.Add(despesa);
+                    await _context.SaveChangesAsync();
+                    
+                    var user = await _userManager.GetUserAsync(User);
+                    if (user != null)
+                    {
+                        await _auditService.LogCreateAsync(user.Id, despesa, despesa.Id.ToString());
+                    }
+                    
+                    return Json(new { 
+                        success = true, 
+                        message = "Despesa recorrente cadastrada com sucesso!",
+                        despesaId = despesa.Id,
+                        despesaNome = $"{despesa.Nome} ({despesa.ValorPadrao:C2})"
+                    });
+                }
+                
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                return Json(new { success = false, message = string.Join("; ", errors) });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao cadastrar despesa recorrente rápida");
+                return Json(new { success = false, message = "Erro ao cadastrar despesa recorrente." });
+            }
+        }
+
+        // ✅ NOVO: Gerar pagamentos automaticamente para o mês
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GerarPagamentosAutomatico(int despesaRecorrenteId, int mes, int ano)
+        {
+            try
+            {
+                var despesa = await _context.DespesasRecorrentes
+                    .Include(d => d.Pagamentos)
+                    .FirstOrDefaultAsync(d => d.Id == despesaRecorrenteId);
+                
+                if (despesa == null)
+                {
+                    return Json(new { success = false, message = "Despesa recorrente não encontrada." });
+                }
+                
+                if (!await CanAccessCentroCusto(despesa.CentroCustoId))
+                {
+                    return Json(new { success = false, message = "Você não tem permissão para acessar esta despesa." });
+                }
+                
+                if (!despesa.Ativa)
+                {
+                    return Json(new { success = false, message = "Não é possível gerar pagamentos para uma despesa inativa." });
+                }
+                
+                // Determinar data base e índice inicial
+                DateTime dataBase;
+                int indiceInicial = 0;
+                
+                if (despesa.Pagamentos.Any())
+                {
+                    var ultimoPagamento = despesa.Pagamentos.OrderByDescending(p => p.DataVencimento).First();
+                    dataBase = ultimoPagamento.DataVencimento;
+                    indiceInicial = 1;
+                }
+                else
+                {
+                    dataBase = despesa.DataInicio ?? DateTime.Today;
+                }
+                
+                // Calcular quantos períodos necessários para cobrir o mês solicitado
+                var dataAlvo = new DateTime(ano, mes, 1);
+                var pagamentosGerados = 0;
+                var pagamentosNovos = new List<PagamentoDespesaRecorrente>();
+                
+                // Gerar até 12 períodos ou até cobrir o mês solicitado
+                for (int i = indiceInicial; i < indiceInicial + 12; i++)
+                {
+                    DateTime dataVencimento = CalcularProximoVencimento(despesa, dataBase, i);
+                    
+                    // Parar se passou muito do mês alvo
+                    if (dataVencimento.Year > ano || (dataVencimento.Year == ano && dataVencimento.Month > mes + 1))
+                    {
+                        break;
+                    }
+                    
+                    // Verificar se está dentro do período de término
+                    if (despesa.DataTermino.HasValue && dataVencimento > despesa.DataTermino.Value)
+                    {
+                        break;
+                    }
+                    
+                    // Verificar duplicação
+                    var jaExiste = despesa.Pagamentos.Any(p => p.DataVencimento.Date == dataVencimento.Date);
+                    
+                    if (!jaExiste)
+                    {
+                        var pagamento = new PagamentoDespesaRecorrente
+                        {
+                            DespesaRecorrenteId = despesa.Id,
+                            DataVencimento = dataVencimento,
+                            ValorPrevisto = despesa.ValorPadrao,
+                            Pago = false,
+                            DataRegistro = DateTime.Now
+                        };
+                        
+                        pagamentosNovos.Add(pagamento);
+                        pagamentosGerados++;
+                    }
+                }
+                
+                if (pagamentosNovos.Any())
+                {
+                    await _context.PagamentosDespesasRecorrentes.AddRangeAsync(pagamentosNovos);
+                    await _context.SaveChangesAsync();
+                    
+                    var user = await _userManager.GetUserAsync(User);
+                    if (user != null)
+                    {
+                        await _auditService.LogAuditAsync(user.Id, "Gerar Pagamentos Automático", "DespesaRecorrente",
+                            despesa.Id.ToString(), $"{pagamentosGerados} pagamentos gerados automaticamente para '{despesa.Nome}'.");
+                    }
+                    
+                    return Json(new { 
+                        success = true, 
+                        message = $"{pagamentosGerados} pagamento(s) gerado(s) com sucesso!" 
+                    });
+                }
+                
+                return Json(new { success = false, message = "Nenhum pagamento novo precisou ser gerado." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar pagamentos automáticos");
+                return Json(new { success = false, message = "Erro ao gerar pagamentos automaticamente." });
+            }
+        }
+
+        // ✅ NOVO: Gerar pagamentos para despesa recém-cadastrada (quantidade de meses)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GerarPagamentosParaDespesaNova(int despesaRecorrenteId, int meses)
+        {
+            try
+            {
+                if (meses <= 0 || meses > 24)
+                {
+                    return Json(new { success = false, message = "O número de meses deve estar entre 1 e 24." });
+                }
+
+                var despesa = await _context.DespesasRecorrentes
+                    .Include(d => d.Pagamentos)
+                    .FirstOrDefaultAsync(d => d.Id == despesaRecorrenteId);
+                
+                if (despesa == null)
+                {
+                    return Json(new { success = false, message = "Despesa recorrente não encontrada." });
+                }
+                
+                if (!await CanAccessCentroCusto(despesa.CentroCustoId))
+                {
+                    return Json(new { success = false, message = "Você não tem permissão para acessar esta despesa." });
+                }
+                
+                // Usar lógica do DespesasRecorrentesController
+                DateTime dataBase = despesa.DataInicio ?? DateTime.Today;
+                int indiceInicial = 0;
+                
+                if (despesa.Pagamentos.Any())
+                {
+                    var ultimoPagamento = despesa.Pagamentos.OrderByDescending(p => p.DataVencimento).First();
+                    dataBase = ultimoPagamento.DataVencimento;
+                    indiceInicial = 1;
+                }
+                
+                // ✅ NOVO: Calcular quantidade de períodos baseado na periodicidade
+                int quantidadePeriodos = CalcularQuantidadePeriodos(despesa.Periodicidade, meses);
+                
+                var pagamentosGerados = 0;
+                var pagamentosNovos = new List<PagamentoDespesaRecorrente>();
+                
+                for (int i = indiceInicial; i < quantidadePeriodos + indiceInicial; i++)
+                {
+                    DateTime dataVencimento = CalcularProximoVencimento(despesa, dataBase, i);
+                    
+                    // Verificar se está dentro do período de término
+                    if (despesa.DataTermino.HasValue && dataVencimento > despesa.DataTermino.Value)
+                    {
+                        break;
+                    }
+                    
+                    // Verificar duplicação
+                    var jaExiste = despesa.Pagamentos.Any(p => p.DataVencimento.Date == dataVencimento.Date);
+                    
+                    if (!jaExiste)
+                    {
+                        var pagamento = new PagamentoDespesaRecorrente
+                        {
+                            DespesaRecorrenteId = despesa.Id,
+                            DataVencimento = dataVencimento,
+                            ValorPrevisto = despesa.ValorPadrao,
+                            Pago = false,
+                            DataRegistro = DateTime.Now
+                        };
+                        
+                        pagamentosNovos.Add(pagamento);
+                        pagamentosGerados++;
+                    }
+                }
+                
+                if (pagamentosNovos.Any())
+                {
+                    await _context.PagamentosDespesasRecorrentes.AddRangeAsync(pagamentosNovos);
+                    await _context.SaveChangesAsync();
+                    
+                    var user = await _userManager.GetUserAsync(User);
+                    if (user != null)
+                    {
+                        await _auditService.LogAuditAsync(user.Id, "Gerar Pagamentos", "DespesaRecorrente",
+                            despesa.Id.ToString(), $"{pagamentosGerados} pagamentos gerados para '{despesa.Nome}'.");
+                    }
+                    
+                    return Json(new { 
+                        success = true, 
+                        message = $"{pagamentosGerados} pagamento(s) gerado(s)!" 
+                    });
+                }
+                
+                return Json(new { success = false, message = "Nenhum pagamento novo foi gerado." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar pagamentos para despesa nova");
+                return Json(new { success = false, message = "Erro ao gerar pagamentos." });
+            }
+        }
+
+        // ✅ NOVO: Método auxiliar para calcular quantidade de períodos (copiado de DespesasRecorrentesController)
+        private int CalcularQuantidadePeriodos(Periodicidade periodicidade, int meses)
+        {
+            return periodicidade switch
+            {
+                Periodicidade.Semanal => (int)Math.Ceiling(meses * 4.33), // ~4.33 semanas por mês
+                Periodicidade.Quinzenal => meses * 2, // 2 quinzenas por mês
+                Periodicidade.Mensal => meses, // 1:1
+                Periodicidade.Bimestral => (int)Math.Ceiling(meses / 2.0), // A cada 2 meses
+                Periodicidade.Trimestral => (int)Math.Ceiling(meses / 3.0), // A cada 3 meses
+                Periodicidade.Semestral => (int)Math.Ceiling(meses / 6.0), // A cada 6 meses
+                Periodicidade.Anual => (int)Math.Ceiling(meses / 12.0), // A cada 12 meses
+                _ => meses // Fallback: usar como mensal
+            };
+        }
+
+        // ✅ NOVO: Método auxiliar para calcular próximo vencimento (copiado de DespesasRecorrentesController)
+        private DateTime CalcularProximoVencimento(DespesaRecorrente despesa, DateTime dataBase, int indice)
+        {
+            DateTime dataVencimento;
+
+            if (despesa.DiaVencimento.HasValue)
+            {
+                int mes = dataBase.Month;
+                int ano = dataBase.Year;
+                int dia = despesa.DiaVencimento.Value;
+
+                switch (despesa.Periodicidade)
+                {
+                    case Periodicidade.Semanal:
+                        dataVencimento = dataBase.AddDays(7 * indice);
+                        break;
+
+                    case Periodicidade.Quinzenal:
+                        dataVencimento = dataBase.AddDays(15 * indice);
+                        break;
+
+                    case Periodicidade.Mensal:
+                        mes = dataBase.Month + indice;
+                        ano = dataBase.Year;
+                        while (mes > 12) { mes -= 12; ano++; }
+                        int diasNoMes = DateTime.DaysInMonth(ano, mes);
+                        dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
+                        dataVencimento = new DateTime(ano, mes, dia);
+                        break;
+
+                    case Periodicidade.Bimestral:
+                        mes = dataBase.Month + (indice * 2);
+                        ano = dataBase.Year;
+                        while (mes > 12) { mes -= 12; ano++; }
+                        diasNoMes = DateTime.DaysInMonth(ano, mes);
+                        dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
+                        dataVencimento = new DateTime(ano, mes, dia);
+                        break;
+
+                    case Periodicidade.Trimestral:
+                        mes = dataBase.Month + (indice * 3);
+                        ano = dataBase.Year;
+                        while (mes > 12) { mes -= 12; ano++; }
+                        diasNoMes = DateTime.DaysInMonth(ano, mes);
+                        dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
+                        dataVencimento = new DateTime(ano, mes, dia);
+                        break;
+
+                    case Periodicidade.Semestral:
+                        mes = dataBase.Month + (indice * 6);
+                        ano = dataBase.Year;
+                        while (mes > 12) { mes -= 12; ano++; }
+                        diasNoMes = DateTime.DaysInMonth(ano, mes);
+                        dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
+                        dataVencimento = new DateTime(ano, mes, dia);
+                        break;
+
+                    case Periodicidade.Anual:
+                        ano = dataBase.Year + indice;
+                        mes = dataBase.Month;
+                        if (mes == 2 && despesa.DiaVencimento.Value == 29 && !DateTime.IsLeapYear(ano))
+                        {
+                            dia = 28;
+                        }
+                        else
+                        {
+                            diasNoMes = DateTime.DaysInMonth(ano, mes);
+                            dia = Math.Min(despesa.DiaVencimento.Value, diasNoMes);
+                        }
+                        dataVencimento = new DateTime(ano, mes, dia);
+                        break;
+
+                    default:
+                        dataVencimento = dataBase.AddMonths(indice);
+                        break;
+                }
+            }
+            else
+            {
+                switch (despesa.Periodicidade)
+                {
+                    case Periodicidade.Semanal:
+                        dataVencimento = dataBase.AddDays(7 * indice);
+                        break;
+                    case Periodicidade.Quinzenal:
+                        dataVencimento = dataBase.AddDays(15 * indice);
+                        break;
+                    case Periodicidade.Mensal:
+                        dataVencimento = dataBase.AddMonths(indice);
+                        break;
+                    case Periodicidade.Bimestral:
+                        dataVencimento = dataBase.AddMonths(2 * indice);
+                        break;
+                    case Periodicidade.Trimestral:
+                        dataVencimento = dataBase.AddMonths(3 * indice);
+                        break;
+                    case Periodicidade.Semestral:
+                        dataVencimento = dataBase.AddMonths(6 * indice);
+                        break;
+                    case Periodicidade.Anual:
+                        dataVencimento = dataBase.AddYears(indice);
+                        break;
+                    default:
+                        dataVencimento = dataBase.AddMonths(indice);
+                        break;
+                }
+            }
+
+            return dataVencimento;
+        }
+
         #region Métodos Auxiliares
 
         /// <summary>
@@ -539,6 +996,42 @@ namespace SistemaTesourariaEclesiastica.Controllers
             ViewData["FornecedorId"] = new SelectList(
                 await _context.Fornecedores.Where(f => f.Ativo).ToListAsync(),
                 "Id", "Nome", saida?.FornecedorId);
+        }
+
+        // ✅ NOVO: Popular dropdown de despesas recorrentes
+        private async Task PopulateDespesasRecorrentes(int? centroCustoId = null)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            
+            var query = _context.DespesasRecorrentes
+                .Include(d => d.CentroCusto)
+                .Include(d => d.PlanoDeContas)
+                .Where(d => d.Ativa);
+            
+            // Filtrar por permissão
+            if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
+            {
+                if (user.CentroCustoId.HasValue)
+                {
+                    query = query.Where(d => d.CentroCustoId == user.CentroCustoId.Value);
+                }
+            }
+            
+            // Filtrar por centro de custo selecionado
+            if (centroCustoId.HasValue)
+            {
+                query = query.Where(d => d.CentroCustoId == centroCustoId.Value);
+            }
+            
+            var despesas = await query
+                .OrderBy(d => d.Nome)
+                .Select(d => new {
+                    d.Id,
+                    Nome = $"{d.Nome} - {d.CentroCusto.Nome} ({d.ValorPadrao:C2})"
+                })
+                .ToListAsync();
+            
+            ViewBag.DespesasRecorrentes = new SelectList(despesas, "Id", "Nome");
         }
 
         private async Task<bool> CanAccessSaida(Saida saida)

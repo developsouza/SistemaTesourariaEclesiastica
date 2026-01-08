@@ -29,6 +29,9 @@
             <div class="card-body">
                 <form asp-action="Create" method="post">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <!-- ✅ NOVO: Campo hidden para IDs dos pagamentos selecionados -->
+                    <input type="hidden" id="pagamentoDespesaRecorrenteIds" name="pagamentoDespesaRecorrenteIds" value="" />
 
                     <div class="row g-3">
                         <div class="col-md-4">
@@ -52,6 +55,60 @@
                                 <option value="">Selecione o tipo</option>
                             </select>
                             <span asp-validation-for="TipoDespesa" class="text-danger"></span>
+                        </div>
+
+                        <!-- ✅ NOVO: Seção para Despesas Recorrentes (apenas para Tipo Fixa) -->
+                        <div id="despesaRecorrenteSection" class="col-12" style="display: none;">
+                            <hr class="my-3">
+                            <h6 class="fw-semibold text-primary">
+                                <i class="bi bi-arrow-repeat me-2"></i>
+                                Vincular a Despesa Recorrente (Opcional)
+                            </h6>
+                            <p class="small text-muted mb-3">
+                                Selecione uma despesa recorrente para registrar o pagamento automaticamente
+                            </p>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Despesa Recorrente</label>
+                                    <div class="input-group">
+                                        <select id="despesaRecorrenteId" name="despesaRecorrenteId" class="form-select">
+                                            <option value="">Selecione uma despesa recorrente</option>
+                                            @if (ViewBag.DespesasRecorrentes != null)
+                                            {
+                                                @foreach (var item in (SelectList)ViewBag.DespesasRecorrentes)
+                                                {
+                                                    <option value="@item.Value">@item.Text</option>
+                                                }
+                                            }
+                                        </select>
+                                        <button type="button" class="btn btn-outline-primary" 
+                                                data-bs-toggle="modal" data-bs-target="#modalCadastroRapido"
+                                                title="Cadastrar nova despesa recorrente">
+                                            <i class="bi bi-plus-circle"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Selecione para vincular esta saída a uma despesa recorrente
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label">Pagamento(s) do Mês</label>
+                                    <div id="pagamentosListContainer" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.375rem; padding: 0.5rem;">
+                                        <p class="text-muted small mb-0">Selecione uma despesa primeiro</p>
+                                    </div>
+                                    <div id="statusPagamento" class="form-text"></div>
+                                </div>
+                                
+                                <div class="col-12" id="alertaPagamentosSection" style="display: none;">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <span id="alertaPagamentosTexto"></span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-md-6">
@@ -174,16 +231,210 @@
     </div>
 </div>
 
+<!-- ✅ Modal de Cadastro Rápido de Despesa Recorrente -->
+<div class="modal fade" id="modalCadastroRapido" tabindex="-1" aria-labelledby="modalCadastroRapidoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalCadastroRapidoLabel">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Cadastro Rápido - Despesa Recorrente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCadastroRapido">
+                    @Html.AntiForgeryToken()
+                    
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Nome <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="Nome" required 
+                                   placeholder="Ex: Zeladoria - João Silva" />
+                            <div class="form-text">Nome da pessoa ou descrição da despesa</div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label class="form-label">Valor Padrão <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">R$</span>
+                                <input type="number" class="form-control" name="ValorPadrao" 
+                                       step="0.01" min="0.01" required />
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Periodicidade <span class="text-danger">*</span></label>
+                            <select class="form-select" name="Periodicidade" required>
+                                <option value="">Selecione</option>
+                                @foreach (var item in Html.GetEnumSelectList<SistemaTesourariaEclesiastica.Enums.Periodicidade>())
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Dia de Vencimento</label>
+                            <input type="number" class="form-control" name="DiaVencimento" 
+                                   min="1" max="31" placeholder="Ex: 5" />
+                            <div class="form-text">Dia do mês (1-31)</div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Centro de Custo <span class="text-danger">*</span></label>
+                            <select class="form-select" name="CentroCustoId" id="modalCentroCustoId" required>
+                                <option value="">Selecione</option>
+                                @if (ViewData["CentroCustoId"] is SelectList ccList)
+                                {
+                                    foreach (var item in ccList)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Categoria <span class="text-danger">*</span></label>
+                            <select class="form-select" name="PlanoDeContasId" required>
+                                <option value="">Selecione</option>
+                                @if (ViewData["PlanoDeContasId"] is SelectList pcList)
+                                {
+                                    foreach (var item in pcList)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Fornecedor</label>
+                            <select class="form-select" name="FornecedorId">
+                                <option value="">Nenhum</option>
+                                @if (ViewData["FornecedorId"] is SelectList fList)
+                                {
+                                    foreach (var item in fList)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Meio de Pagamento</label>
+                            <select class="form-select" name="MeioDePagamentoId">
+                                <option value="">Nenhum</option>
+                                @if (ViewData["MeioDePagamentoId"] is SelectList mpList)
+                                {
+                                    foreach (var item in mpList)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <hr class="my-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="gerarPagamentosAposCadastro" checked>
+                                <label class="form-check-label fw-bold" for="gerarPagamentosAposCadastro">
+                                    Gerar pagamentos automaticamente após cadastrar
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6" id="mesesGerarContainer">
+                            <label class="form-label">Quantos meses gerar?</label>
+                            <select class="form-select" id="mesesGerar">
+                                <option value="1">1 mês</option>
+                                <option value="2">2 meses</option>
+                                <option value="3" selected>3 meses</option>
+                                <option value="6">6 meses</option>
+                                <option value="12">12 meses</option>
+                                <option value="24">24 meses</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Atenção:</strong> Os pagamentos serão gerados automaticamente conforme a periodicidade escolhida.
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Atenção:</strong> Após cadastrar, você precisará gerar os pagamentos futuros no módulo de Despesas Recorrentes.
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnSalvarCadastroRapido">
+                    <i class="bi bi-check-circle me-2"></i>Cadastrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    
+    <style>
+        #pagamentosListContainer {
+            background-color: #f8f9fa;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        #pagamentosListContainer .form-check {
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.25rem;
+            border-radius: 0.25rem;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        #pagamentosListContainer .form-check:hover {
+            background-color: #e9ecef;
+        }
+        
+        #pagamentosListContainer .form-check-input {
+            flex-shrink: 0;
+            margin-top: 0.25rem;
+        }
+        
+        #pagamentosListContainer .form-check-label {
+            flex: 1;
+            word-break: break-word;
+        }
+        
+        #pagamentosListContainer .form-check-input:checked ~ .form-check-label {
+            font-weight: 600;
+        }
+        
+        #mesesGerarContainer {
+            transition: all 0.3s ease;
+        }
+    </style>
+    
     <script>
         $(document).ready(function() {
             var $btnSalvar = $('#btnSalvar');
             
             // Resetar estado do botão ao carregar a página
-            // (importante quando há erros de validação server-side)
             $btnSalvar.prop('disabled', false);
             $btnSalvar.find('.btn-text').removeClass('d-none');
             $btnSalvar.find('.btn-loading').addClass('d-none');
@@ -208,9 +459,417 @@
                 }
             });
 
+            // ✅ NOVO: Mostrar/ocultar seção de despesas recorrentes
+            $('[name="TipoDespesa"]').change(function() {
+                const tipoFixa = '1'; // TipoDespesa.Fixa = 1
+                if ($(this).val() == tipoFixa) {
+                    $('#despesaRecorrenteSection').slideDown();
+                } else {
+                    $('#despesaRecorrenteSection').slideUp();
+                    $('#despesaRecorrenteId').val('').trigger('change');
+                }
+            });
+            
+            // ✅ NOVO: Quando selecionar despesa recorrente, buscar pagamentos do mês
+            $('#despesaRecorrenteId').change(function() {
+                const despesaId = $(this).val();
+                const dataSaida = $('[name="Data"]').val();
+                
+                if (!despesaId || !dataSaida) {
+                    $('#pagamentosListContainer').html('<p class="text-muted small mb-0">Selecione uma despesa primeiro</p>');
+                    $('#statusPagamento').text('');
+                    $('#alertaPagamentosSection').hide();
+                    return;
+                }
+                
+                // ✅ NOVO: Pegar valor padrão da despesa selecionada
+                const despesaTexto = $('#despesaRecorrenteId option:selected').text();
+                const valorMatch = despesaTexto.match(/R\$\s*([\d.,]+)/);
+                let valorPadrao = 0;
+                if (valorMatch) {
+                    const valorStr = valorMatch[1].replace(/\./g, '').replace(',', '.');
+                    valorPadrao = parseFloat(valorStr);
+                    $('#Valor').val(valorPadrao.toFixed(2));
+                }
+                
+                const data = new Date(dataSaida);
+                const mes = data.getMonth() + 1;
+                const ano = data.getFullYear();
+                
+                $.ajax({
+                    url: '@Url.Action("VerificarPagamentosPendentes", "Saidas")',
+                    type: 'GET',
+                    data: { despesaRecorrenteId: despesaId, mes: mes, ano: ano },
+                    success: function(pagamentos) {
+                        const container = $('#pagamentosListContainer');
+                        container.empty();
+                        
+                        if (pagamentos.length === 0) {
+                            // ✅ NOVO: Oferecer gerar pagamentos automaticamente
+                            container.html('<p class="text-muted small mb-2">Nenhum pagamento gerado</p>');
+                            $('#statusPagamento').html(
+                                '<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Nenhum pagamento gerado</span>'
+                            );
+                            $('#alertaPagamentosTexto').html(
+                                '<strong>Atenção:</strong> Não há pagamentos gerados para este mês. ' +
+                                '<button type="button" class="btn btn-sm btn-primary ms-2" id="btnGerarPagamentosRapido">' +
+                                '<i class="bi bi-plus-circle me-1"></i>Gerar Pagamentos Automaticamente</button>'
+                            );
+                            $('#alertaPagamentosSection').slideDown();
+                            
+                            // Handler para gerar pagamentos
+                            $('#btnGerarPagamentosRapido').click(function() {
+                                gerarPagamentosAutomatico(despesaId, mes, ano);
+                            });
+                            return;
+                        }
+                        
+                        const pagos = pagamentos.filter(p => p.pago).length;
+                        const pendentes = pagamentos.length - pagos;
+                        
+                        // ✅ NOVO: Criar checkboxes para cada pagamento
+                        pagamentos.forEach(function(p) {
+                            const status = p.pago ? '✓ PAGO' : '✗ PENDENTE';
+                            const valor = p.pago ? p.valorPago : p.valorPrevisto;
+                            const dataVenc = new Date(p.dataVencimento);
+                            const disabled = p.pago ? 'disabled' : '';
+                            const checked = !p.pago && pendentes <= 3 ? 'checked' : ''; // Auto-seleciona até 3 pendentes
+                            
+                            let labelClass = 'form-check-label';
+                            let checkClass = 'form-check';
+                            let atrasoText = '';
+                            
+                            if (p.pago) {
+                                labelClass += ' text-muted text-decoration-line-through';
+                            } else if (p.diasAtraso > 0) {
+                                labelClass += ' text-danger fw-bold';
+                                atrasoText = ` <span class="badge bg-danger">${p.diasAtraso} dias de atraso</span>`;
+                            }
+                            
+                            const checkboxHtml = `
+                                <div class="${checkClass}">
+                                    <input class="form-check-input pagamento-checkbox" type="checkbox" 
+                                           value="${p.id}" 
+                                           data-valor="${valor}" 
+                                           id="pag_${p.id}" 
+                                           ${disabled} 
+                                           ${checked}>
+                                    <label class="${labelClass}" for="pag_${p.id}">
+                                        ${dataVenc.toLocaleDateString('pt-BR')} - ${status} - R$ ${valor.toFixed(2)}${atrasoText}
+                                    </label>
+                                </div>
+                            `;
+                            
+                            container.append(checkboxHtml);
+                        });
+                        
+                        // Mostrar alerta com resumo
+                        let alertaTexto = `<strong>${pagamentos.length}</strong> pagamento(s) encontrado(s) para este mês: `;
+                        if (pagos > 0) {
+                            alertaTexto += `<strong class="text-success">${pagos} pago(s)</strong>`;
+                        }
+                        if (pendentes > 0) {
+                            if (pagos > 0) alertaTexto += ', ';
+                            alertaTexto += `<strong class="text-warning">${pendentes} pendente(s)</strong>`;
+                        }
+                        
+                        $('#alertaPagamentosTexto').html(alertaTexto);
+                        $('#alertaPagamentosSection').slideDown();
+                        
+                        // ✅ NOVO: Atualizar valor total ao selecionar/desselecionar
+                        atualizarValorTotal();
+                        
+                        // Handler para mudanças nos checkboxes
+                        $('.pagamento-checkbox').change(function() {
+                            atualizarValorTotal();
+                        });
+                        
+                        // Status
+                        const selecionados = $('.pagamento-checkbox:checked').length;
+                        if (selecionados > 0) {
+                            $('#statusPagamento').html(
+                                `<span class="text-success"><i class="bi bi-check-circle"></i> ${selecionados} pagamento(s) selecionado(s)</span>`
+                            );
+                        }
+                    },
+                    error: function() {
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error('Erro ao buscar pagamentos');
+                        }
+                    }
+                });
+            });
+            
+            // ✅ NOVO: Função para atualizar valor total baseado nos checkboxes selecionados
+            function atualizarValorTotal() {
+                let valorTotal = 0;
+                let quantidade = 0;
+                const mesesSelecionados = [];
+                
+                $('.pagamento-checkbox:checked').each(function() {
+                    const valor = parseFloat($(this).attr('data-valor'));
+                    if (!isNaN(valor)) {
+                        valorTotal += valor;
+                        quantidade++;
+                        
+                        // Extrair mês do label
+                        const label = $(this).next('label').text();
+                        const dataMatch = label.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+                        if (dataMatch) {
+                            const dia = dataMatch[1];
+                            const mes = dataMatch[2];
+                            const ano = dataMatch[3];
+                            mesesSelecionados.push(`${dia}/${mes}/${ano}`);
+                        }
+                    }
+                });
+                
+                if (quantidade > 0) {
+                    $('#Valor').val(valorTotal.toFixed(2));
+                    $('#statusPagamento').html(
+                        `<span class="text-success"><i class="bi bi-check-circle"></i> ${quantidade} pagamento(s) selecionado(s) - Total: R$ ${valorTotal.toFixed(2)}</span>`
+                    );
+                    
+                    // ✅ NOVO: Atualizar descrição considerando periodicidade
+                    const despesaNome = $('#despesaRecorrenteId option:selected').text().split(' - ')[0];
+                    
+                    // Tentar identificar periodicidade pelo intervalo entre datas
+                    let periodicidadeTexto = 'pagamentos';
+                    if (mesesSelecionados.length >= 2) {
+                        const data1 = new Date(mesesSelecionados[0].split('/').reverse().join('-'));
+                        const data2 = new Date(mesesSelecionados[1].split('/').reverse().join('-'));
+                        const diffDias = Math.abs((data2 - data1) / (1000 * 60 * 60 * 24));
+                        
+                        if (diffDias <= 8) {
+                            periodicidadeTexto = 'semanas';
+                        } else if (diffDias <= 16) {
+                            periodicidadeTexto = 'quinzenas';
+                        } else if (diffDias <= 35) {
+                            periodicidadeTexto = 'meses';
+                        } else if (diffDias <= 70) {
+                            periodicidadeTexto = 'bimestres';
+                        } else if (diffDias <= 100) {
+                            periodicidadeTexto = 'trimestres';
+                        } else if (diffDias <= 200) {
+                            periodicidadeTexto = 'semestres';
+                        } else {
+                            periodicidadeTexto = 'anos';
+                        }
+                    }
+                    
+                    if (quantidade === 1) {
+                        $('#Descricao').val(`Pagamento ${despesaNome} - ${mesesSelecionados[0]}`);
+                    } else {
+                        $('#Descricao').val(`Pagamento ${despesaNome} - ${quantidade} ${periodicidadeTexto} (${mesesSelecionados.join(', ')})`);
+                    }
+                } else {
+                    // Se nenhum selecionado, usar valor padrão da despesa
+                    const despesaTexto = $('#despesaRecorrenteId option:selected').text();
+                    const valorMatch = despesaTexto.match(/R\$\s*([\d.,]+)/);
+                    if (valorMatch) {
+                        const valorStr = valorMatch[1].replace(/\./g, '').replace(',', '.');
+                        $('#Valor').val(parseFloat(valorStr).toFixed(2));
+                    }
+                    $('#statusPagamento').html(
+                        '<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Nenhum pagamento selecionado</span>'
+                    );
+                }
+            }
+
+            // ✅ NOVO: Função para gerar pagamentos automaticamente
+            function gerarPagamentosAutomatico(despesaId, mes, ano) {
+                const btn = $('#btnGerarPagamentosRapido');
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Gerando...');
+                
+                $.ajax({
+                    url: '@Url.Action("GerarPagamentosAutomatico", "Saidas")',
+                    type: 'POST',
+                    data: {
+                        __RequestVerificationToken: $('[name="__RequestVerificationToken"]').val(),
+                        despesaRecorrenteId: despesaId,
+                        mes: mes,
+                        ano: ano
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            if (typeof toastr !== 'undefined') {
+                                toastr.success(response.message);
+                            }
+                            // Recarregar lista de pagamentos
+                            $('#despesaRecorrenteId').trigger('change');
+                        } else {
+                            if (typeof toastr !== 'undefined') {
+                                toastr.error(response.message);
+                            } else {
+                                alert(response.message);
+                            }
+                        }
+                    },
+                    error: function() {
+                        const msg = 'Erro ao gerar pagamentos';
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error(msg);
+                        } else {
+                            alert(msg);
+                        }
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false).html('<i class="bi bi-plus-circle me-1"></i>Gerar Pagamentos');
+                    }
+                });
+            }
+            
+            // ✅ NOVO: Cadastro rápido via modal
+            $('#btnSalvarCadastroRapido').click(function() {
+                const form = $('#formCadastroRapido');
+                const btn = $(this);
+                
+                if (!form[0].checkValidity()) {
+                    form[0].reportValidity();
+                    return;
+                }
+                
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Salvando...');
+                
+                $.ajax({
+                    url: '@Url.Action("CadastrarDespesaRecorrenteRapido", "Saidas")',
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            // ✅ NOVO: Verificar se deve gerar pagamentos
+                            const gerarPagamentos = $('#gerarPagamentosAposCadastro').is(':checked');
+                            
+                            if (gerarPagamentos) {
+                                const mesesGerar = parseInt($('#mesesGerar').val());
+                                btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Gerando pagamentos...');
+                                
+                                // Gerar pagamentos após cadastro
+                                gerarPagamentosAposCadastro(response.despesaId, mesesGerar, function(geradoComSucesso) {
+                                    finalizarCadastroRapido(response, btn, form, geradoComSucesso);
+                                });
+                            } else {
+                                finalizarCadastroRapido(response, btn, form, false);
+                            }
+                        } else {
+                            if (typeof toastr !== 'undefined') {
+                                toastr.error(response.message);
+                            } else {
+                                alert(response.message);
+                            }
+                            btn.prop('disabled', false).html('<i class="bi bi-check-circle me-2"></i>Cadastrar');
+                        }
+                    },
+                    error: function() {
+                        const msg = 'Erro ao cadastrar despesa recorrente';
+                        if (typeof toastr !== 'undefined') {
+                            toastr.error(msg);
+                        } else {
+                            alert(msg);
+                        }
+                        btn.prop('disabled', false).html('<i class="bi bi-check-circle me-2"></i>Cadastrar');
+                    }
+                });
+            });
+            
+            // ✅ NOVO: Função para gerar pagamentos após cadastro
+            function gerarPagamentosAposCadastro(despesaId, meses, callback) {
+                const hoje = new Date();
+                const mes = hoje.getMonth() + 1;
+                const ano = hoje.getFullYear();
+                
+                $.ajax({
+                    url: '@Url.Action("GerarPagamentosParaDespesaNova", "Saidas")',
+                    type: 'POST',
+                    data: {
+                        __RequestVerificationToken: $('[name="__RequestVerificationToken"]').val(),
+                        despesaRecorrenteId: despesaId,
+                        meses: meses
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            if (typeof toastr !== 'undefined') {
+                                toastr.success(response.message);
+                            }
+                            callback(true);
+                        } else {
+                            if (typeof toastr !== 'undefined') {
+                                toastr.warning('Despesa cadastrada, mas: ' + response.message);
+                            }
+                            callback(false);
+                        }
+                    },
+                    error: function() {
+                        if (typeof toastr !== 'undefined') {
+                            toastr.warning('Despesa cadastrada, mas houve erro ao gerar pagamentos');
+                        }
+                        callback(false);
+                    }
+                });
+            }
+            
+            // ✅ NOVO: Finalizar cadastro rápido
+            function finalizarCadastroRapido(response, btn, form, pagamentosGerados) {
+                // Adicionar nova opção no select
+                const option = $('<option></option>')
+                    .attr('value', response.despesaId)
+                    .text(response.despesaNome)
+                    .prop('selected', true);
+                $('#despesaRecorrenteId').append(option).trigger('change');
+                
+                // Fechar modal
+                $('#modalCadastroRapido').modal('hide');
+                form[0].reset();
+                
+                // Mostrar mensagem
+                let mensagem = response.message;
+                if (pagamentosGerados) {
+                    mensagem += ' Pagamentos gerados com sucesso!';
+                }
+                
+                if (typeof toastr !== 'undefined') {
+                    toastr.success(mensagem);
+                } else {
+                    alert(mensagem);
+                }
+                
+                btn.prop('disabled', false).html('<i class="bi bi-check-circle me-2"></i>Cadastrar');
+            }
+
+            // Limpar form ao fechar modal
+            $('#modalCadastroRapido').on('hidden.bs.modal', function() {
+                $('#formCadastroRapido')[0].reset();
+                $('#gerarPagamentosAposCadastro').prop('checked', true);
+                $('#mesesGerarContainer').show();
+            });
+            
+            // ✅ NOVO: Mostrar/ocultar select de meses
+            $('#gerarPagamentosAposCadastro').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#mesesGerarContainer').slideDown();
+                } else {
+                    $('#mesesGerarContainer').slideUp();
+                }
+            });
+            
+            // Ao abrir modal, pré-selecionar centro de custo da saída
+            $('#modalCadastroRapido').on('show.bs.modal', function() {
+                const centroCustoId = $('[name="CentroCustoId"]').val();
+                if (centroCustoId) {
+                    $('#modalCentroCustoId').val(centroCustoId);
+                }
+            });
+
             // Controlar loading do botão de submit
-            $('form').on('submit', function(e) {
+            $('form:not(#formCadastroRapido)').on('submit', function(e) {
                 var $form = $(this);
+
+                // ✅ NOVO: Coletar IDs dos pagamentos selecionados
+                const pagamentosSelecionados = [];
+                $('.pagamento-checkbox:checked').each(function() {
+                    pagamentosSelecionados.push($(this).val());
+                });
+                $('#pagamentoDespesaRecorrenteIds').val(pagamentosSelecionados.join(','));
 
                 // Validar formulário antes de mostrar loading
                 if ($form.valid()) {
