@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using SistemaTesourariaEclesiastica.Attributes;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using SistemaTesourariaEclesiastica.Helpers;
 
 namespace SistemaTesourariaEclesiastica.Models
 {
@@ -55,7 +56,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public string UsuarioId { get; set; } = string.Empty;
 
         [Display(Name = "Data de Criação")]
-        public DateTime DataCriacao { get; set; } = DateTime.Now;
+        public DateTime DataCriacao { get; set; } = DateTimeHelper.Now; // ✅ ALTERADO
 
         // ✅ NOVOS CAMPOS PARA CONTROLE DE FECHAMENTOS
         /// <summary>

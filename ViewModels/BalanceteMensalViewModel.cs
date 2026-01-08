@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using SistemaTesourariaEclesiastica.Helpers;
 
 namespace SistemaTesourariaEclesiastica.ViewModels
 {
@@ -93,7 +94,7 @@ namespace SistemaTesourariaEclesiastica.ViewModels
         public string? VistoDoPastor { get; set; }
 
         [Display(Name = "Data de Geração")]
-        public DateTime DataGeracao { get; set; } = DateTime.Now;
+        public DateTime DataGeracao { get; set; } = DateTimeHelper.Now;
     }
 
     /// <summary>

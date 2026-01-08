@@ -280,27 +280,34 @@ namespace SistemaTesourariaEclesiastica.Controllers
 
             if (fechamentoExistente != null)
             {
-                // Para fechamentos NÃO DIÁRIOS, bloquear totalmente
-                if (viewModel.TipoFechamento != TipoFechamento.Diario)
+                // ✅ CORREÇÃO: Para fechamentos DIÁRIOS, permitir múltiplos fechamentos no mesmo dia
+                // desde que haja lançamentos novos
+                if (viewModel.TipoFechamento == TipoFechamento.Diario)
                 {
-                    _logger.LogWarning($"Tentativa de criar fechamento duplicado: já existe fechamento aprovado ID {fechamentoExistente.Id} para o período {viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}");
-                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}). Não é possível criar outro fechamento no mesmo período.";
+                    // Verificar se há lançamentos novos desde o último fechamento
+                    var temLancamentosNovosAntesDeCalcular = await FechamentoQueryHelper.TemLancamentosNovos(
+                        _context, viewModel.CentroCustoId, viewModel.DataInicio, viewModel.DataFim);
 
-                    if (viewModel.EhSede)
+                    if (!temLancamentosNovosAntesDeCalcular)
                     {
-                        viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                        _logger.LogWarning($"Fechamento diário sem lançamentos novos - Período: {viewModel.DataInicio:dd/MM/yyyy}");
+                        TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para o dia {viewModel.DataInicio:dd/MM/yyyy} e não há novos lançamentos desde então.";
+
+                        if (viewModel.EhSede)
+                        {
+                            viewModel.FechamentosDisponiveis = await CarregarFechamentosDisponiveis();
+                        }
+                        return View(viewModel);
                     }
-                    return View(viewModel);
+
+                    // ✅ PERMITIR: Se há lançamentos novos, pode criar outro fechamento diário
+                    _logger.LogInformation($"Permitindo criação de novo fechamento diário para {viewModel.DataInicio:dd/MM/yyyy} - Existem lançamentos novos.");
                 }
-
-                // Para fechamentos DIÁRIOS, verificar se há lançamentos novos
-                var temLancamentosNovosAntesDeCalcular = await FechamentoQueryHelper.TemLancamentosNovos(
-                    _context, viewModel.CentroCustoId, viewModel.DataInicio, viewModel.DataFim);
-
-                if (!temLancamentosNovosAntesDeCalcular)
+                else
                 {
-                    _logger.LogWarning($"Fechamento diário sem lançamentos novos - Período: {viewModel.DataInicio:dd/MM/yyyy}");
-                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para o dia {viewModel.DataInicio:dd/MM/yyyy} e não há novos lançamentos desde então.";
+                    // Para fechamentos NÃO DIÁRIOS (Semanal/Mensal), bloquear totalmente
+                    _logger.LogWarning($"Tentativa de criar fechamento duplicado: já existe fechamento aprovado ID {fechamentoExistente.Id} para o período {viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}");
+                    TempData["ErrorMessage"] = $"Já existe um fechamento APROVADO para este período ({viewModel.DataInicio:dd/MM/yyyy} - {viewModel.DataFim:dd/MM/yyyy}). Não é possível criar outro fechamento {viewModel.TipoFechamento} no mesmo período.";
 
                     if (viewModel.EhSede)
                     {

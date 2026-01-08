@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
+using SistemaTesourariaEclesiastica.Helpers;
 
 namespace SistemaTesourariaEclesiastica.Models
 {
@@ -56,7 +57,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public bool Ativo { get; set; } = true;
 
         [Display(Name = "Data de Cadastro")]
-        public DateTime DataCadastro { get; set; } = DateTime.Now;
+        public DateTime DataCadastro { get; set; } = DateTimeHelper.Now; // ✅ ALTERADO
 
         // Navigation properties
         [ValidateNever]

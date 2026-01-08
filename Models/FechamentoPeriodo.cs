@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using SistemaTesourariaEclesiastica.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using SistemaTesourariaEclesiastica.Helpers;
 
 namespace SistemaTesourariaEclesiastica.Models
 {
@@ -92,7 +93,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public StatusFechamentoPeriodo Status { get; set; } = StatusFechamentoPeriodo.Pendente;
 
         [Display(Name = "Data de Submissão")]
-        public DateTime DataSubmissao { get; set; } = DateTime.Now;
+        public DateTime DataSubmissao { get; set; } = DateTimeHelper.Now;
 
         [Display(Name = "Data de Aprovação")]
         public DateTime? DataAprovacao { get; set; }

@@ -592,19 +592,32 @@ UserManager<ApplicationUser> userManager,
             // Usar a data atual como data de pagamento
             var dataPagamento = DateTime.Now;
 
+            // ? CORRIGIDO: Gerar descrição considerando a periodicidade
+            string descricaoPeriodicidade = despesa.Periodicidade switch
+            {
+                Periodicidade.Semanal => "semana",
+                Periodicidade.Quinzenal => "quinzena",
+                Periodicidade.Mensal => "mês",
+                Periodicidade.Bimestral => "bimestre",
+                Periodicidade.Trimestral => "trimestre",
+                Periodicidade.Semestral => "semestre",
+                Periodicidade.Anual => "ano",
+                _ => "período"
+            };
+
             // Criar a saída automaticamente
             var saida = new Saida
             {
                 Data = dataPagamento,
                 Valor = valorFinal,
-                Descricao = $"{despesa.Nome} - {pagamento.DataVencimento:MM/yyyy}",
+                Descricao = $"Pagamento {despesa.Nome} - {descricaoPeriodicidade} {pagamento.DataVencimento:dd/MM/yyyy}",
                 MeioDePagamentoId = despesa.MeioDePagamentoId.Value,
                 CentroCustoId = despesa.CentroCustoId,
                 PlanoDeContasId = despesa.PlanoDeContasId,
                 FornecedorId = despesa.FornecedorId,
                 TipoDespesa = TipoDespesa.Fixa,
                 DataVencimento = pagamento.DataVencimento,
-                Observacoes = $"Gerada automaticamente a partir da despesa recorrente: {despesa.Nome}",
+                Observacoes = $"Gerada automaticamente - Despesa recorrente {descricaoPeriodicidade}: {despesa.Nome}",
                 UsuarioId = user.Id,
                 DataCriacao = DateTime.Now
             };
@@ -748,18 +761,31 @@ UserManager<ApplicationUser> userManager,
             var dataSaida = pagamento.DataPagamento ?? DateTime.Now;
             var valorSaida = pagamento.ValorPago ?? pagamento.ValorPrevisto;
 
+            // ? CORRIGIDO: Gerar descrição considerando a periodicidade
+            string descricaoPeriodicidade = despesa.Periodicidade switch
+            {
+                Periodicidade.Semanal => "semana",
+                Periodicidade.Quinzenal => "quinzena",
+                Periodicidade.Mensal => "mês",
+                Periodicidade.Bimestral => "bimestre",
+                Periodicidade.Trimestral => "trimestre",
+                Periodicidade.Semestral => "semestre",
+                Periodicidade.Anual => "ano",
+                _ => "período"
+            };
+
             var saida = new Saida
             {
                 Data = dataSaida,
                 Valor = valorSaida,
-                Descricao = $"{despesa.Nome} - {pagamento.DataVencimento:MM/yyyy}",
+                Descricao = $"Pagamento {despesa.Nome} - {descricaoPeriodicidade} {pagamento.DataVencimento:dd/MM/yyyy}",
                 MeioDePagamentoId = despesa.MeioDePagamentoId.Value,
                 CentroCustoId = despesa.CentroCustoId,
                 PlanoDeContasId = despesa.PlanoDeContasId,
                 FornecedorId = despesa.FornecedorId,
                 TipoDespesa = TipoDespesa.Fixa,
                 DataVencimento = pagamento.DataVencimento,
-                Observacoes = $"Gerada automaticamente a partir da despesa recorrente: {despesa.Nome}",
+                Observacoes = $"Gerada automaticamente - Despesa recorrente {descricaoPeriodicidade}: {despesa.Nome}",
                 UsuarioId = user.Id,
                 DataCriacao = DateTime.Now
             };

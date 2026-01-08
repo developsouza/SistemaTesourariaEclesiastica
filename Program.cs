@@ -7,6 +7,40 @@ using SistemaTesourariaEclesiastica.Middleware;
 using SistemaTesourariaEclesiastica.Models;
 using SistemaTesourariaEclesiastica.Services;
 using System.Text;
+using System.Globalization;
+
+// ========================================
+// CONFIGURAÇÃO CRÍTICA - LOCALIZAÇÃO BRASIL
+// ========================================
+// Definir TimeZone padrão para Brasília (UTC-3)
+// Isso garante que as datas funcionem corretamente mesmo em servidores AWS (UTC)
+try
+{
+    TimeZoneInfo brasilTimeZone = TimeZoneInfo.FindSystemTimeZoneById("E. South America Standard Time");
+    Environment.SetEnvironmentVariable("TZ", brasilTimeZone.Id);
+    Console.WriteLine($"? TimeZone configurado: {brasilTimeZone.DisplayName}");
+}
+catch (Exception ex)
+{
+    // Fallback para sistemas Linux/Unix
+    try
+    {
+        TimeZoneInfo brasilTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+        Environment.SetEnvironmentVariable("TZ", brasilTimeZone.Id);
+        Console.WriteLine($"? TimeZone configurado (Linux): {brasilTimeZone.DisplayName}");
+    }
+    catch
+    {
+        Console.WriteLine($"?? Aviso: Não foi possível configurar TimeZone automaticamente. Detalhes: {ex.Message}");
+    }
+}
+
+// Definir cultura padrão brasileira para toda a aplicação
+var culturaBrasil = new CultureInfo("pt-BR");
+CultureInfo.DefaultThreadCurrentCulture = culturaBrasil;
+CultureInfo.DefaultThreadCurrentUICulture = culturaBrasil;
+Thread.CurrentThread.CurrentCulture = culturaBrasil;
+Thread.CurrentThread.CurrentUICulture = culturaBrasil;
 
 // CORRECAO: Definir encoding UTF-8 como padrao para toda a aplicacao
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
+using SistemaTesourariaEclesiastica.Helpers;
 
 namespace SistemaTesourariaEclesiastica.Models
 {
@@ -27,7 +28,7 @@ namespace SistemaTesourariaEclesiastica.Models
 
         [Required(ErrorMessage = "A data e hora são obrigatórias.")]
         [Display(Name = "Data e Hora")]
-        public DateTime DataHora { get; set; } = DateTime.Now;
+        public DateTime DataHora { get; set; } = DateTimeHelper.Now; // ✅ ALTERADO
 
         [Display(Name = "Detalhes")]
         public string? Detalhes { get; set; }

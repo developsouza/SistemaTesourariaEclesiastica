@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using SistemaTesourariaEclesiastica.Attributes;
 using System.ComponentModel.DataAnnotations;
+using SistemaTesourariaEclesiastica.Helpers;
 
 namespace SistemaTesourariaEclesiastica.Models
 {
@@ -31,7 +32,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public int CentroCustoId { get; set; }
 
         [Display(Name = "Data de Cadastro")]
-        public DateTime DataCadastro { get; set; } = DateTime.Now;
+        public DateTime DataCadastro { get; set; } = DateTimeHelper.Now;
 
         [Display(Name = "Ativo")]
         public bool Ativo { get; set; } = true;

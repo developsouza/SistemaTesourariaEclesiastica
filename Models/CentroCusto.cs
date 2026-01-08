@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using SistemaTesourariaEclesiastica.Enums;
 using System.ComponentModel.DataAnnotations;
+using SistemaTesourariaEclesiastica.Helpers;
 
 namespace SistemaTesourariaEclesiastica.Models
 {
@@ -25,7 +26,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public bool Ativo { get; set; } = true;
 
         [Display(Name = "Data de Criação")]
-        public DateTime DataCriacao { get; set; } = DateTime.Now;
+        public DateTime DataCriacao { get; set; } = DateTimeHelper.Now;
 
         // Navigation properties
         [ValidateNever]

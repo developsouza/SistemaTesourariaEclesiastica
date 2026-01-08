@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using SistemaTesourariaEclesiastica.Helpers;
 
 namespace SistemaTesourariaEclesiastica.Models
 {
@@ -71,7 +72,7 @@ namespace SistemaTesourariaEclesiastica.Models
         public Emprestimo()
         {
             Devolucoes = new List<DevolucaoEmprestimo>();
-            DataEmprestimo = DateTime.Now;
+            DataEmprestimo = DateTimeHelper.Now; // ✅ ALTERADO: Usar data do Brasil
             Status = StatusEmprestimo.Ativo;
         }
     }
@@ -106,7 +107,7 @@ namespace SistemaTesourariaEclesiastica.Models
 
         public DevolucaoEmprestimo()
         {
-            DataDevolucao = DateTime.Now;
+            DataDevolucao = DateTimeHelper.Now; // ✅ ALTERADO: Usar data do Brasil
         }
     }
 
