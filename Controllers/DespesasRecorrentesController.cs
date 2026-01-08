@@ -399,7 +399,7 @@ UserManager<ApplicationUser> userManager,
 
             // ? NOVA LÓGICA: Calcular quantos períodos cabem nos meses especificados
             int quantidadePeriodos = CalcularQuantidadePeriodos(despesa.Periodicidade, meses);
-            
+
             var pagamentosGerados = 0;
             var pagamentosJaExistentes = 0;
             var pagamentosNovos = new List<PagamentoDespesaRecorrente>();

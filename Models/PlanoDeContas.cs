@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using SistemaTesourariaEclesiastica.Enums;
-using System.ComponentModel.DataAnnotations;
 using SistemaTesourariaEclesiastica.Helpers;
+using System.ComponentModel.DataAnnotations;
 
 namespace SistemaTesourariaEclesiastica.Models
 {

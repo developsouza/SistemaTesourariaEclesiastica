@@ -184,7 +184,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
         // POST: Saidas/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Data,Valor,Descricao,MeioDePagamentoId,CentroCustoId,PlanoDeContasId,FornecedorId,TipoDespesa,NumeroDocumento,DataVencimento,ComprovanteUrl,Observacoes")] Saida saida, 
+        public async Task<IActionResult> Create([Bind("Data,Valor,Descricao,MeioDePagamentoId,CentroCustoId,PlanoDeContasId,FornecedorId,TipoDespesa,NumeroDocumento,DataVencimento,ComprovanteUrl,Observacoes")] Saida saida,
             int? despesaRecorrenteId, string? pagamentoDespesaRecorrenteIds) // ✅ ALTERADO: string para múltiplos IDs
         {
             try
@@ -219,17 +219,17 @@ namespace SistemaTesourariaEclesiastica.Controllers
                             .Select(id => int.TryParse(id, out int result) ? result : 0)
                             .Where(id => id > 0)
                             .ToList();
-                        
+
                         if (ids.Any())
                         {
                             var pagamentos = await _context.PagamentosDespesasRecorrentes
                                 .Where(p => ids.Contains(p.Id) && !p.Pago)
                                 .ToListAsync();
-                            
+
                             // ✅ CORRIGIDO: Dividir valor igualmente entre os pagamentos
                             decimal valorPorPagamento = pagamentos.Count > 0 ? saida.Valor / pagamentos.Count : 0;
                             int pagamentosAtualizados = 0;
-                            
+
                             foreach (var pagamento in pagamentos)
                             {
                                 pagamento.Pago = true;
@@ -239,13 +239,13 @@ namespace SistemaTesourariaEclesiastica.Controllers
                                 pagamento.SaidaId = saida.Id;
                                 pagamentosAtualizados++;
                             }
-                            
+
                             if (pagamentosAtualizados > 0)
                             {
                                 await _context.SaveChangesAsync();
-                                
+
                                 _logger.LogInformation($"{pagamentosAtualizados} pagamento(s) ID(s): [{string.Join(", ", ids)}] vinculado(s) à saída ID {saida.Id}");
-                                
+
                                 if (pagamentosAtualizados > 1)
                                 {
                                     TempData["InfoMessage"] = $"{pagamentosAtualizados} pagamentos foram marcados como pagos com esta saída.";
@@ -471,11 +471,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
         {
             var dataInicio = new DateTime(ano, mes, 1);
             var dataFim = dataInicio.AddMonths(1).AddDays(-1);
-            
+
             var pagamentos = await _context.PagamentosDespesasRecorrentes
                 .Where(p => p.DespesaRecorrenteId == despesaRecorrenteId)
                 .Where(p => p.DataVencimento >= dataInicio && p.DataVencimento <= dataFim)
-                .Select(p => new {
+                .Select(p => new
+                {
                     p.Id,
                     p.DataVencimento,
                     p.ValorPrevisto,
@@ -485,7 +486,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 })
                 .OrderBy(p => p.DataVencimento)
                 .ToListAsync();
-            
+
             return Json(pagamentos);
         }
 
@@ -501,35 +502,36 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 ModelState.Remove("Fornecedor");
                 ModelState.Remove("MeioDePagamento");
                 ModelState.Remove("Pagamentos");
-                
+
                 if (!await CanAccessCentroCusto(despesa.CentroCustoId))
                 {
                     return Json(new { success = false, message = "Você não tem permissão para criar despesas neste centro de custo." });
                 }
-                
+
                 if (ModelState.IsValid)
                 {
                     despesa.DataCadastro = DateTime.Now;
                     despesa.DataInicio = DateTime.Today;
                     despesa.Ativa = true;
-                    
+
                     _context.Add(despesa);
                     await _context.SaveChangesAsync();
-                    
+
                     var user = await _userManager.GetUserAsync(User);
                     if (user != null)
                     {
                         await _auditService.LogCreateAsync(user.Id, despesa, despesa.Id.ToString());
                     }
-                    
-                    return Json(new { 
-                        success = true, 
+
+                    return Json(new
+                    {
+                        success = true,
                         message = "Despesa recorrente cadastrada com sucesso!",
                         despesaId = despesa.Id,
                         despesaNome = $"{despesa.Nome} ({despesa.ValorPadrao:C2})"
                     });
                 }
-                
+
                 var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
                 return Json(new { success = false, message = string.Join("; ", errors) });
             }
@@ -550,26 +552,26 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var despesa = await _context.DespesasRecorrentes
                     .Include(d => d.Pagamentos)
                     .FirstOrDefaultAsync(d => d.Id == despesaRecorrenteId);
-                
+
                 if (despesa == null)
                 {
                     return Json(new { success = false, message = "Despesa recorrente não encontrada." });
                 }
-                
+
                 if (!await CanAccessCentroCusto(despesa.CentroCustoId))
                 {
                     return Json(new { success = false, message = "Você não tem permissão para acessar esta despesa." });
                 }
-                
+
                 if (!despesa.Ativa)
                 {
                     return Json(new { success = false, message = "Não é possível gerar pagamentos para uma despesa inativa." });
                 }
-                
+
                 // Determinar data base e índice inicial
                 DateTime dataBase;
                 int indiceInicial = 0;
-                
+
                 if (despesa.Pagamentos.Any())
                 {
                     var ultimoPagamento = despesa.Pagamentos.OrderByDescending(p => p.DataVencimento).First();
@@ -580,32 +582,32 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 {
                     dataBase = despesa.DataInicio ?? DateTime.Today;
                 }
-                
+
                 // Calcular quantos períodos necessários para cobrir o mês solicitado
                 var dataAlvo = new DateTime(ano, mes, 1);
                 var pagamentosGerados = 0;
                 var pagamentosNovos = new List<PagamentoDespesaRecorrente>();
-                
+
                 // Gerar até 12 períodos ou até cobrir o mês solicitado
                 for (int i = indiceInicial; i < indiceInicial + 12; i++)
                 {
                     DateTime dataVencimento = CalcularProximoVencimento(despesa, dataBase, i);
-                    
+
                     // Parar se passou muito do mês alvo
                     if (dataVencimento.Year > ano || (dataVencimento.Year == ano && dataVencimento.Month > mes + 1))
                     {
                         break;
                     }
-                    
+
                     // Verificar se está dentro do período de término
                     if (despesa.DataTermino.HasValue && dataVencimento > despesa.DataTermino.Value)
                     {
                         break;
                     }
-                    
+
                     // Verificar duplicação
                     var jaExiste = despesa.Pagamentos.Any(p => p.DataVencimento.Date == dataVencimento.Date);
-                    
+
                     if (!jaExiste)
                     {
                         var pagamento = new PagamentoDespesaRecorrente
@@ -616,30 +618,31 @@ namespace SistemaTesourariaEclesiastica.Controllers
                             Pago = false,
                             DataRegistro = DateTime.Now
                         };
-                        
+
                         pagamentosNovos.Add(pagamento);
                         pagamentosGerados++;
                     }
                 }
-                
+
                 if (pagamentosNovos.Any())
                 {
                     await _context.PagamentosDespesasRecorrentes.AddRangeAsync(pagamentosNovos);
                     await _context.SaveChangesAsync();
-                    
+
                     var user = await _userManager.GetUserAsync(User);
                     if (user != null)
                     {
                         await _auditService.LogAuditAsync(user.Id, "Gerar Pagamentos Automático", "DespesaRecorrente",
                             despesa.Id.ToString(), $"{pagamentosGerados} pagamentos gerados automaticamente para '{despesa.Nome}'.");
                     }
-                    
-                    return Json(new { 
-                        success = true, 
-                        message = $"{pagamentosGerados} pagamento(s) gerado(s) com sucesso!" 
+
+                    return Json(new
+                    {
+                        success = true,
+                        message = $"{pagamentosGerados} pagamento(s) gerado(s) com sucesso!"
                     });
                 }
-                
+
                 return Json(new { success = false, message = "Nenhum pagamento novo precisou ser gerado." });
             }
             catch (Exception ex)
@@ -664,47 +667,47 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var despesa = await _context.DespesasRecorrentes
                     .Include(d => d.Pagamentos)
                     .FirstOrDefaultAsync(d => d.Id == despesaRecorrenteId);
-                
+
                 if (despesa == null)
                 {
                     return Json(new { success = false, message = "Despesa recorrente não encontrada." });
                 }
-                
+
                 if (!await CanAccessCentroCusto(despesa.CentroCustoId))
                 {
                     return Json(new { success = false, message = "Você não tem permissão para acessar esta despesa." });
                 }
-                
+
                 // Usar lógica do DespesasRecorrentesController
                 DateTime dataBase = despesa.DataInicio ?? DateTime.Today;
                 int indiceInicial = 0;
-                
+
                 if (despesa.Pagamentos.Any())
                 {
                     var ultimoPagamento = despesa.Pagamentos.OrderByDescending(p => p.DataVencimento).First();
                     dataBase = ultimoPagamento.DataVencimento;
                     indiceInicial = 1;
                 }
-                
+
                 // ✅ NOVO: Calcular quantidade de períodos baseado na periodicidade
                 int quantidadePeriodos = CalcularQuantidadePeriodos(despesa.Periodicidade, meses);
-                
+
                 var pagamentosGerados = 0;
                 var pagamentosNovos = new List<PagamentoDespesaRecorrente>();
-                
+
                 for (int i = indiceInicial; i < quantidadePeriodos + indiceInicial; i++)
                 {
                     DateTime dataVencimento = CalcularProximoVencimento(despesa, dataBase, i);
-                    
+
                     // Verificar se está dentro do período de término
                     if (despesa.DataTermino.HasValue && dataVencimento > despesa.DataTermino.Value)
                     {
                         break;
                     }
-                    
+
                     // Verificar duplicação
                     var jaExiste = despesa.Pagamentos.Any(p => p.DataVencimento.Date == dataVencimento.Date);
-                    
+
                     if (!jaExiste)
                     {
                         var pagamento = new PagamentoDespesaRecorrente
@@ -715,30 +718,31 @@ namespace SistemaTesourariaEclesiastica.Controllers
                             Pago = false,
                             DataRegistro = DateTime.Now
                         };
-                        
+
                         pagamentosNovos.Add(pagamento);
                         pagamentosGerados++;
                     }
                 }
-                
+
                 if (pagamentosNovos.Any())
                 {
                     await _context.PagamentosDespesasRecorrentes.AddRangeAsync(pagamentosNovos);
                     await _context.SaveChangesAsync();
-                    
+
                     var user = await _userManager.GetUserAsync(User);
                     if (user != null)
                     {
                         await _auditService.LogAuditAsync(user.Id, "Gerar Pagamentos", "DespesaRecorrente",
                             despesa.Id.ToString(), $"{pagamentosGerados} pagamentos gerados para '{despesa.Nome}'.");
                     }
-                    
-                    return Json(new { 
-                        success = true, 
-                        message = $"{pagamentosGerados} pagamento(s) gerado(s)!" 
+
+                    return Json(new
+                    {
+                        success = true,
+                        message = $"{pagamentosGerados} pagamento(s) gerado(s)!"
                     });
                 }
-                
+
                 return Json(new { success = false, message = "Nenhum pagamento novo foi gerado." });
             }
             catch (Exception ex)
@@ -1002,12 +1006,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private async Task PopulateDespesasRecorrentes(int? centroCustoId = null)
         {
             var user = await _userManager.GetUserAsync(User);
-            
+
             var query = _context.DespesasRecorrentes
                 .Include(d => d.CentroCusto)
                 .Include(d => d.PlanoDeContas)
                 .Where(d => d.Ativa);
-            
+
             // Filtrar por permissão
             if (!User.IsInRole(Roles.Administrador) && !User.IsInRole(Roles.TesoureiroGeral))
             {
@@ -1016,21 +1020,22 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     query = query.Where(d => d.CentroCustoId == user.CentroCustoId.Value);
                 }
             }
-            
+
             // Filtrar por centro de custo selecionado
             if (centroCustoId.HasValue)
             {
                 query = query.Where(d => d.CentroCustoId == centroCustoId.Value);
             }
-            
+
             var despesas = await query
                 .OrderBy(d => d.Nome)
-                .Select(d => new {
+                .Select(d => new
+                {
                     d.Id,
                     Nome = $"{d.Nome} - {d.CentroCusto.Nome} ({d.ValorPadrao:C2})"
                 })
                 .ToListAsync();
-            
+
             ViewBag.DespesasRecorrentes = new SelectList(despesas, "Id", "Nome");
         }
 

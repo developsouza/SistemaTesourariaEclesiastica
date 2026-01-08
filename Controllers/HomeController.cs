@@ -643,11 +643,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     PeriodoReferencia = $"{inicioMes:MMMM yyyy}".ToUpper()
                 };
 
-                // =====================================================
-                // BUSCAR TODOS OS CENTROS DE CUSTO ATIVOS (CONGREGAÇÕES)
-                // =====================================================
+                // ✅ CORREÇÃO: BUSCAR APENAS CENTROS DE CUSTO DO TIPO SEDE E CONGREGAÇÃO (EXCLUIR RATEIOS/FINANCEIRO)
                 var centrosCusto = await _context.CentrosCusto
-                    .Where(c => c.Ativo)
+                    .Where(c => c.Ativo &&
+                           (c.Tipo == TipoCentroCusto.Sede ||
+                            c.Tipo == TipoCentroCusto.Congregacao))
                     .OrderBy(c => c.Nome)
                     .ToListAsync();
 
@@ -1306,8 +1306,11 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     PeriodoReferencia = $"{inicioMes:MMMM yyyy}".ToUpper()
                 };
 
+                // ✅ CORREÇÃO: BUSCAR APENAS CENTROS DE CUSTO DO TIPO SEDE E CONGREGAÇÃO (EXCLUIR RATEIOS/FINANCEIRO)
                 var centrosCusto = await _context.CentrosCusto
-                    .Where(c => c.Ativo)
+                    .Where(c => c.Ativo &&
+                           (c.Tipo == TipoCentroCusto.Sede ||
+                            c.Tipo == TipoCentroCusto.Congregacao))
                     .OrderBy(c => c.Nome)
                     .ToListAsync();
 
