@@ -93,25 +93,40 @@ namespace SistemaTesourariaEclesiastica.Data
         {
             logger.LogInformation("2. Criando Centros de Custo...");
 
-            // Sede
-            var sede = await context.CentrosCusto.FirstOrDefaultAsync(c => c.Nome == "Sede");
+            // Sede - Buscar por "Sede" ou "Sede - Jacumã" para evitar duplicação
+            var sede = await context.CentrosCusto.FirstOrDefaultAsync(c =>
+                c.Nome == "Sede" || c.Nome == "Sede - Jacumã");
+
             if (sede == null)
             {
                 sede = new CentroCusto
                 {
-                    Nome = "Sede",
+                    Nome = "Sede - Jacumã",
                     Tipo = TipoCentroCusto.Sede,
-                    Descricao = "Centro de custo principal da igreja - Sede da Convenção",
+                    Descricao = "Centro de custo principal da igreja - Sede da Convenção em Jacumã",
                     Ativo = true,
                     DataCriacao = DateTime.Now
                 };
                 context.CentrosCusto.Add(sede);
                 await context.SaveChangesAsync();
-                logger.LogInformation($"   ✓ Centro de Custo 'Sede' criado (ID: {sede.Id})");
+                logger.LogInformation($"   ✓ Centro de Custo 'Sede - Jacumã' criado (ID: {sede.Id})");
             }
             else
             {
-                logger.LogInformation($"   ○ Centro de Custo 'Sede' já existe (ID: {sede.Id})");
+                // Se encontrou com nome antigo "Sede", atualizar para "Sede - Jacumã"
+                if (sede.Nome == "Sede")
+                {
+                    logger.LogInformation($"   ⚠ Atualizando nome de 'Sede' para 'Sede - Jacumã' (ID: {sede.Id})");
+                    sede.Nome = "Sede - Jacumã";
+                    sede.Descricao = "Centro de custo principal da igreja - Sede da Convenção em Jacumã";
+                    context.CentrosCusto.Update(sede);
+                    await context.SaveChangesAsync();
+                    logger.LogInformation($"   ✓ Nome atualizado para 'Sede - Jacumã' (ID: {sede.Id})");
+                }
+                else
+                {
+                    logger.LogInformation($"   ○ Centro de Custo 'Sede - Jacumã' já existe (ID: {sede.Id})");
+                }
             }
 
             // ✅ FUNDO 1: Repasse Templo Central (20%)

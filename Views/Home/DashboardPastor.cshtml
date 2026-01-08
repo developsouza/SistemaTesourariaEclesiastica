@@ -503,6 +503,7 @@
             <div class="card-body">
                 @if (Model.RankingReceitas.Any())
                 {
+                    var maxReceitaValor = Model.RankingReceitas.First().Valor;
                     @foreach (var item in Model.RankingReceitas)
                     {
                         <div class="ranking-item">
@@ -516,7 +517,7 @@
                                 </div>
                                 <div class="progress progress-thin">
                                     <div class="progress-bar bg-@item.CorBarra" 
-                                         style="width: @((item.Valor / Model.RankingReceitas.First().Valor * 100).ToString("F0"))%"></div>
+                                         style="width: @((maxReceitaValor > 0 ? (item.Valor / maxReceitaValor * 100) : 100).ToString("F0"))%"></div>
                                 </div>
                             </div>
                         </div>
@@ -548,6 +549,7 @@
             <div class="card-body">
                 @if (Model.RankingDespesas.Any())
                 {
+                    var maxDespesaValor = Model.RankingDespesas.First().Valor;
                     @foreach (var item in Model.RankingDespesas)
                     {
                         <div class="ranking-item">
@@ -561,7 +563,7 @@
                                 </div>
                                 <div class="progress progress-thin">
                                     <div class="progress-bar bg-@item.CorBarra" 
-                                         style="width: @((item.Valor / Model.RankingDespesas.First().Valor * 100).ToString("F0"))%"></div>
+                                         style="width: @((maxDespesaValor > 0 ? (item.Valor / maxDespesaValor * 100) : 100).ToString("F0"))%"></div>
                                 </div>
                             </div>
                         </div>
