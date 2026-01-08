@@ -1,0 +1,922 @@
+﻿@model SistemaTesourariaEclesiastica.ViewModels.DashboardPastorViewModel
+
+@{
+    ViewData["Title"] = "Dashboard Pastor - Visão Estratégica";
+}
+
+<style>
+    .card-stat {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-stat:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    /* ✅ MOBILE: Reduzir tamanho do ícone */
+    @@media (max-width: 576px) {
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 20px;
+        }
+        
+        .card-stat h4 {
+            font-size: 1.25rem;
+        }
+    }
+
+    .congregacao-card {
+        border-radius: 12px;
+        border: 1px solid #e0e0e0;
+        transition: all 0.3s ease;
+        margin-bottom: 16px;
+    }
+
+    .congregacao-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 4px 16px rgba(0,123,255,0.1);
+    }
+
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
+    .progress-thin {
+        height: 8px;
+        border-radius: 4px;
+    }
+
+    .ranking-item {
+        padding: 12px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        transition: background 0.2s ease;
+    }
+
+    .ranking-item:hover {
+        background: #e9ecef;
+    }
+
+    .ranking-position {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 12px;
+        flex-shrink: 0;
+    }
+
+    /* ✅ MOBILE: Melhorar legibilidade dos rankings */
+    @@media (max-width: 576px) {
+        .ranking-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .ranking-item .flex-grow-1 {
+            width: 100%;
+            margin-top: 8px;
+        }
+        
+        .ranking-position {
+            margin-bottom: 8px;
+        }
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+
+    /* ✅ MOBILE: Ajustar altura do gráfico */
+    @@media (max-width: 768px) {
+        .chart-container {
+            height: 250px;
+        }
+    }
+
+    .alert-dashboard {
+        border-radius: 12px;
+        border: none;
+        border-left: 4px solid;
+    }
+
+    /* ✅ NOVO: Estados vazios */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        opacity: 0.3;
+        margin-bottom: 1rem;
+    }
+
+    /* ✅ MOBILE: Cabeçalho responsivo */
+    @@media (max-width: 768px) {
+        .header-actions {
+            margin-top: 1rem;
+            width: 100%;
+        }
+        
+        .header-actions .btn {
+            width: 100%;
+        }
+        
+        .period-info {
+            display: block;
+            margin-top: 0.5rem;
+        }
+    }
+
+    /* ✅ MOBILE: Cards de congregação responsivos */
+    @@media (max-width: 992px) {
+        .congregacao-card .row > div {
+            margin-bottom: 1rem !important;
+        }
+        
+        .congregacao-card .col-6 {
+            width: 50% !important;
+        }
+    }
+
+    /* ✅ NOVO: Loading skeleton */
+    .skeleton {
+        animation: skeleton-loading 1s linear infinite alternate;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        border-radius: 4px;
+    }
+
+    @@keyframes skeleton-loading {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
+    /* ✅ NOVO: Scroll suave para muitas congregações */
+    .congregacoes-scroll {
+        max-height: 1200px;
+        overflow-y: auto;
+        padding-right: 8px;
+    }
+
+    .congregacoes-scroll::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .congregacoes-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .congregacoes-scroll::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+
+    .congregacoes-scroll::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    /* ✅ NOVO: Botão flutuante para exportação (mobile) */
+    .fab-export {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        display: none;
+    }
+
+    @@media (max-width: 768px) {
+        .fab-export {
+            display: block;
+        }
+        
+        .desktop-export {
+            display: none;
+        }
+    }
+
+    /* ✅ NOVO: Badge de contagem */
+    .count-badge {
+        display: inline-block;
+        min-width: 24px;
+        height: 24px;
+        padding: 0 6px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 24px;
+        text-align: center;
+        background: #007bff;
+        color: white;
+        margin-left: 8px;
+    }
+</style>
+
+<!-- ✅ MOBILE: Cabeçalho responsivo -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-md-flex justify-content-between align-items-start">
+            <div class="mb-3 mb-md-0">
+                <h1 class="h3 mb-1">
+                    <i class="bi bi-speedometer2 me-2"></i>Dashboard Estratégico
+                </h1>
+                <div class="text-muted">
+                    <div>
+                        <i class="bi bi-person-badge me-1"></i>Pastor @Model.NomePastor
+                    </div>
+                    <div class="period-info">
+                        <i class="bi bi-calendar-event me-1"></i>@Model.PeriodoReferencia
+                    </div>
+                </div>
+            </div>
+            <div class="header-actions d-flex gap-2 desktop-export">
+                <button type="button" class="btn btn-danger" onclick="imprimirDashboard()">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>
+                    <span class="d-none d-lg-inline">Gerar PDF</span>
+                    <span class="d-lg-none">PDF</span>
+                </button>
+                <a asp-controller="Relatorios" asp-action="Index" class="btn btn-outline-primary">
+                    <i class="bi bi-file-earmark-text me-1"></i>
+                    <span class="d-none d-lg-inline">Relatórios</span>
+                    <span class="d-lg-none">Mais</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ NOVO: Botão flutuante para mobile -->
+<div class="fab-export">
+    <div class="btn-group dropup">
+        <button type="button" class="btn btn-primary btn-lg rounded-circle shadow-lg" 
+                data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-three-dots-vertical"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow">
+            <li>
+                <a class="dropdown-item" href="#" onclick="imprimirDashboard(); return false;">
+                    <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Gerar PDF
+                </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <a class="dropdown-item" asp-controller="Relatorios" asp-action="Index">
+                    <i class="bi bi-file-earmark-text me-2"></i>Ver Relatórios
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<!-- Alertas Importantes -->
+@if (Model.Alertas.Any())
+{
+    <div class="row mb-4">
+        <div class="col-12">
+            @foreach (var alerta in Model.Alertas.Take(3))
+            {
+                <div class="alert alert-@alerta.Tipo alert-dashboard mb-2" role="alert">
+                    <div class="d-flex align-items-start">
+                        <i class="@alerta.Icone me-3 fs-4 flex-shrink-0"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading mb-1">@alerta.Titulo</h6>
+                            <p class="mb-1">@alerta.Mensagem</p>
+                            @if (!string.IsNullOrEmpty(alerta.CongregacaoRelacionada))
+                            {
+                                <small class="text-muted">
+                                    <i class="bi bi-building me-1"></i>@alerta.CongregacaoRelacionada
+                                </small>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- ✅ NOVO: Resumo Executivo Destacado -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-primary shadow-sm">
+            <div class="card-body bg-primary bg-opacity-10">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="mb-2">
+                            <i class="bi bi-clipboard-data text-primary me-2"></i>Resumo Executivo do Mês
+                        </h5>
+                        <p class="mb-1">
+                            <strong>Resultado:</strong> 
+                            @if (Model.SaldoMesAtual >= 0)
+                            {
+                                <span class="text-success fw-bold">
+                                    Superávit de @Model.SaldoMesAtual.ToString("C")
+                                    <i class="bi bi-arrow-up-circle-fill ms-1"></i>
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="text-danger fw-bold">
+                                    Déficit de @(Model.SaldoMesAtual * -1).ToString("C")
+                                    <i class="bi bi-arrow-down-circle-fill ms-1"></i>
+                                </span>
+                            }
+                        </p>
+                        <small class="text-muted">
+                            Margem: @((Model.ReceitasMesAtual > 0 ? (Model.SaldoMesAtual / Model.ReceitasMesAtual * 100) : 0).ToString("F1"))% das receitas
+                        </small>
+                    </div>
+                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                        <div class="d-flex d-md-block gap-2">
+                            <span class="badge bg-primary fs-6 mb-md-2">
+                                <i class="bi bi-building me-1"></i>@Model.QuantidadeCongregacoes Congregações
+                            </span>
+                            <span class="badge bg-info fs-6">
+                                <i class="bi bi-graph-up me-1"></i>@((Model.ReceitasMesAtual > 0 ? ((Model.ReceitasMesAtual - Model.DespesasMesAtual) / Model.ReceitasMesAtual * 100) : 0).ToString("F0"))% Eficiência
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cards de Estatísticas Gerais -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card card-stat h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success me-3 flex-shrink-0">
+                        <i class="bi bi-arrow-up-circle-fill"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <p class="text-muted mb-1 small">Total Receitas</p>
+                        <h4 class="mb-0 fw-bold">@Model.TotalReceitasGeral.ToString("C")</h4>
+                        <small class="text-success">
+                            <i class="bi bi-arrow-up-short"></i>Mês: @Model.ReceitasMesAtual.ToString("C")
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card card-stat h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-danger bg-opacity-10 text-danger me-3 flex-shrink-0">
+                        <i class="bi bi-arrow-down-circle-fill"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <p class="text-muted mb-1 small">Total Despesas</p>
+                        <h4 class="mb-0 fw-bold">@Model.TotalDespesasGeral.ToString("C")</h4>
+                        <small class="text-danger">
+                            <i class="bi bi-arrow-down-short"></i>Mês: @Model.DespesasMesAtual.ToString("C")
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card card-stat h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3 flex-shrink-0">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <p class="text-muted mb-1 small">Saldo Consolidado</p>
+                        <h4 class="mb-0 fw-bold">@Model.SaldoGeralAtual.ToString("C")</h4>
+                        <small class="@(Model.SaldoMesAtual >= 0 ? "text-success" : "text-danger")">
+                            <i class="bi bi-@(Model.SaldoMesAtual >= 0 ? "arrow-up" : "arrow-down")-short"></i>
+                            Mês: @Model.SaldoMesAtual.ToString("C")
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card card-stat h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info me-3 flex-shrink-0">
+                        <i class="bi bi-building"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <p class="text-muted mb-1 small">Congregações</p>
+                        <h4 class="mb-0 fw-bold">@Model.QuantidadeCongregacoes</h4>
+                        <small class="text-muted">
+                            <i class="bi bi-arrow-repeat me-1"></i>Rateios: @Model.TotalRateiosEnviados.ToString("C")
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráfico de Tendências -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card card-stat">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Tendência Financeira - Últimos 6 Meses
+                </h5>
+                <button class="btn btn-sm btn-outline-secondary d-none d-md-inline" onclick="toggleChartType()">
+                    <i class="bi bi-bar-chart me-1"></i>Alternar Tipo
+                </button>
+            </div>
+            <div class="card-body">
+                @if (Model.TendenciasReceitas.Any())
+                {
+                    <div class="chart-container">
+                        <canvas id="tendenciasChart"></canvas>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-graph-up"></i>
+                        <p>Nenhum dado de tendência disponível ainda.</p>
+                        <small class="text-muted">Os dados aparecerão após os primeiros fechamentos mensais.</small>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rankings e Maiores Despesas -->
+<div class="row mb-4">
+    <!-- Ranking de Receitas -->
+    <div class="col-lg-4 mb-3">
+        <div class="card card-stat h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-trophy-fill text-success me-2"></i>Top 5 - Receitas do Mês
+                    @if (Model.RankingReceitas.Any())
+                    {
+                        <span class="count-badge bg-success">@Model.RankingReceitas.Count</span>
+                    }
+                </h6>
+            </div>
+            <div class="card-body">
+                @if (Model.RankingReceitas.Any())
+                {
+                    @foreach (var item in Model.RankingReceitas)
+                    {
+                        <div class="ranking-item">
+                            <div class="ranking-position bg-@item.CorBarra text-white">
+                                @item.Posicao
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap">
+                                    <span class="fw-semibold text-truncate me-2">@item.NomeCongregacao</span>
+                                    <span class="text-@item.CorBarra fw-bold">@item.Valor.ToString("C")</span>
+                                </div>
+                                <div class="progress progress-thin">
+                                    <div class="progress-bar bg-@item.CorBarra" 
+                                         style="width: @((item.Valor / Model.RankingReceitas.First().Valor * 100).ToString("F0"))%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state py-4">
+                        <i class="bi bi-trophy"></i>
+                        <p class="mb-0">Nenhuma receita registrada ainda.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranking de Despesas -->
+    <div class="col-lg-4 mb-3">
+        <div class="card card-stat h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-graph-down text-danger me-2"></i>Top 5 - Despesas do Mês
+                    @if (Model.RankingDespesas.Any())
+                    {
+                        <span class="count-badge bg-danger">@Model.RankingDespesas.Count</span>
+                    }
+                </h6>
+            </div>
+            <div class="card-body">
+                @if (Model.RankingDespesas.Any())
+                {
+                    @foreach (var item in Model.RankingDespesas)
+                    {
+                        <div class="ranking-item">
+                            <div class="ranking-position bg-@item.CorBarra text-white">
+                                @item.Posicao
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap">
+                                    <span class="fw-semibold text-truncate me-2">@item.NomeCongregacao</span>
+                                    <span class="text-@item.CorBarra fw-bold">@item.Valor.ToString("C")</span>
+                                </div>
+                                <div class="progress progress-thin">
+                                    <div class="progress-bar bg-@item.CorBarra" 
+                                         style="width: @((item.Valor / Model.RankingDespesas.First().Valor * 100).ToString("F0"))%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state py-4">
+                        <i class="bi bi-graph-down"></i>
+                        <p class="mb-0">Nenhuma despesa registrada ainda.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Maiores Despesas -->
+    <div class="col-lg-4 mb-3">
+        <div class="card card-stat h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-cash-stack text-warning me-2"></i>Maiores Categorias de Despesa
+                    @if (Model.MaioresDespesas.Any())
+                    {
+                        <span class="count-badge bg-warning">@Model.MaioresDespesas.Count</span>
+                    }
+                </h6>
+            </div>
+            <div class="card-body">
+                @if (Model.MaioresDespesas.Any())
+                {
+                    @foreach (var despesa in Model.MaioresDespesas.Take(5))
+                    {
+                        <div class="d-flex justify-content-between align-items-start mb-3 pb-3 border-bottom">
+                            <div class="flex-grow-1 pe-2">
+                                <h6 class="mb-1">@despesa.CategoriaDespesa</h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-building me-1"></i>@despesa.QuantidadeOcorrencias ocorrência(s)
+                                </small>
+                            </div>
+                            <span class="badge bg-danger fs-6 flex-shrink-0">@despesa.ValorTotal.ToString("C")</span>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state py-4">
+                        <i class="bi bi-cash-stack"></i>
+                        <p class="mb-0">Nenhuma despesa categorizada ainda.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detalhamento por Congregação -->
+<div class="row">
+    <div class="col-12">
+        <div class="card card-stat">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap">
+                <h5 class="mb-0">
+                    <i class="bi bi-building me-2"></i>Indicadores por Congregação
+                    <span class="count-badge">@Model.Congregacoes.Count</span>
+                </h5>
+                <div class="mt-2 mt-md-0">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="sortOptions" id="sortReceita" checked>
+                        <label class="btn btn-outline-secondary" for="sortReceita" onclick="ordenarPor('receita')">
+                            <i class="bi bi-arrow-up-circle"></i> Receita
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="sortOptions" id="sortDespesa">
+                        <label class="btn btn-outline-secondary" for="sortDespesa" onclick="ordenarPor('despesa')">
+                            <i class="bi bi-arrow-down-circle"></i> Despesa
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="sortOptions" id="sortSaldo">
+                        <label class="btn btn-outline-secondary" for="sortSaldo" onclick="ordenarPor('saldo')">
+                            <i class="bi bi-wallet2"></i> Saldo
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (Model.Congregacoes.Any())
+                {
+                    <div class="congregacoes-scroll" id="congregacoesList">
+                        @foreach (var congregacao in Model.Congregacoes)
+                        {
+                            <div class="congregacao-card" 
+                                 data-receita="@congregacao.ReceitasAcumuladas" 
+                                 data-despesa="@congregacao.DespesasAcumuladas"
+                                 data-saldo="@congregacao.SaldoAtual">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <!-- Nome e Status -->
+                                        <div class="col-lg-3 mb-3 mb-lg-0">
+                                            <h6 class="mb-2">
+                                                <i class="bi bi-building me-2 text-primary"></i>@congregacao.NomeCongregacao
+                                            </h6>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                <span class="badge bg-secondary">@congregacao.TipoCongregacao</span>
+                                                <span class="badge bg-@congregacao.CorIndicador">
+                                                    <i class="@congregacao.IconeStatus me-1"></i>@congregacao.StatusSaude
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Receitas -->
+                                        <div class="col-lg-2 col-6 mb-3 mb-lg-0">
+                                            <small class="text-muted d-block">Receitas</small>
+                                            <h6 class="mb-1 text-success">@congregacao.ReceitasAcumuladas.ToString("C")</h6>
+                                            <small class="text-muted d-block text-truncate">Mês: @congregacao.ReceitasMesAtual.ToString("C")</small>
+                                        </div>
+
+                                        <!-- Despesas -->
+                                        <div class="col-lg-2 col-6 mb-3 mb-lg-0">
+                                            <small class="text-muted d-block">Despesas</small>
+                                            <h6 class="mb-1 text-danger">@congregacao.DespesasAcumuladas.ToString("C")</h6>
+                                            <small class="text-muted d-block text-truncate">Mês: @congregacao.DespesasMesAtual.ToString("C")</small>
+                                        </div>
+
+                                        <!-- Saldo -->
+                                        <div class="col-lg-2 col-6 mb-3 mb-lg-0">
+                                            <small class="text-muted d-block">Saldo Atual</small>
+                                            <h6 class="mb-1 @(congregacao.SaldoAtual >= 0 ? "text-primary" : "text-danger")">
+                                                @congregacao.SaldoAtual.ToString("C")
+                                            </h6>
+                                            <small class="text-muted d-block text-truncate">Rent.: @congregacao.PercentualLucro.ToString("F1")%</small>
+                                        </div>
+
+                                        <!-- Rateios -->
+                                        <div class="col-lg-2 col-6 mb-3 mb-lg-0">
+                                            <small class="text-muted d-block">Rateios</small>
+                                            <h6 class="mb-1 text-warning">@congregacao.RateiosEnviados.ToString("C")</h6>
+                                            <small class="text-success d-block text-truncate">Rec.: @congregacao.RateiosRecebidos.ToString("C")</small>
+                                        </div>
+
+                                        <!-- Ações -->
+                                        <div class="col-lg-1 text-end">
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                        type="button" 
+                                                        data-bs-toggle="dropdown">
+                                                    <i class="bi bi-three-dots-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <a class="dropdown-item" 
+                                                           asp-controller="Relatorios" 
+                                                           asp-action="EntradasPorPeriodo"
+                                                           asp-route-centroCustoId="@congregacao.CentroCustoId">
+                                                            <i class="bi bi-arrow-up-circle me-2"></i>Ver Receitas
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" 
+                                                           asp-controller="Relatorios" 
+                                                           asp-action="SaidasPorPeriodo"
+                                                           asp-route-centroCustoId="@congregacao.CentroCustoId">
+                                                            <i class="bi bi-arrow-down-circle me-2"></i>Ver Despesas
+                                                        </a>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item" 
+                                                           asp-controller="Relatorios" 
+                                                           asp-action="BalanceteMensal"
+                                                           asp-route-centroCustoId="@congregacao.CentroCustoId">
+                                                            <i class="bi bi-file-earmark-text me-2"></i>Balancete
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Barra de Progresso Visual -->
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar bg-success" 
+                                                     style="width: @((congregacao.ReceitasMesAtual / (Model.ReceitasMesAtual > 0 ? Model.ReceitasMesAtual : 1) * 100).ToString("F0"))%"
+                                                     title="Participação nas receitas do mês"></div>
+                                            </div>
+                                            <small class="text-muted">
+                                                Representa @((congregacao.ReceitasMesAtual / (Model.ReceitasMesAtual > 0 ? Model.ReceitasMesAtual : 1) * 100).ToString("F1"))% das receitas do mês
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-building"></i>
+                        <p>Nenhuma congregação cadastrada ainda.</p>
+                        <small class="text-muted">Cadastre congregações em "Unidades Financeiras" para começar.</small>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let tendenciasChart = null;
+        let currentChartType = 'line';
+
+        // Gráfico de Tendências
+        function initChart() {
+            const ctx = document.getElementById('tendenciasChart');
+            if (!ctx) return;
+
+            const ctxTendencias = ctx.getContext('2d');
+            
+            tendenciasChart = new Chart(ctxTendencias, {
+                type: currentChartType,
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.TendenciasReceitas.Select(t => t.MesAno))),
+                    datasets: [
+                        {
+                            label: 'Receitas',
+                            data: @Html.Raw(Json.Serialize(Model.TendenciasReceitas.Select(t => t.TotalReceitas))),
+                            borderColor: 'rgb(40, 167, 69)',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Despesas',
+                            data: @Html.Raw(Json.Serialize(Model.TendenciasReceitas.Select(t => t.TotalDespesas))),
+                            borderColor: 'rgb(220, 53, 69)',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Saldo',
+                            data: @Html.Raw(Json.Serialize(Model.TendenciasReceitas.Select(t => t.Saldo))),
+                            borderColor: 'rgb(0, 123, 255)',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += new Intl.NumberFormat('pt-BR', { 
+                                        style: 'currency', 
+                                        currency: 'BRL' 
+                                    }).format(context.parsed.y);
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return new Intl.NumberFormat('pt-BR', { 
+                                        style: 'currency', 
+                                        currency: 'BRL',
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 0
+                                    }).format(value);
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        // ✅ NOVO: Alternar tipo de gráfico
+        function toggleChartType() {
+            if (tendenciasChart) {
+                currentChartType = currentChartType === 'line' ? 'bar' : 'line';
+                tendenciasChart.destroy();
+                initChart();
+            }
+        }
+
+        // ✅ NOVO: Ordenar congregações
+        function ordenarPor(criterio) {
+            const lista = document.getElementById('congregacoesList');
+            if (!lista) return;
+
+            const cards = Array.from(lista.querySelectorAll('.congregacao-card'));
+            
+            cards.sort((a, b) => {
+                const valorA = parseFloat(a.getAttribute(`data-${criterio}`));
+                const valorB = parseFloat(b.getAttribute(`data-${criterio}`));
+                return valorB - valorA; // Ordem decrescente
+            });
+
+            // Reordenar elementos no DOM
+            cards.forEach(card => lista.appendChild(card));
+        }
+
+        // ✅ MODIFICADO: Gerar PDF usando helper
+        function imprimirDashboard() {
+            window.location.href = '@Url.Action("GerarDashboardPdf", "Home")';
+        }
+
+        // Inicializar gráfico quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+        });
+    </script>
+
+    <!-- ✅ NOVO: Estilos para impressão -->
+    <style media="print">
+        .fab-export,
+        .desktop-export,
+        .btn-group,
+        .dropdown {
+            display: none !important;
+        }
+
+        .card-stat {
+            box-shadow: none !important;
+            page-break-inside: avoid;
+        }
+
+        .congregacao-card {
+            page-break-inside: avoid;
+        }
+    </style>
+}

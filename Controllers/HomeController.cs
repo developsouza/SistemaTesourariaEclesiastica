@@ -19,7 +19,6 @@ namespace SistemaTesourariaEclesiastica.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly AuditService _auditService;
 
-
         public HomeController(
             ILogger<HomeController> logger,
             ApplicationDbContext context,
@@ -50,6 +49,12 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 var primaryRole = roles.FirstOrDefault() ?? "Sem Perfil";
 
                 _logger.LogInformation($"Dashboard acessado por: {user.NomeCompleto} ({primaryRole})");
+
+                // ✅ NOVO: Se for Pastor, redirecionar para Dashboard específico
+                if (User.IsInRole(Roles.Pastor))
+                {
+                    return RedirectToAction("DashboardPastor");
+                }
 
                 // =====================================================
                 // 2. LOG DE AUDITORIA (com proteção contra erro)
@@ -611,6 +616,429 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
         }
 
+        // =====================================================
+        // DASHBOARD ESPECÍFICO PARA PASTORES
+        // =====================================================
+        [AuthorizeRoles(Roles.Pastor)]
+        public async Task<IActionResult> DashboardPastor()
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return RedirectToAction("Login", "Account");
+                }
+
+                _logger.LogInformation($"Dashboard Pastor acessado por: {user.NomeCompleto}");
+
+                var hoje = DateTime.Now.Date;
+                var inicioMes = new DateTime(hoje.Year, hoje.Month, 1);
+                var fimMes = inicioMes.AddMonths(1).AddDays(-1);
+
+                var viewModel = new ViewModels.DashboardPastorViewModel
+                {
+                    NomePastor = user.NomeCompleto,
+                    DataReferencia = hoje,
+                    PeriodoReferencia = $"{inicioMes:MMMM yyyy}".ToUpper()
+                };
+
+                // =====================================================
+                // BUSCAR TODOS OS CENTROS DE CUSTO ATIVOS (CONGREGAÇÕES)
+                // =====================================================
+                var centrosCusto = await _context.CentrosCusto
+                    .Where(c => c.Ativo)
+                    .OrderBy(c => c.Nome)
+                    .ToListAsync();
+
+                viewModel.QuantidadeCongregacoes = centrosCusto.Count;
+
+                // =====================================================
+                // PROCESSAR INDICADORES POR CONGREGAÇÃO
+                // =====================================================
+                var indicadoresCongregacoes = new List<ViewModels.IndicadoresCongregacaoViewModel>();
+
+                foreach (var centro in centrosCusto)
+                {
+                    var indicador = await CalcularIndicadoresCongregacao(centro.Id, inicioMes, fimMes);
+                    indicadoresCongregacoes.Add(indicador);
+
+                    // Acumular totais gerais
+                    viewModel.TotalReceitasGeral += indicador.ReceitasAcumuladas;
+                    viewModel.TotalDespesasGeral += indicador.DespesasAcumuladas;
+                    viewModel.ReceitasMesAtual += indicador.ReceitasMesAtual;
+                    viewModel.DespesasMesAtual += indicador.DespesasMesAtual;
+                    viewModel.TotalRateiosEnviados += indicador.RateiosEnviados;
+                }
+
+                viewModel.SaldoGeralAtual = viewModel.TotalReceitasGeral - viewModel.TotalDespesasGeral - viewModel.TotalRateiosEnviados;
+                viewModel.SaldoMesAtual = viewModel.ReceitasMesAtual - viewModel.DespesasMesAtual;
+                viewModel.Congregacoes = indicadoresCongregacoes.OrderByDescending(c => c.ReceitasAcumuladas).ToList();
+
+                // =====================================================
+                // MAIORES DESPESAS CONSOLIDADAS
+                // =====================================================
+                viewModel.MaioresDespesas = await ObterMaioresDespesas(inicioMes, fimMes);
+
+                // =====================================================
+                // RANKINGS
+                // =====================================================
+                viewModel.RankingReceitas = indicadoresCongregacoes
+                    .OrderByDescending(c => c.ReceitasMesAtual)
+                    .Take(5)
+                    .Select((c, index) => new ViewModels.RankingCongregacaoViewModel
+                    {
+                        Posicao = index + 1,
+                        NomeCongregacao = c.NomeCongregacao,
+                        Valor = c.ReceitasMesAtual,
+                        CorBarra = index == 0 ? "success" : index < 3 ? "primary" : "info"
+                    })
+                    .ToList();
+
+                viewModel.RankingDespesas = indicadoresCongregacoes
+                    .OrderByDescending(c => c.DespesasMesAtual)
+                    .Take(5)
+                    .Select((c, index) => new ViewModels.RankingCongregacaoViewModel
+                    {
+                        Posicao = index + 1,
+                        NomeCongregacao = c.NomeCongregacao,
+                        Valor = c.DespesasMesAtual,
+                        CorBarra = index == 0 ? "danger" : index < 3 ? "warning" : "secondary"
+                    })
+                    .ToList();
+
+                // =====================================================
+                // TENDÊNCIAS (ÚLTIMOS 6 MESES)
+                // =====================================================
+                viewModel.TendenciasReceitas = await ObterTendenciasMensais();
+
+                // =====================================================
+                // ALERTAS E OBSERVAÇÕES
+                // =====================================================
+                viewModel.Alertas = GerarAlertas(indicadoresCongregacoes);
+
+                await _auditService.LogAsync("DASHBOARD_PASTOR_ACCESS", "Home",
+                    $"Dashboard Pastor acessado por {user.NomeCompleto}");
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao carregar Dashboard Pastor");
+                TempData["Erro"] = "Erro ao carregar dashboard.";
+                return View("Error", new ErrorViewModel
+                {
+                    RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+                });
+            }
+        }
+
+        // =====================================================
+        // MÉTODOS AUXILIARES PARA DASHBOARD PASTOR
+        // =====================================================
+
+        private async Task<ViewModels.IndicadoresCongregacaoViewModel> CalcularIndicadoresCongregacao(
+            int centroCustoId, DateTime inicioMes, DateTime fimMes)
+        {
+            var centroCusto = await _context.CentrosCusto.FindAsync(centroCustoId);
+
+            var indicador = new ViewModels.IndicadoresCongregacaoViewModel
+            {
+                CentroCustoId = centroCustoId,
+                NomeCongregacao = centroCusto?.Nome ?? "Desconhecido",
+                TipoCongregacao = centroCusto?.Tipo.ToString() ?? "N/A"
+            };
+
+            // RECEITAS ACUMULADAS (aprovadas/processadas de todos os tempos)
+            var queryReceitasAcumuladas = _context.Entradas
+                .Where(e => e.CentroCustoId == centroCustoId);
+
+            var idsReceitasAcumuladas = await queryReceitasAcumuladas
+                .Where(e => _context.FechamentosPeriodo.Any(f =>
+                    f.CentroCustoId == e.CentroCustoId &&
+                    (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+                    e.Data >= f.DataInicio &&
+                    e.Data <= f.DataFim))
+                .Select(e => e.Id)
+                .ToListAsync();
+
+            indicador.ReceitasAcumuladas = idsReceitasAcumuladas.Any()
+                ? await _context.Entradas
+                    .Where(e => idsReceitasAcumuladas.Contains(e.Id))
+                    .SumAsync(e => (decimal?)e.Valor) ?? 0
+                : 0;
+
+            // RECEITAS DO MÊS ATUAL
+            var queryReceitasMes = _context.Entradas
+                .Where(e => e.CentroCustoId == centroCustoId &&
+                           e.Data >= inicioMes && e.Data <= fimMes);
+
+            var idsReceitasMes = await queryReceitasMes
+                .Where(e => _context.FechamentosPeriodo.Any(f =>
+                    f.CentroCustoId == e.CentroCustoId &&
+                    (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+                    e.Data >= f.DataInicio &&
+                    e.Data <= f.DataFim))
+                .Select(e => e.Id)
+                .ToListAsync();
+
+            indicador.ReceitasMesAtual = idsReceitasMes.Any()
+                ? await _context.Entradas
+                    .Where(e => idsReceitasMes.Contains(e.Id))
+                    .SumAsync(e => (decimal?)e.Valor) ?? 0
+                : 0;
+
+            // DESPESAS ACUMULADAS
+            var queryDespesasAcumuladas = _context.Saidas
+                .Where(s => s.CentroCustoId == centroCustoId);
+
+            var idsDespesasAcumuladas = await queryDespesasAcumuladas
+                .Where(s => _context.FechamentosPeriodo.Any(f =>
+                    f.CentroCustoId == s.CentroCustoId &&
+                    (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+                    s.Data >= f.DataInicio &&
+                    s.Data <= f.DataFim))
+                .Select(s => s.Id)
+                .ToListAsync();
+
+            indicador.DespesasAcumuladas = idsDespesasAcumuladas.Any()
+                ? await _context.Saidas
+                    .Where(s => idsDespesasAcumuladas.Contains(s.Id))
+                    .SumAsync(s => (decimal?)s.Valor) ?? 0
+                : 0;
+
+            // DESPESAS DO MÊS ATUAL
+            var queryDespesasMes = _context.Saidas
+                .Where(s => s.CentroCustoId == centroCustoId &&
+                           s.Data >= inicioMes && s.Data <= fimMes);
+
+            var idsDespesasMes = await queryDespesasMes
+                .Where(s => _context.FechamentosPeriodo.Any(f =>
+                    f.CentroCustoId == s.CentroCustoId &&
+                    (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+                    s.Data >= f.DataInicio &&
+                    s.Data <= f.DataFim))
+                .Select(s => s.Id)
+                .ToListAsync();
+
+            indicador.DespesasMesAtual = idsDespesasMes.Any()
+                ? await _context.Saidas
+                    .Where(s => idsDespesasMes.Contains(s.Id))
+                    .SumAsync(s => (decimal?)s.Valor) ?? 0
+                : 0;
+
+            // RATEIOS ENVIADOS
+            indicador.RateiosEnviados = await _context.ItensRateioFechamento
+                .Include(i => i.FechamentoPeriodo)
+                .Where(i => i.FechamentoPeriodo.CentroCustoId == centroCustoId &&
+                           (i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado ||
+                            i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Processado))
+                .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
+
+            // RATEIOS RECEBIDOS (destino é este centro de custo)
+            indicador.RateiosRecebidos = await _context.ItensRateioFechamento
+                .Include(i => i.RegraRateio)
+                .Include(i => i.FechamentoPeriodo)
+                .Where(i => i.RegraRateio.CentroCustoDestinoId == centroCustoId &&
+                           (i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado ||
+                            i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Processado))
+                .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
+
+            // SALDO ATUAL
+            indicador.SaldoAtual = indicador.ReceitasAcumuladas - indicador.DespesasAcumuladas - indicador.RateiosEnviados + indicador.RateiosRecebidos;
+
+            // PERCENTUAL DE LUCRO
+            if (indicador.ReceitasAcumuladas > 0)
+            {
+                indicador.PercentualLucro = ((indicador.ReceitasAcumuladas - indicador.DespesasAcumuladas) / indicador.ReceitasAcumuladas) * 100;
+            }
+
+            // STATUS DE SAÚDE FINANCEIRA
+            if (indicador.SaldoAtual < 0)
+            {
+                indicador.StatusSaude = "Crítico";
+                indicador.CorIndicador = "danger";
+                indicador.IconeStatus = "bi-exclamation-triangle-fill";
+            }
+            else if (indicador.PercentualLucro < 20)
+            {
+                indicador.StatusSaude = "Regular";
+                indicador.CorIndicador = "warning";
+                indicador.IconeStatus = "bi-exclamation-circle";
+            }
+            else if (indicador.PercentualLucro < 40)
+            {
+                indicador.StatusSaude = "Bom";
+                indicador.CorIndicador = "info";
+                indicador.IconeStatus = "bi-info-circle";
+            }
+            else
+            {
+                indicador.StatusSaude = "Ótimo";
+                indicador.CorIndicador = "success";
+                indicador.IconeStatus = "bi-check-circle-fill";
+            }
+
+            return indicador;
+        }
+
+        private async Task<List<ViewModels.MaiorDespesaViewModel>> ObterMaioresDespesas(
+            DateTime inicioMes, DateTime fimMes)
+        {
+            var querySaidasAprovadas = _context.Saidas
+                .Include(s => s.PlanoDeContas)
+                .Include(s => s.CentroCusto)
+                .Where(s => s.Data >= inicioMes && s.Data <= fimMes);
+
+            var idsSaidasAprovadas = await querySaidasAprovadas
+                .Where(s => _context.FechamentosPeriodo.Any(f =>
+                    f.CentroCustoId == s.CentroCustoId &&
+                    (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+                    s.Data >= f.DataInicio &&
+                    s.Data <= f.DataFim))
+                .Select(s => s.Id)
+                .ToListAsync();
+
+            if (!idsSaidasAprovadas.Any())
+                return new List<ViewModels.MaiorDespesaViewModel>();
+
+            var maioresDespesas = await _context.Saidas
+                .Include(s => s.PlanoDeContas)
+                .Include(s => s.CentroCusto)
+                .Where(s => idsSaidasAprovadas.Contains(s.Id))
+                .GroupBy(s => new
+                {
+                    Categoria = s.PlanoDeContas!.Nome
+                })
+                .Select(g => new ViewModels.MaiorDespesaViewModel
+                {
+                    CategoriaDespesa = g.Key.Categoria,
+                    ValorTotal = g.Sum(s => s.Valor),
+                    QuantidadeOcorrencias = g.Count(),
+                    CongregacoesEnvolvidas = g.Select(s => s.CentroCusto!.Nome).Distinct().ToList()
+                })
+                .OrderByDescending(m => m.ValorTotal)
+                .Take(10)
+                .ToListAsync();
+
+            return maioresDespesas;
+        }
+
+        private async Task<List<ViewModels.TendenciaMensalViewModel>> ObterTendenciasMensais()
+        {
+            var tendencias = new List<ViewModels.TendenciaMensalViewModel>();
+            var hoje = DateTime.Now.Date;
+
+            for (int i = 5; i >= 0; i--)
+            {
+                var mesInicio = hoje.AddMonths(-i).AddDays(-(hoje.Day - 1));
+                var mesFim = mesInicio.AddMonths(1).AddDays(-1);
+
+                var queryEntradas = _context.Entradas
+                    .Where(e => e.Data >= mesInicio && e.Data <= mesFim);
+
+                var idsEntradas = await queryEntradas
+                    .Where(e => _context.FechamentosPeriodo.Any(f =>
+                        f.CentroCustoId == e.CentroCustoId &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+                        e.Data >= f.DataInicio &&
+                        e.Data <= f.DataFim))
+                    .Select(e => e.Id)
+                    .ToListAsync();
+
+                var totalReceitas = idsEntradas.Any()
+                    ? await _context.Entradas
+                        .Where(e => idsEntradas.Contains(e.Id))
+                        .SumAsync(e => (decimal?)e.Valor) ?? 0
+                    : 0;
+
+                var querySaidas = _context.Saidas
+                    .Where(s => s.Data >= mesInicio && s.Data <= mesFim);
+
+                var idsSaidas = await querySaidas
+                    .Where(s => _context.FechamentosPeriodo.Any(f =>
+                        f.CentroCustoId == s.CentroCustoId &&
+                        (f.Status == StatusFechamentoPeriodo.Aprovado || f.Status == StatusFechamentoPeriodo.Processado) &&
+                        s.Data >= f.DataInicio &&
+                        s.Data <= f.DataFim))
+                    .Select(s => s.Id)
+                    .ToListAsync();
+
+                var totalDespesas = idsSaidas.Any()
+                    ? await _context.Saidas
+                        .Where(s => idsSaidas.Contains(s.Id))
+                        .SumAsync(s => (decimal?)s.Valor) ?? 0
+                    : 0;
+
+                tendencias.Add(new ViewModels.TendenciaMensalViewModel
+                {
+                    MesAno = mesInicio.ToString("MMM/yy", new System.Globalization.CultureInfo("pt-BR")),
+                    TotalReceitas = totalReceitas,
+                    TotalDespesas = totalDespesas,
+                    Saldo = totalReceitas - totalDespesas
+                });
+            }
+
+            return tendencias;
+        }
+
+        private List<ViewModels.AlertaDashboardViewModel> GerarAlertas(
+            List<ViewModels.IndicadoresCongregacaoViewModel> congregacoes)
+        {
+            var alertas = new List<ViewModels.AlertaDashboardViewModel>();
+
+            // Alerta: Congregações com saldo negativo
+            var congregacoesNegativas = congregacoes.Where(c => c.SaldoAtual < 0).ToList();
+            if (congregacoesNegativas.Any())
+            {
+                alertas.Add(new ViewModels.AlertaDashboardViewModel
+                {
+                    Tipo = "danger",
+                    Icone = "bi-exclamation-triangle-fill",
+                    Titulo = "Atenção: Saldo Negativo",
+                    Mensagem = $"{congregacoesNegativas.Count} congregação(ões) com saldo negativo requer atenção imediata.",
+                    CongregacaoRelacionada = string.Join(", ", congregacoesNegativas.Select(c => c.NomeCongregacao))
+                });
+            }
+
+            // Alerta: Congregações com despesas acima de 80% das receitas
+            var congregacoesAltaDespesa = congregacoes
+                .Where(c => c.ReceitasMesAtual > 0 && (c.DespesasMesAtual / c.ReceitasMesAtual) > 0.8m)
+                .ToList();
+
+            if (congregacoesAltaDespesa.Any())
+            {
+                alertas.Add(new ViewModels.AlertaDashboardViewModel
+                {
+                    Tipo = "warning",
+                    Icone = "bi-exclamation-circle",
+                    Titulo = "Despesas Elevadas",
+                    Mensagem = $"{congregacoesAltaDespesa.Count} congregação(ões) com despesas acima de 80% das receitas.",
+                    CongregacaoRelacionada = string.Join(", ", congregacoesAltaDespesa.Select(c => c.NomeCongregacao))
+                });
+            }
+
+            // Alerta positivo: Congregações com melhor desempenho
+            var melhorDesempenho = congregacoes
+                .Where(c => c.ReceitasMesAtual > 0)
+                .OrderByDescending(c => c.PercentualLucro)
+                .FirstOrDefault();
+
+            if (melhorDesempenho != null && melhorDesempenho.PercentualLucro > 40)
+            {
+                alertas.Add(new ViewModels.AlertaDashboardViewModel
+                {
+                    Tipo = "success",
+                    Icone = "bi-trophy-fill",
+                    Titulo = "Destaque do Mês",
+                    Mensagem = $"{melhorDesempenho.NomeCongregacao} apresentou excelente desempenho com {melhorDesempenho.PercentualLucro:F1}% de rentabilidade.",
+                    CongregacaoRelacionada = melhorDesempenho.NomeCongregacao
+                });
+            }
+
+            return alertas;
+        }
+
         private async Task<bool> VerificarTabelas()
         {
             try
@@ -848,6 +1276,107 @@ namespace SistemaTesourariaEclesiastica.Controllers
             {
                 _logger.LogError(ex, "Erro ao buscar rateios por destino");
                 return new List<object>();
+            }
+        }
+
+        // ✅ NOVO: Gerar PDF do Dashboard Pastor
+        [AuthorizeRoles(Roles.Pastor)]
+        [HttpGet]
+        public async Task<IActionResult> GerarDashboardPdf()
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return RedirectToAction("Login", "Account");
+                }
+
+                _logger.LogInformation($"Geração de PDF do Dashboard Pastor solicitada por: {user.NomeCompleto}");
+
+                var hoje = DateTime.Now.Date;
+                var inicioMes = new DateTime(hoje.Year, hoje.Month, 1);
+                var fimMes = inicioMes.AddMonths(1).AddDays(-1);
+
+                // Recarregar os dados do dashboard
+                var viewModel = new ViewModels.DashboardPastorViewModel
+                {
+                    NomePastor = user.NomeCompleto,
+                    DataReferencia = hoje,
+                    PeriodoReferencia = $"{inicioMes:MMMM yyyy}".ToUpper()
+                };
+
+                var centrosCusto = await _context.CentrosCusto
+                    .Where(c => c.Ativo)
+                    .OrderBy(c => c.Nome)
+                    .ToListAsync();
+
+                viewModel.QuantidadeCongregacoes = centrosCusto.Count;
+
+                var indicadoresCongregacoes = new List<ViewModels.IndicadoresCongregacaoViewModel>();
+
+                foreach (var centro in centrosCusto)
+                {
+                    var indicador = await CalcularIndicadoresCongregacao(centro.Id, inicioMes, fimMes);
+                    indicadoresCongregacoes.Add(indicador);
+
+                    viewModel.TotalReceitasGeral += indicador.ReceitasAcumuladas;
+                    viewModel.TotalDespesasGeral += indicador.DespesasAcumuladas;
+                    viewModel.ReceitasMesAtual += indicador.ReceitasMesAtual;
+                    viewModel.DespesasMesAtual += indicador.DespesasMesAtual;
+                    viewModel.TotalRateiosEnviados += indicador.RateiosEnviados;
+                }
+
+                viewModel.SaldoGeralAtual = viewModel.TotalReceitasGeral - viewModel.TotalDespesasGeral - viewModel.TotalRateiosEnviados;
+                viewModel.SaldoMesAtual = viewModel.ReceitasMesAtual - viewModel.DespesasMesAtual;
+                viewModel.Congregacoes = indicadoresCongregacoes.OrderByDescending(c => c.ReceitasAcumuladas).ToList();
+                viewModel.MaioresDespesas = await ObterMaioresDespesas(inicioMes, fimMes);
+
+                viewModel.RankingReceitas = indicadoresCongregacoes
+                    .OrderByDescending(c => c.ReceitasMesAtual)
+                    .Take(5)
+                    .Select((c, index) => new ViewModels.RankingCongregacaoViewModel
+                    {
+                        Posicao = index + 1,
+                        NomeCongregacao = c.NomeCongregacao,
+                        Valor = c.ReceitasMesAtual,
+                        CorBarra = index == 0 ? "success" : index < 3 ? "primary" : "info"
+                    })
+                    .ToList();
+
+                viewModel.RankingDespesas = indicadoresCongregacoes
+                    .OrderByDescending(c => c.DespesasMesAtual)
+                    .Take(5)
+                    .Select((c, index) => new ViewModels.RankingCongregacaoViewModel
+                    {
+                        Posicao = index + 1,
+                        NomeCongregacao = c.NomeCongregacao,
+                        Valor = c.DespesasMesAtual,
+                        CorBarra = index == 0 ? "danger" : index < 3 ? "warning" : "secondary"
+                    })
+                    .ToList();
+
+                viewModel.TendenciasReceitas = await ObterTendenciasMensais();
+                viewModel.Alertas = GerarAlertas(indicadoresCongregacoes);
+
+                // Gerar PDF
+                var pdfBytes = Helpers.DashboardPastorPdfHelper.GerarPdfDashboard(viewModel);
+
+                // Registrar auditoria
+                await _auditService.LogAsync("PDF_DASHBOARD_PASTOR", "Home",
+                    $"PDF do Dashboard Pastor gerado por {user.NomeCompleto} - Período: {viewModel.PeriodoReferencia}");
+
+                _logger.LogInformation($"PDF do Dashboard Pastor gerado com sucesso - Tamanho: {pdfBytes.Length} bytes");
+
+                var nomeArquivo = $"Dashboard_Pastor_{inicioMes:yyyyMM}.pdf";
+
+                return File(pdfBytes, "application/pdf", nomeArquivo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar PDF do Dashboard Pastor");
+                TempData["ErrorMessage"] = $"Erro ao gerar PDF: {ex.Message}";
+                return RedirectToAction(nameof(DashboardPastor));
             }
         }
     }
