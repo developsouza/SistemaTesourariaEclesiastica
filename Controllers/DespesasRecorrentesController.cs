@@ -397,11 +397,14 @@ UserManager<ApplicationUser> userManager,
                 dataBase = despesa.DataInicio ?? DateTime.Today;
             }
 
+            // ? NOVA LÓGICA: Calcular quantos períodos cabem nos meses especificados
+            int quantidadePeriodos = CalcularQuantidadePeriodos(despesa.Periodicidade, meses);
+            
             var pagamentosGerados = 0;
             var pagamentosJaExistentes = 0;
             var pagamentosNovos = new List<PagamentoDespesaRecorrente>();
 
-            for (int i = indiceInicial; i < meses + indiceInicial; i++)
+            for (int i = indiceInicial; i < quantidadePeriodos + indiceInicial; i++)
             {
                 DateTime dataVencimento = CalcularProximoVencimento(despesa, dataBase, i);
 
@@ -831,6 +834,27 @@ UserManager<ApplicationUser> userManager,
         private bool DespesaExists(int id)
         {
             return _context.DespesasRecorrentes.Any(e => e.Id == id);
+        }
+
+        /// <summary>
+        /// Calcula quantos períodos cabem em uma determinada quantidade de meses
+        /// </summary>
+        /// <param name="periodicidade">Periodicidade da despesa</param>
+        /// <param name="meses">Quantidade de meses desejada</param>
+        /// <returns>Quantidade de períodos a serem gerados</returns>
+        private int CalcularQuantidadePeriodos(Periodicidade periodicidade, int meses)
+        {
+            return periodicidade switch
+            {
+                Periodicidade.Semanal => (int)Math.Ceiling(meses * 4.33), // ~4.33 semanas por mês
+                Periodicidade.Quinzenal => meses * 2, // 2 quinzenas por mês
+                Periodicidade.Mensal => meses, // 1:1
+                Periodicidade.Bimestral => (int)Math.Ceiling(meses / 2.0), // A cada 2 meses
+                Periodicidade.Trimestral => (int)Math.Ceiling(meses / 3.0), // A cada 3 meses
+                Periodicidade.Semestral => (int)Math.Ceiling(meses / 6.0), // A cada 6 meses
+                Periodicidade.Anual => (int)Math.Ceiling(meses / 12.0), // A cada 12 meses
+                _ => meses // Fallback: usar como mensal
+            };
         }
 
         private DateTime CalcularProximoVencimento(DespesaRecorrente despesa, DateTime dataBase, int indice)
