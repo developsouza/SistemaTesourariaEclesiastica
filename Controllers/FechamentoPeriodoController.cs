@@ -715,6 +715,164 @@ namespace SistemaTesourariaEclesiastica.Controllers
             }
         }
 
+        // GET: FechamentoPeriodo/Delete/5
+        [HttpGet]
+        [Authorize(Roles = Roles.Administrador)] // Apenas administradores podem excluir
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var fechamento = await _context.FechamentosPeriodo
+                .Include(f => f.CentroCusto)
+                .Include(f => f.UsuarioSubmissao)
+                .Include(f => f.UsuarioAprovacao)
+                .Include(f => f.DetalhesFechamento)
+                .Include(f => f.ItensRateio)
+                .FirstOrDefaultAsync(f => f.Id == id);
+
+            if (fechamento == null)
+            {
+                return NotFound();
+            }
+
+            // ✅ VALIDAR PERMISSÃO DE ACESSO
+            if (!await CanAccessFechamento(fechamento))
+            {
+                return Forbid();
+            }
+
+            // ✅ Adicionar informação para a view saber se pode excluir
+            ViewBag.FechamentoAprovado = fechamento.Status == StatusFechamentoPeriodo.Aprovado;
+
+            if (ViewBag.FechamentoAprovado)
+            {
+                ViewBag.AvisoAdmin = $"Você está prestes a excluir um fechamento APROVADO. Como administrador, você tem permissão para fazer isso, mas esta é uma operação CRÍTICA que afetará relatórios financeiros e liberará {fechamento.DetalhesFechamento.Count} lançamentos.";
+            }
+
+            await _auditService.LogAsync("Visualização", "FechamentoPeriodo", $"Tela de exclusão do fechamento ID {fechamento.Id} acessada");
+            return View(fechamento);
+        }
+
+        // POST: FechamentoPeriodo/Delete/5
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = Roles.Administrador)] // Apenas administradores podem excluir
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            try
+            {
+                var fechamento = await _context.FechamentosPeriodo
+                    .Include(f => f.CentroCusto)
+                    .Include(f => f.DetalhesFechamento)
+                    .Include(f => f.ItensRateio)
+                    .FirstOrDefaultAsync(f => f.Id == id);
+
+                if (fechamento == null)
+                {
+                    return NotFound();
+                }
+
+                // ✅ VALIDAR PERMISSÃO DE ACESSO
+                if (!await CanAccessFechamento(fechamento))
+                {
+                    return Forbid();
+                }
+
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return Unauthorized();
+                }
+
+                _logger.LogInformation($"Administrador {user.UserName} iniciando exclusão do fechamento ID {id} (Status: {fechamento.Status})");
+
+                var descricaoFechamento = ObterDescricaoFechamento(fechamento);
+                var ehAprovado = fechamento.Status == StatusFechamentoPeriodo.Aprovado;
+                var ehFechamentoSede = fechamento.EhFechamentoSede;
+                var quantidadeCongregacoes = fechamento.QuantidadeCongregacoesIncluidas;
+
+                // ✅ USAR TRANSAÇÃO COM EXECUTION STRATEGY
+                var strategy = _context.Database.CreateExecutionStrategy();
+                await strategy.ExecuteAsync(async () =>
+                {
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
+                    {
+                        // 1. Desmarcar lançamentos (liberar para novo fechamento)
+                        _logger.LogInformation($"Desmarcando lançamentos do fechamento ID {id}");
+                        await DesmarcarLancamentosComoIncluidos(id);
+
+                        // 2. Se for fechamento da SEDE, liberar fechamentos de congregações
+                        if (ehFechamentoSede && quantidadeCongregacoes > 0)
+                        {
+                            _logger.LogInformation($"Liberando {quantidadeCongregacoes} fechamentos de congregações processados pelo fechamento da SEDE ID {id}");
+                            await LiberarFechamentosCongregacoesProcessados(id);
+                        }
+
+                        // 3. Excluir itens de rateio
+                        if (fechamento.ItensRateio.Any())
+                        {
+                            _logger.LogInformation($"Excluindo {fechamento.ItensRateio.Count} itens de rateio");
+                            _context.ItensRateioFechamento.RemoveRange(fechamento.ItensRateio);
+                        }
+
+                        // 4. Excluir detalhes do fechamento
+                        if (fechamento.DetalhesFechamento.Any())
+                        {
+                            _logger.LogInformation($"Excluindo {fechamento.DetalhesFechamento.Count} detalhes do fechamento");
+                            _context.DetalhesFechamento.RemoveRange(fechamento.DetalhesFechamento);
+                        }
+
+                        // 5. Excluir o fechamento
+                        _context.FechamentosPeriodo.Remove(fechamento);
+                        await _context.SaveChangesAsync();
+
+                        await transaction.CommitAsync();
+
+                        // ✅ LOG DE AUDITORIA DETALHADO
+                        var mensagemAuditoria = ehAprovado
+                            ? $"EXCLUSÃO ADMINISTRATIVA: Fechamento APROVADO ID {id} excluído por {user.UserName}. Período: {descricaoFechamento}, Centro: {fechamento.CentroCusto?.Nome}. {fechamento.DetalhesFechamento.Count} lançamentos liberados."
+                            : $"Fechamento ID {id} excluído. Período: {descricaoFechamento}, Centro: {fechamento.CentroCusto?.Nome}.";
+
+                        if (ehFechamentoSede && quantidadeCongregacoes > 0)
+                        {
+                            mensagemAuditoria += $" {quantidadeCongregacoes} fechamento(s) de congregações liberados.";
+                        }
+
+                        await _auditService.LogAsync("Exclusão", "FechamentoPeriodo", mensagemAuditoria);
+
+                        _logger.LogInformation($"Fechamento ID {id} excluído com sucesso por {user.UserName}");
+
+                        TempData["SuccessMessage"] = ehAprovado
+                            ? $"Fechamento APROVADO excluído com sucesso! {fechamento.DetalhesFechamento.Count} lançamentos foram liberados para novo fechamento."
+                            : "Fechamento excluído com sucesso!";
+
+                        if (ehFechamentoSede && quantidadeCongregacoes > 0)
+                        {
+                            TempData["SuccessMessage"] += $" {quantidadeCongregacoes} fechamento(s) de congregações foram liberados (status retornado para Aprovado).";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+                        _logger.LogError(ex, $"Erro ao excluir fechamento ID {id}");
+                        throw;
+                    }
+                });
+
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao excluir fechamento ID {id}");
+                TempData["ErrorMessage"] = $"Erro ao excluir fechamento: {ex.Message}";
+                return RedirectToAction(nameof(Delete), new { id });
+            }
+        }
+
         // Método auxiliar para recarregar lista
         // ✅ OTIMIZADO: Usa AsNoTracking e projeta apenas campos necessários
         // ✅ MODIFICADO: Incluir fechamentos Pendentes E Aprovados para permitir aprovação inline
