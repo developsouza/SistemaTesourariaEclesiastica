@@ -669,7 +669,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     viewModel.ReceitasMesAtual += indicador.ReceitasMesAtual;
                     viewModel.DespesasMesAtual += indicador.DespesasMesAtual;
                     viewModel.TotalRateiosEnviados += indicador.RateiosEnviados;
-                    
+
                     // ✅ NOVO: Acumular rateios do mês atual
                     var rateiosMesAtual = await _context.ItensRateioFechamento
                         .Include(i => i.FechamentoPeriodo)
@@ -679,16 +679,16 @@ namespace SistemaTesourariaEclesiastica.Controllers
                                    i.FechamentoPeriodo.DataAprovacao >= inicioMes &&
                                    i.FechamentoPeriodo.DataAprovacao <= fimMes)
                         .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
-                    
+
                     viewModel.RateiosEnviadosMesAtual += rateiosMesAtual;
                 }
 
                 // ✅ CORRIGIDO: Saldo Geral = Receitas - Despesas - Rateios
                 viewModel.SaldoGeralAtual = viewModel.TotalReceitasGeral - viewModel.TotalDespesasGeral - viewModel.TotalRateiosEnviados;
-                
+
                 // ✅ CORRIGIDO: Saldo do Mês = Receitas Mês - Despesas Mês - Rateios Mês
                 viewModel.SaldoMesAtual = viewModel.ReceitasMesAtual - viewModel.DespesasMesAtual - viewModel.RateiosEnviadosMesAtual;
-                
+
                 viewModel.Congregacoes = indicadoresCongregacoes.OrderByDescending(c => c.ReceitasAcumuladas).ToList();
                 viewModel.MaioresDespesas = await ObterMaioresDespesas(inicioMes, fimMes);
 
@@ -1345,7 +1345,7 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     viewModel.ReceitasMesAtual += indicador.ReceitasMesAtual;
                     viewModel.DespesasMesAtual += indicador.DespesasMesAtual;
                     viewModel.TotalRateiosEnviados += indicador.RateiosEnviados;
-                    
+
                     // ✅ NOVO: Acumular rateios do mês atual
                     var rateiosMesAtual = await _context.ItensRateioFechamento
                         .Include(i => i.FechamentoPeriodo)
@@ -1355,16 +1355,16 @@ namespace SistemaTesourariaEclesiastica.Controllers
                                    i.FechamentoPeriodo.DataAprovacao >= inicioMes &&
                                    i.FechamentoPeriodo.DataAprovacao <= fimMes)
                         .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
-                    
+
                     viewModel.RateiosEnviadosMesAtual += rateiosMesAtual;
                 }
 
                 // ✅ CORRIGIDO: Saldo Geral = Receitas - Despesas - Rateios
                 viewModel.SaldoGeralAtual = viewModel.TotalReceitasGeral - viewModel.TotalDespesasGeral - viewModel.TotalRateiosEnviados;
-                
+
                 // ✅ CORRIGIDO: Saldo do Mês = Receitas Mês - Despesas Mês - Rateios Mês
                 viewModel.SaldoMesAtual = viewModel.ReceitasMesAtual - viewModel.DespesasMesAtual - viewModel.RateiosEnviadosMesAtual;
-                
+
                 viewModel.Congregacoes = indicadoresCongregacoes.OrderByDescending(c => c.ReceitasAcumuladas).ToList();
                 viewModel.MaioresDespesas = await ObterMaioresDespesas(inicioMes, fimMes);
 
