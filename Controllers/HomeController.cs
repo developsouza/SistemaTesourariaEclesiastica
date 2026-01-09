@@ -719,24 +719,19 @@ namespace SistemaTesourariaEclesiastica.Controllers
                 viewModel.TendenciasReceitas = await ObterTendenciasMensais();
                 viewModel.Alertas = GerarAlertas(indicadoresCongregacoes);
 
-                // Gerar PDF
-                var pdfBytes = Helpers.DashboardPastorPdfHelper.GerarPdfDashboard(viewModel);
+                await _auditService.LogAsync("DASHBOARD_PASTOR_ACCESS", "Home",
+                    $"Dashboard Pastor acessado por {user.NomeCompleto}");
 
-                // Registrar auditoria
-                await _auditService.LogAsync("PDF_DASHBOARD_PASTOR", "Home",
-                    $"PDF do Dashboard Pastor gerado por {user.NomeCompleto} - Período: {viewModel.PeriodoReferencia}");
-
-                _logger.LogInformation($"PDF do Dashboard Pastor gerado com sucesso - Tamanho: {pdfBytes.Length} bytes");
-
-                var nomeArquivo = $"Dashboard_Pastor_{inicioMes:yyyyMM}.pdf";
-
-                return File(pdfBytes, "application/pdf", nomeArquivo);
+                return View(viewModel);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao gerar PDF do Dashboard Pastor");
-                TempData["ErrorMessage"] = $"Erro ao gerar PDF: {ex.Message}";
-                return RedirectToAction(nameof(DashboardPastor));
+                _logger.LogError(ex, "Erro ao carregar Dashboard Pastor");
+                TempData["Erro"] = "Erro ao carregar dashboard.";
+                return View("Error", new ErrorViewModel
+                {
+                    RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+                });
             }
         }
 
