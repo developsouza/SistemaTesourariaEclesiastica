@@ -20,6 +20,7 @@ namespace SistemaTesourariaEclesiastica.ViewModels
         public decimal ReceitasMesAtual { get; set; }
         public decimal DespesasMesAtual { get; set; }
         public decimal SaldoMesAtual { get; set; }
+        public decimal RateiosEnviadosMesAtual { get; set; } // ? NOVO: Rateios do mês atual
         public int QuantidadeCongregacoes { get; set; }
 
         // Lista de congregações com seus indicadores

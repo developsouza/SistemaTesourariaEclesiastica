@@ -669,20 +669,29 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     viewModel.ReceitasMesAtual += indicador.ReceitasMesAtual;
                     viewModel.DespesasMesAtual += indicador.DespesasMesAtual;
                     viewModel.TotalRateiosEnviados += indicador.RateiosEnviados;
+                    
+                    // ✅ NOVO: Acumular rateios do mês atual
+                    var rateiosMesAtual = await _context.ItensRateioFechamento
+                        .Include(i => i.FechamentoPeriodo)
+                        .Where(i => i.FechamentoPeriodo.CentroCustoId == centro.Id &&
+                                   (i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado ||
+                                    i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Processado) &&
+                                   i.FechamentoPeriodo.DataAprovacao >= inicioMes &&
+                                   i.FechamentoPeriodo.DataAprovacao <= fimMes)
+                        .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
+                    
+                    viewModel.RateiosEnviadosMesAtual += rateiosMesAtual;
                 }
 
+                // ✅ CORRIGIDO: Saldo Geral = Receitas - Despesas - Rateios
                 viewModel.SaldoGeralAtual = viewModel.TotalReceitasGeral - viewModel.TotalDespesasGeral - viewModel.TotalRateiosEnviados;
-                viewModel.SaldoMesAtual = viewModel.ReceitasMesAtual - viewModel.DespesasMesAtual;
+                
+                // ✅ CORRIGIDO: Saldo do Mês = Receitas Mês - Despesas Mês - Rateios Mês
+                viewModel.SaldoMesAtual = viewModel.ReceitasMesAtual - viewModel.DespesasMesAtual - viewModel.RateiosEnviadosMesAtual;
+                
                 viewModel.Congregacoes = indicadoresCongregacoes.OrderByDescending(c => c.ReceitasAcumuladas).ToList();
-
-                // =====================================================
-                // MAIORES DESPESAS CONSOLIDADAS
-                // =====================================================
                 viewModel.MaioresDespesas = await ObterMaioresDespesas(inicioMes, fimMes);
 
-                // =====================================================
-                // RANKINGS
-                // =====================================================
                 viewModel.RankingReceitas = indicadoresCongregacoes
                     .OrderByDescending(c => c.ReceitasMesAtual)
                     .Take(5)
@@ -707,29 +716,27 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     })
                     .ToList();
 
-                // =====================================================
-                // TENDÊNCIAS (ÚLTIMOS 6 MESES)
-                // =====================================================
                 viewModel.TendenciasReceitas = await ObterTendenciasMensais();
-
-                // =====================================================
-                // ALERTAS E OBSERVAÇÕES
-                // =====================================================
                 viewModel.Alertas = GerarAlertas(indicadoresCongregacoes);
 
-                await _auditService.LogAsync("DASHBOARD_PASTOR_ACCESS", "Home",
-                    $"Dashboard Pastor acessado por {user.NomeCompleto}");
+                // Gerar PDF
+                var pdfBytes = Helpers.DashboardPastorPdfHelper.GerarPdfDashboard(viewModel);
 
-                return View(viewModel);
+                // Registrar auditoria
+                await _auditService.LogAsync("PDF_DASHBOARD_PASTOR", "Home",
+                    $"PDF do Dashboard Pastor gerado por {user.NomeCompleto} - Período: {viewModel.PeriodoReferencia}");
+
+                _logger.LogInformation($"PDF do Dashboard Pastor gerado com sucesso - Tamanho: {pdfBytes.Length} bytes");
+
+                var nomeArquivo = $"Dashboard_Pastor_{inicioMes:yyyyMM}.pdf";
+
+                return File(pdfBytes, "application/pdf", nomeArquivo);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao carregar Dashboard Pastor");
-                TempData["Erro"] = "Erro ao carregar dashboard.";
-                return View("Error", new ErrorViewModel
-                {
-                    RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
-                });
+                _logger.LogError(ex, "Erro ao gerar PDF do Dashboard Pastor");
+                TempData["ErrorMessage"] = $"Erro ao gerar PDF: {ex.Message}";
+                return RedirectToAction(nameof(DashboardPastor));
             }
         }
 
@@ -970,12 +977,21 @@ namespace SistemaTesourariaEclesiastica.Controllers
                         .SumAsync(s => (decimal?)s.Valor) ?? 0
                     : 0;
 
+                // ✅ NOVO: Buscar rateios do mês para o gráfico de tendências
+                var totalRateios = await _context.ItensRateioFechamento
+                    .Include(i => i.FechamentoPeriodo)
+                    .Where(i => (i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado ||
+                                i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Processado) &&
+                               i.FechamentoPeriodo.DataAprovacao >= mesInicio &&
+                               i.FechamentoPeriodo.DataAprovacao <= mesFim)
+                    .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
+
                 tendencias.Add(new ViewModels.TendenciaMensalViewModel
                 {
                     MesAno = mesInicio.ToString("MMM/yy", new System.Globalization.CultureInfo("pt-BR")),
                     TotalReceitas = totalReceitas,
-                    TotalDespesas = totalDespesas,
-                    Saldo = totalReceitas - totalDespesas
+                    TotalDespesas = totalDespesas + totalRateios, // ✅ CORRIGIDO: Despesas + Rateios
+                    Saldo = totalReceitas - totalDespesas - totalRateios // ✅ CORRIGIDO: Incluir rateios no saldo
                 });
             }
 
@@ -1323,15 +1339,32 @@ namespace SistemaTesourariaEclesiastica.Controllers
                     var indicador = await CalcularIndicadoresCongregacao(centro.Id, inicioMes, fimMes);
                     indicadoresCongregacoes.Add(indicador);
 
+                    // Acumular totais gerais
                     viewModel.TotalReceitasGeral += indicador.ReceitasAcumuladas;
                     viewModel.TotalDespesasGeral += indicador.DespesasAcumuladas;
                     viewModel.ReceitasMesAtual += indicador.ReceitasMesAtual;
                     viewModel.DespesasMesAtual += indicador.DespesasMesAtual;
                     viewModel.TotalRateiosEnviados += indicador.RateiosEnviados;
+                    
+                    // ✅ NOVO: Acumular rateios do mês atual
+                    var rateiosMesAtual = await _context.ItensRateioFechamento
+                        .Include(i => i.FechamentoPeriodo)
+                        .Where(i => i.FechamentoPeriodo.CentroCustoId == centro.Id &&
+                                   (i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Aprovado ||
+                                    i.FechamentoPeriodo.Status == StatusFechamentoPeriodo.Processado) &&
+                                   i.FechamentoPeriodo.DataAprovacao >= inicioMes &&
+                                   i.FechamentoPeriodo.DataAprovacao <= fimMes)
+                        .SumAsync(i => (decimal?)i.ValorRateio) ?? 0;
+                    
+                    viewModel.RateiosEnviadosMesAtual += rateiosMesAtual;
                 }
 
+                // ✅ CORRIGIDO: Saldo Geral = Receitas - Despesas - Rateios
                 viewModel.SaldoGeralAtual = viewModel.TotalReceitasGeral - viewModel.TotalDespesasGeral - viewModel.TotalRateiosEnviados;
-                viewModel.SaldoMesAtual = viewModel.ReceitasMesAtual - viewModel.DespesasMesAtual;
+                
+                // ✅ CORRIGIDO: Saldo do Mês = Receitas Mês - Despesas Mês - Rateios Mês
+                viewModel.SaldoMesAtual = viewModel.ReceitasMesAtual - viewModel.DespesasMesAtual - viewModel.RateiosEnviadosMesAtual;
+                
                 viewModel.Congregacoes = indicadoresCongregacoes.OrderByDescending(c => c.ReceitasAcumuladas).ToList();
                 viewModel.MaioresDespesas = await ObterMaioresDespesas(inicioMes, fimMes);
 
